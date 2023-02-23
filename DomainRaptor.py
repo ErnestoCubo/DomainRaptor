@@ -1,27 +1,15 @@
 #!/usr/bin/python3
 
-import re
-import whois
-import logging
 import argparse
-import concurrent.futures
 import random
 import time
-import traceback
 from colorama import Fore
+from logging import INFO, ERROR, DEBUG
 
-def log_CLI(msg: str, context):
-    logging_format="%(asctime)s: %(message)s"
-    if context == "info":
-        logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="[%H:%M:%S]")
-        logging.info(msg)
-    elif context == "error":
-        logging.basicConfig(format=logging_format, level=logging.ERROR, datefmt="[%H:%M:%S]")
-        logging.error(msg)
-    elif context == 'debug':
-        logging.basicConfig(format=logging_format, level=logging.DEBUG, datefmt="[%H:%M:%S]")
-        logging.exception(msg)
-    return 0
+# Local modules
+from modules.log import log_module
+from modules.log.print import printing_module
+from modules.regex import regex_module
 
 def retrieve_data(file_path: str):
     text_file = open(file_path  , 'r', encoding="utf-8")
@@ -30,68 +18,6 @@ def retrieve_data(file_path: str):
         elements.append(line.replace("\n", ""))
 
     return elements
-
-# Printing lists
-def print_list(elements):
-    print(*elements, sep="\n")
-
-    return
-
-def find_patterns(src_list: list, regex_expr):
-    regex_pattern = re.compile(regex_expr, flags=re.I|re.M)
-    finds = regex_pattern.findall(str(src_list))
-
-    return finds
-
-def execute_in_threads(execution_threads: int, element_count: int, file_contents: list, expr):
-    # Calculating elements per thread
-    try:
-        if execution_threads > element_count:
-            msg = "[ERROR] Assigned threads are longer than the length of the list provided"
-            raise BufferError(msg)
-        length_elements_per_thread = element_count / execution_threads
-        elements = [file_contents[x:x+int(length_elements_per_thread)] for x in range(0, element_count, int(length_elements_per_thread))]
-        msg = "Main------>Preparing threads for extract domains"
-        log_CLI(msg, "info")
-
-        # Adding multithreading
-        with concurrent.futures.ThreadPoolExecutor() as threadExecutor:
-            msg = "Main------>Execution started"
-            log_CLI(msg, "info")
-            thread_future = threadExecutor.submit(find_patterns, elements, expr)
-            msg = "Main------>Waiting threads to finish the work . . ."
-            log_CLI(msg, "info")
-            results = thread_future.result()
-        msg = "Main------>Execution finished"
-        log_CLI(msg, "info")
-
-        # Printing results
-        msg = "The matched patterns are:"
-        log_CLI(msg, "info")
-        print_list(results)
-
-    except Exception as e:
-        log_CLI(str(e), "debug")
-
-def validate_domain():
-    return
-
-def extract_option(option):
-    match option:
-        case '1':
-            expr = r"\b(?:(?:(?:2[0-5]{2}|1[0-9]{2}|[1-9][0-9]|[0-9])\.){3}(?:2[0-5]{2}|1[0-9]{2}|[1-9][0-9]|[1-9]))"
-        case '2':
-            expr = r"(http|https)(\:\/{2})(w{3}\.)?([a-zA-Z0-9!@#$&()%-`.+,/\"]+)(\.[a-z]{1,5})"
-        case '3':
-            expr = r"([a-z,A-Z]+\:\/{2}[a-zA-Z0-9!@#$&()%-`.+,/\"]+)"
-        case '4':
-            expr = r"^(([0-9a-fA-F]){1,4})\\:){7}([0-9a-fA-F]){1,4}"
-        case _:
-            msg = "Invalid expression option try again setting a valid -e <value>"
-            log_CLI(msg, "error")
-            exit(1)
-        
-    return expr
 
 # Defining CLI args
 def command_line_args():
@@ -124,22 +50,22 @@ def main(args):
     print_title(title_pos)
 
     # storing arguments
-    expr = extract_option(args.expr)
+    expr = regex_module.extract_option(args.expr)
     execution_threads = args.execution_threads
     file_path = args.file_path
 
     # Fething file data
     msg = "Main------>Fetching file data"
-    log_CLI(msg, "info")
+    log_module.log_cli(msg, "info", INFO)
     file_contents = retrieve_data(file_path)
     element_count = len(file_contents)
     msg = "Printing file data:"
-    log_CLI(msg, "info")
-    print_list(file_contents)
+    log_module.log_cli(msg, "info", INFO)
+    printing_module.print_list(file_contents)
     msg = "Elements count -> " + str(element_count)
-    log_CLI(msg, "info")
+    log_module.log_cli(msg, "info", INFO)
 
-    execute_in_threads(execution_threads, element_count, file_contents, expr)
+    regex_module.execute_in_threads(execution_threads, element_count, file_contents, expr)
 
     return 0
 
