@@ -25,12 +25,10 @@ def retrieve_data(file_path: str):
     return elements
 
 def find_patterns(src_list: list, regex_expr):
-    print(regex_expr)
     regex_pattern = re.compile(regex_expr, flags=re.I|re.M)
     finds = regex_pattern.findall(str(src_list))
-    print(finds)
 
-    #return finds
+    return finds
 
 def validate_domain():
     return
@@ -63,6 +61,13 @@ def command_line_args():
 
     return args
 
+# Printing lists
+def print_list(elements):
+    print(*elements, sep="\n")
+
+    return
+
+#Printing titles
 def print_title(title_pos):
     titles = [
         Fore.RED + "\n\n·▄▄▄▄        • ▌ ▄ ·.  ▄▄▄· ▪   ▐ ▄ ▄▄▄   ▄▄▄·  ▄▄▄·▄▄▄▄▄      ▄▄▄  \n██▪ ██ ▪     ·██ ▐███▪▐█ ▀█ ██ •█▌▐█▀▄ █·▐█ ▀█ ▐█ ▄█•██  ▪     ▀▄ █·\n▐█· ▐█▌ ▄█▀▄ ▐█ ▌▐▌▐█·▄█▀▀█ ▐█·▐█▐▐▌▐▀▀▄ ▄█▀▀█  ██▀· ▐█.▪ ▄█▀▄ ▐▀▀▄ \n██. ██ ▐█▌.▐▌██ ██▌▐█▌▐█ ▪▐▌▐█▌██▐█▌▐█•█▌▐█ ▪▐▌▐█▪·• ▐█▌·▐█▌.▐▌▐█•█▌\n▀▀▀▀▀•  ▀█▄▀▪▀▀  █▪▀▀▀ ▀  ▀ ▀▀▀▀▀ █▪.▀  ▀ ▀  ▀ .▀    ▀▀▀  ▀█▄▀▪.▀  ▀\n",
@@ -90,8 +95,9 @@ def main(args):
     log_CLI(msg)
     file_contents = retrieve_data(file_path)
     element_count = len(file_contents)
-    msg = "Printing file data -> " + str(file_contents)
+    msg = "Printing file data:"
     log_CLI(msg)
+    print_list(file_contents)
     msg = "Elements count -> " + str(element_count)
     log_CLI(msg)
 
@@ -105,16 +111,17 @@ def main(args):
     with concurrent.futures.ThreadPoolExecutor() as threadExecutor:
         msg = "Main------>Execution started"
         log_CLI(msg)
-        thread_results = threadExecutor.submit(find_patterns, elements, expr)
+        thread_future = threadExecutor.submit(find_patterns, elements, expr)
         msg = "Main------>Waiting threads to finish the work . . ."
         log_CLI(msg)
-        for result in thread_results:
-            print(result.result())
-    
+        results = thread_future.result()
     msg = "Main------>Execution finished"
     log_CLI(msg)
-    print("The matched patterns are: \n")
-    #print(finds)
+
+    # Printing results
+    msg = "The matched patterns are:"
+    log_CLI(msg)
+    print_list(results)
 
     return 0
 
