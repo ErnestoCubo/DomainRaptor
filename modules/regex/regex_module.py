@@ -22,13 +22,13 @@ def execute_in_threads(execution_threads: int, element_count: int, file_contents
         log_module.log_cli(msg, "info", INFO)
 
         # Adding multithreading
-        with concurrent.futures.ThreadPoolExecutor() as threadExecutor:
+        with concurrent.futures.ProcessPoolExecutor() as ProccessExecutor:
             msg = "Main------>Execution started"
             log_module.log_cli(msg, "info", INFO)
-            thread_future = threadExecutor.submit(find_patterns, elements, expr)
+            future = ProccessExecutor.submit(find_patterns, elements, expr)
             msg = "Main------>Waiting threads to finish the work . . ."
             log_module.log_cli(msg, "info", INFO)
-            results = thread_future.result()
+            results = future.result()
             
         msg = "Main------>Execution finished"
         log_module.log_cli(msg, "info", INFO)
@@ -37,6 +37,7 @@ def execute_in_threads(execution_threads: int, element_count: int, file_contents
         msg = "The matched patterns are:"
         log_module.log_cli(msg, "info", INFO)
         printing_module.print_list(results)
+        return results
 
     except Exception as e:
         log_module.log_cli(str(e), "debug", DEBUG)
