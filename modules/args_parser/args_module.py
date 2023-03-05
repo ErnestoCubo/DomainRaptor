@@ -7,6 +7,7 @@ def command_line_args():
     parser.add_argument("-f", "--format", dest="format", default=None, help="Format that should be used in order to export data")
     parser.add_argument("-e", "--expresion", dest="expr", default='1', help="Specifies the data that should be extracted options avalaible are:\n  1 -> Used for extract IPv4\n  2 -> Extract domains and subdoamins\n  3 -> Extract URLs and other protocols URI\n  4) IPv6")
     parser.add_argument("-i", "--input_file", dest="file_path", default='./patterns.txt', help="Specifies the file path where data should be fetched")
+    parser.add_argument("-a", "--api_key", dest="api_key", default=None, help="API key used for researching in shodan")
 
     args = parser.parse_args()
 
