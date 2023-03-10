@@ -17,25 +17,28 @@ def main(args):
     printing_module.print_title(title_pos)
 
     # storing arguments
-    expr = regex_module.extract_option(args.expr)
+    select_expr = args.expr
+    expr = regex_module.extract_option(select_expr)
     execution_threads = args.execution_threads
     file_path = args.file_path
     api_key = args.api_key
 
     # Fething file data
-    msg = "Main------>Fetching file data"
-    log_module.log_cli(msg, "info", INFO)
+    log_module.log_cli("Main------>Fetching file data", "info", INFO)
     file_contents = data_transformation_module.retrieve_data(file_path)
     element_count = len(file_contents)
-    msg = "Printing file data:"
-    log_module.log_cli(msg, "info", INFO)
-    printing_module.print_list(file_contents)
-    msg = "Elements count -> " + str(element_count)
-    log_module.log_cli(msg, "info", INFO)
+    log_module.log_cli("Printing file data:", "info", INFO)
+    log_module.log_cli(f"Elements count -> {element_count}", "info", INFO)
 
     regexed_list = regex_module.execute_in_threads(execution_threads, element_count, file_contents, expr)
-    data_transformation_module.tranform_to_dict_in_threads(regexed_list)
-    #shodan_object = shodan_enum.Shodan_enum(api_key=api_key)
+
+    if select_expr == '2':
+        domain_dict = data_transformation_module.tranform_to_dict_in_threads(regexed_list)
+        if domain_dict != None:
+            printing_module.print_elements(domain_dict)
+    shodan_object = shodan_enum.Shodan_enum(api_key="sgztonoBQ1APEMl870zNMg1EMBiojN25")
+    domain_dict = shodan_object.basic_search(domain_dict)
+    printing_module.print_elements(domain_dict)
 
     return 0
 

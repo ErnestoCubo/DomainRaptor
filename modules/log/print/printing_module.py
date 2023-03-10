@@ -1,4 +1,6 @@
 import time
+from pygments import lexers, highlight, formatters
+import json
 from colorama import Fore
 
 #Printing titles
@@ -14,8 +16,10 @@ def print_title(title_pos):
 
     return
 
-# Printing lists
-def print_list(elements):
-    print(*elements, sep="\n")
-
+# Printing elements
+def print_elements(elements: iter):
+    print(Fore.CYAN)
+    print(highlight(json.dumps(elements, indent=4), lexers.JsonLexer(), formatters.Terminal256Formatter()))
+    print(Fore.WHITE)
+    
     return

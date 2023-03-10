@@ -1,10 +1,13 @@
 import shodan
 import requests
+from logging import DEBUG
+
+from ...log import log_module
 
 class Shodan_enum():
 
     def __init__(self, api_key) -> None:
-        self.api = shodan.Shodan(api_key)
+        self.client = shodan.Shodan(api_key)
         self.FACETS = [
             'org',
             'domain',
@@ -17,7 +20,17 @@ class Shodan_enum():
             ('country', 100),
         ]
 
-    def basic_search(self, query):
-        result = self.api.count(query, self.FACETS)
-
-        return result
+    def basic_search(self, elements: dict):
+        try:
+            print(elements.keys())
+            for key in elements.keys():
+                results = self.client.search(key)
+                print(f"Result founds for  {key}: {results['total']}")
+                elements[key]["IPs"] = list()
+                for result in results['matches']:
+                    elements[key]["IPs"].append(result['ip_str'])
+            
+            return elements
+            
+        except shodan.APIError as e:
+            log_module.DEBUG(str(e), "debug", DEBUG)
