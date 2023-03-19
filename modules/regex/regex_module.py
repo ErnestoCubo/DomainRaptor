@@ -4,7 +4,7 @@ from logging import INFO, ERROR, DEBUG
 from ..log import log_module
 from ..log.print import printing_module
 
-REGEX_SPLIT_DOMAINS = re.compile(r"(?P<domain>(?:\w*\.)*)(?P<subdomain>\w*)")
+REGEX_SPLIT_DOMAINS = re.compile(r"(?P<Subdomain>([\w-]+\.){1,10})?(?P<Domain>[\w-]+\.{1}[\w-]+$)")
 
 
 def find_patterns(src_list: list, regex_expr):
@@ -45,16 +45,20 @@ def validate_domain():
 
 # Splitting domains and subdomains
 def split_domain(structure_domains):
-    splitted_list = REGEX_SPLIT_DOMAINS.match(structure_domains[3])
-
-    return splitted_list.group("domain"), splitted_list.group("subdomain")
+    domain_string = structure_domains[3]
+    splitted_list = REGEX_SPLIT_DOMAINS.match(domain_string)
+    if splitted_list:
+        
+        if splitted_list.group("Subdomain") is not None:
+            return splitted_list.group("Domain"), splitted_list.group("Subdomain")
+        return splitted_list.group("Domain")
 
 def extract_option(option):
     match option:
         case '1':
             expr = r"\b(?:(?:(?:2[0-5]{2}|1[0-9]{2}|[1-9][0-9]|[0-9])\.){3}(?:2[0-5]{2}|1[0-9]{2}|[1-9][0-9]|[1-9]))"
         case '2':
-            expr = r"(http|https)(\:\/{2})(w{3}\.)?([a-zA-Z0-9!@#$&()%-`.+,/\"]+)(\.[a-z]{1,5})"
+            expr = r"(http|https)(\:\/{2})(w{3}\.)?([a-zA-Z0-9!@#$&()%-`.+,\"][^',\/]+)"
         case '3':
             expr = r"([a-z,A-Z]+\:\/{2}[a-zA-Z0-9!@#$&()%-`.+,/\"]+)"
         case '4':

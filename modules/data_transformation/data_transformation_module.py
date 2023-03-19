@@ -34,21 +34,25 @@ def tranform_to_dict_in_threads(queried_info: list):
             log_module.log_cli("Data_Transformation_Module------>Transforming data", "info", INFO)
             futures = ThreadExecutor.map(regex_module.split_domain, queried_info)
             futures = list(futures)
+            print(futures)
             for x in futures:
                 if type(x) != str:
                     formalized_data[x[1]] = {
                         "Domain": {
-                            "name": x[1],
-                            "IPs":[]
+                            "name": x[0],
+                            "IPs":list()
                         },
                         "Subdomains": [{
-                            "name": x[0],
-                            "IPs": []
+                            "name": x[1] + x[0],
+                            "IPs":list()
                         }]
                     }
                 else:
                     formalized_data[x] = dict()
-                    formalized_data[x]["Domain"] = x
+                    formalized_data[x]["Domain"] = {
+                            "name": x,
+                            "IPs":list()
+                        }
             log_module.log_cli('Data_Trasformation_Module------>Data transformed correctly the preset format is {<DOMAIN>: INFO}', "info", INFO)
             
             return formalized_data

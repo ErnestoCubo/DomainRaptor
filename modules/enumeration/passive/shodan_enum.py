@@ -26,9 +26,8 @@ class Shodan_enum():
             for key in elements.keys():
                 results = self.client.search(key)
                 print(f"Result founds for  {key}: {results['total']}")
-                elements[key]["IPs"] = list()
                 for result in results['matches']:
-                    elements[key]["IPs"].append(result['ip_str'])
+                    elements[key]["Domain"]["IPs"].append(result['ip_str'])
             
             return elements
             
