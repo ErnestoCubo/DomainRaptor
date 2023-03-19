@@ -34,8 +34,6 @@ def main(args):
 
     if select_expr == '2':
         domain_dict = data_transformation_module.tranform_to_dict_in_threads(regexed_list)
-        if domain_dict != None:
-            printing_module.print_elements(domain_dict)
     shodan_object = shodan_enum.Shodan_enum(api_key="sgztonoBQ1APEMl870zNMg1EMBiojN25")
     domain_dict = shodan_object.basic_search(domain_dict)
     printing_module.print_elements(domain_dict)

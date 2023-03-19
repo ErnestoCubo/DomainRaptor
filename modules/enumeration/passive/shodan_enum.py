@@ -22,7 +22,6 @@ class Shodan_enum():
 
     def basic_search(self, elements: dict):
         try:
-            print(elements.keys())
             for key in elements.keys():
                 results = self.client.search(key)
                 print(f"Result founds for  {key}: {results['total']}")

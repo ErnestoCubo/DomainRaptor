@@ -34,7 +34,6 @@ def tranform_to_dict_in_threads(queried_info: list):
             log_module.log_cli("Data_Transformation_Module------>Transforming data", "info", INFO)
             futures = ThreadExecutor.map(regex_module.split_domain, queried_info)
             futures = list(futures)
-            print(futures)
             for x in futures:
                 if type(x) != str:
                     formalized_data[x[1]] = {
