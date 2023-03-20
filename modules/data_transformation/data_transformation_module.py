@@ -35,8 +35,8 @@ def tranform_to_dict_in_threads(queried_info: list):
             futures = ThreadExecutor.map(regex_module.split_domain, queried_info)
             futures = list(futures)
             for x in futures:
-                if type(x) != str:
-                    formalized_data[x[1]] = {
+                if type(x) == tuple:
+                    formalized_data[x[0]] = {
                         "Domain": {
                             "name": x[0],
                             "IPs":list()

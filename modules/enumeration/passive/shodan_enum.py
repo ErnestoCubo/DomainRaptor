@@ -1,9 +1,9 @@
 import shodan
-import requests
+import json
 from logging import DEBUG
 
 from ...log import log_module
-
+from ...log.print import printing_module
 class Shodan_enum():
 
     def __init__(self, api_key) -> None:
@@ -20,14 +20,21 @@ class Shodan_enum():
             ('country', 100),
         ]
 
+    def filter_search(self, results: dict, key: str):
+        temporal_list = list()
+        for result in results['matches']:
+            if (key in result["domains"]) or key in result["hostnames"]:
+                temporal_list.append(result['ip_str'])
+
+        return temporal_list
+    
     def basic_search(self, elements: dict):
         try:
             for key in elements.keys():
-                results = self.client.search(key)
+                results = self.client.search(f"hostname:{key}")
                 print(f"Result founds for  {key}: {results['total']}")
-                for result in results['matches']:
-                    elements[key]["Domain"]["IPs"].append(result['ip_str'])
-            
+                elements[key]["Domain"]["IPs"] = list(dict.fromkeys(self.filter_search(results, key)))
+                
             return elements
             
         except shodan.APIError as e:
