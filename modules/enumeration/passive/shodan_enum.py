@@ -1,40 +1,53 @@
 import shodan
-import json
-from logging import DEBUG
+import concurrent.futures
+from logging import DEBUG, INFO
 
 from ...log import log_module
 from ...log.print import printing_module
+
+DOMAIN = 0
+SUBDOMAIN = 1
+
 class Shodan_enum():
 
     def __init__(self, api_key) -> None:
         self.client = shodan.Shodan(api_key)
-        self.FACETS = [
-            'org',
-            'domain',
-            'port',
-            'asn',
 
-            # We only care about the top 3 countries, this is how we let Shodan know to return 3 instead of the
-            # default 5 for a facet. If you want to see more than 5, you could do ('country', 1000) for example
-            # to see the top 1,000 countries for a search query.
-            ('country', 100),
-        ]
-
-    def filter_search(self, results: dict, key: str):
+    def filter_search(self, results: dict, name: str, type: int):
         temporal_list = list()
         for result in results['matches']:
-            if (key in result["domains"]) or key in result["hostnames"]:
-                temporal_list.append(result['ip_str'])
+            if type == 0:
+                if (name in result["domains"]) or name in result["hostnames"]:
+                    temporal_list.append(result['ip_str'])
+            elif type == 1:
+                if name in result["hostnames"]:
+                    temporal_list.append(result['ip_str'])
 
         return temporal_list
     
-    def basic_search(self, elements: dict):
+    def subdomain_search(self, data: dict):
+        results = self.client.search(f"hostname:{data['Subdomain']['name']}")
+        print(f"Result founds for  {data['Subdomain']['name']}: {results['total']}")
+        results = list(dict.fromkeys(self.filter_search(results, data['Subdomain']['name'], SUBDOMAIN)))
+
+        return results
+    
+    def domain_search(self, data: dict):
+        results = self.client.search(f"hostname:{data['Domain']}")
+        print(f"Result founds for  {data['Domain']}: {results['total']}")
+        data["IPs"] = list(dict.fromkeys(self.filter_search(results, data['Domain'], DOMAIN)))
+        if data["Subdomain"]["name"] != None:
+            data["Subdomain"]["IPs"] = self.subdomain_search(data)
+
+        return data
+
+    def thread_search(self, elements: list):
         try:
-            for key in elements.keys():
-                results = self.client.search(f"hostname:{key}")
-                print(f"Result founds for  {key}: {results['total']}")
-                elements[key]["Domain"]["IPs"] = list(dict.fromkeys(self.filter_search(results, key)))
-                
+            with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ProcessPool:
+                log_module.log_cli("Shodan_Enumeration_Module------>Searching public exposed data", "info", INFO)
+                futures = ProcessPool.map(self.domain_search, elements)
+                futures = list(futures)                
+
             return elements
             
         except shodan.APIError as e:

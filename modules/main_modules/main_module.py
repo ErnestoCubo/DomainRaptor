@@ -23,7 +23,7 @@ def fetch_data(file_path: str, execution_threads: int, expr):
 def develop_action(select_expr: str, regexed_list: list, api_key: str):
 
     if select_expr == '2':
-        domain_dict = data_transformation_module.tranform_to_dict_in_threads(regexed_list)
+        domain_list = data_transformation_module.tranform_to_dict_in_threads(regexed_list)
         shodan_object = shodan_enum.Shodan_enum(api_key=api_key)
-        domain_dict = shodan_object.basic_search(domain_dict)
-        printing_module.print_elements(domain_dict)
+        domain_list = shodan_object.thread_search(domain_list)
+        printing_module.print_elements(domain_list)

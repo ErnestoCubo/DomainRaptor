@@ -27,31 +27,32 @@ def extract_domain(structure_domains: str):
     
     return structure_domains[3]
 
+def fill_dict(domain: str, subdomain=None):
+    if subdomain != None:
+        subdomain = subdomain + domain
+    temp_dict = {
+        "Domain": domain,
+        "IPs":list(),
+        "Subdomain":{
+            "name": subdomain,
+            "IPs":list()
+        }
+    }
+
+    return temp_dict
+
 def tranform_to_dict_in_threads(queried_info: list):
-    formalized_data = dict()
+    formalized_data = list()
     try:
-        with concurrent.futures.ProcessPoolExecutor(max_workers=10) as ThreadExecutor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=10) as ProcessPool:
             log_module.log_cli("Data_Transformation_Module------>Transforming data", "info", INFO)
-            futures = ThreadExecutor.map(regex_module.split_domain, queried_info)
+            futures = ProcessPool.map(regex_module.split_domain, queried_info)
             futures = list(futures)
             for x in futures:
                 if type(x) == tuple:
-                    formalized_data[x[0]] = {
-                        "Domain": {
-                            "name": x[0],
-                            "IPs":list()
-                        },
-                        "Subdomains": [{
-                            "name": x[1] + x[0],
-                            "IPs":list()
-                        }]
-                    }
-                else:
-                    formalized_data[x] = dict()
-                    formalized_data[x]["Domain"] = {
-                            "name": x,
-                            "IPs":list()
-                        }
+                    formalized_data.append(fill_dict(x[0], x[1]))
+                else:                    
+                    formalized_data.append(fill_dict(x))
             log_module.log_cli('Data_Trasformation_Module------>Data transformed correctly the preset format is {<DOMAIN>: INFO}', "info", INFO)
             
             return formalized_data
