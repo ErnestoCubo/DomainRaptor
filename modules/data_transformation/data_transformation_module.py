@@ -4,7 +4,13 @@ from ..log import log_module
 from logging import INFO, DEBUG
 from ..regex import regex_module
 
-# Retrieve data from file
+''' retrieve_data()
+        Description: Opens and parses the list data
+        Params:
+            - file_path: type str -> path to the txt file
+        returns:
+            - It return a list with the parsed data
+'''
 def retrieve_data(file_path: str):
     try:
         with open(file_path  , 'r', encoding="utf-8") as text_file:
@@ -17,44 +23,52 @@ def retrieve_data(file_path: str):
         log_module.log_cli(str(e), "debug", DEBUG)
         exit(12)
 
-# If regex module was selected for URLs then this search will extract domains and subdomains
-def extract_domain(structure_domains: str):
-    has_subdomain = structure_domains[3].find(".")
-    if has_subdomain != -1:
-        splitted_structure = structure_domains[3].split('.')
+''' fill_dict()
+        Description: creates the schema for collecting data of each domain
+        Params:
+            - domain: type str -> domain to structure it data
+            - subdomain: type str -> subdomain to structure it data
+        returns:
+            - It return a dictionary which will be used then for filling with more data
+'''
+def fill_dict(domain: str, subdomain=None):
+    if subdomain != None:
+        subdomain = subdomain + domain
+    temp_dict = {
+        "domain": domain,
+        "ip_list":list(),
+        "open_ports":list(),
+        "subdomain":{
+            "name": subdomain,
+            "ip_list":list()
+        }
+    }
 
-        return splitted_structure
-    
-    return structure_domains[3]
+    return temp_dict
 
+''' tranform_to_dict_in_threads()
+        Description: Transform all list data to be searched into a dict while using CPU processing threads
+        Params:
+            - queried_info: type list -> List with all splitted domains and subdomains
+        returns:
+            - It return a dictionary which will be used then for filling with more data
+'''
 def tranform_to_dict_in_threads(queried_info: list):
-    formalized_data = dict()
+    formalized_data = list()
     try:
-        with concurrent.futures.ProcessPoolExecutor(max_workers=10) as ThreadExecutor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=10) as ProcessPool:
             log_module.log_cli("Data_Transformation_Module------>Transforming data", "info", INFO)
-            futures = ThreadExecutor.map(regex_module.split_domain, queried_info)
+            futures = ProcessPool.map(regex_module.split_domain, queried_info)
             futures = list(futures)
             for x in futures:
-                if type(x) != str:
-                    formalized_data[x[1]] = {
-                        "Domain": {
-                            "name": x[0],
-                            "IPs":list()
-                        },
-                        "Subdomains": [{
-                            "name": x[1] + x[0],
-                            "IPs":list()
-                        }]
-                    }
-                else:
-                    formalized_data[x] = dict()
-                    formalized_data[x]["Domain"] = {
-                            "name": x,
-                            "IPs":list()
-                        }
+                if type(x) == tuple:
+                    formalized_data.append(fill_dict(x[0], x[1]))
+                else:                    
+                    formalized_data.append(fill_dict(x))
             log_module.log_cli('Data_Trasformation_Module------>Data transformed correctly the preset format is {<DOMAIN>: INFO}', "info", INFO)
             
             return formalized_data
     except Exception as e:
         log_module.log_cli(str(e), "debug", DEBUG)
+        
         return None
