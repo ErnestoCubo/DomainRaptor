@@ -6,13 +6,31 @@ from ..log.print import printing_module
 
 REGEX_SPLIT_DOMAINS = re.compile(r"(?P<Subdomain>([\w-]+\.){1,10})?(?P<Domain>[\w-]+\.{1}[\w-]+$)")
 
-
+''' find_patterns()
+        Description: It will filter and match all patterns given by a compiled regex expression
+        Params:
+            - src_list: type str -> list of data in which the regex will be performed
+            - regex_expr: type int -> regex expression that will be used to filter and match data
+        returns:
+            - It returns a tuple with the finds
+'''
 def find_patterns(src_list: list, regex_expr):
     regex_pattern = re.compile(regex_expr, flags=re.I|re.M)
     finds = regex_pattern.findall(str(src_list))
 
     return finds
 
+''' execute_in_threads()
+        Description: It will execute the regex filter by dividing the data list into smaller pieces of data which will be proccesed then using CPU bound operations
+        it will divide the list into smaller data lists by using compression lists, note that its important to now that the given threads can't be a larger number than the list length
+        Params:
+            - execution_threads: type int -> threads to be used
+            - element_count: type int -> len of the list
+            - file_contents: type list -> data to be processed
+            - expr: type regex expression -> regex expression that will be used to filter and match data
+        returns:
+            - It returns a list with the filtered data
+'''
 def execute_in_threads(execution_threads: int, element_count: int, file_contents: list, expr):
     # Calculating elements per thread
     try:
@@ -21,14 +39,12 @@ def execute_in_threads(execution_threads: int, element_count: int, file_contents
         length_elements_per_thread = element_count / execution_threads
         elements = [file_contents[x:x+int(length_elements_per_thread)] for x in range(0, element_count, int(length_elements_per_thread))]
         log_module.log_cli("Main------>Preparing threads for extract domains", "info", INFO)
-
         # Adding multithreading
         with concurrent.futures.ProcessPoolExecutor() as ProccessExecutor:
             log_module.log_cli("Main------>Execution started", "info", INFO)
             future = ProccessExecutor.submit(find_patterns, elements, expr)
             log_module.log_cli("Main------>Waiting threads to finish the work . . .", "info", INFO)
             results = future.result()
-            
         log_module.log_cli("Main------>Execution finished", "info", INFO)
 
         # Printing results
@@ -40,10 +56,13 @@ def execute_in_threads(execution_threads: int, element_count: int, file_contents
     except Exception as e:
         log_module.log_cli(str(e), "debug", DEBUG)
 
-def validate_domain():
-    return
-
-# Splitting domains and subdomains
+''' split_domain()
+        Description: It will match subdomain and domainand give them into a tuple
+        Params:
+            - structure_domains: type list -> list with a domain and subdomain to be splitted into
+        returns:
+            - It returns a tuple with the splitted matches
+'''
 def split_domain(structure_domains):
     domain_string = structure_domains[3]
     splitted_list = REGEX_SPLIT_DOMAINS.match(domain_string)
@@ -53,6 +72,13 @@ def split_domain(structure_domains):
             return splitted_list.group("Domain"), splitted_list.group("Subdomain")
         return splitted_list.group("Domain")
 
+''' extract_option()
+        Description: 
+        Params:
+            - option: type str -> option given to select a regex expression
+        returns:
+            - It returns the expression object to be used then
+'''
 def extract_option(option):
     match option:
         case '1':
