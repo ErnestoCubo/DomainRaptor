@@ -23,7 +23,23 @@ def retrieve_data(file_path: str):
         log_module.log_cli(str(e), "debug", DEBUG)
         exit(12)
 
-''' fill_dict()
+''' ip_dict()
+        Description: creates the schema for collecting data of each domain
+        Params:
+            - ip: type str -> IP to structure it data
+            - ports: type list -> open ports of each IP
+        returns:
+            - It return a dictionary for an IP
+'''    
+def ip_dict(ip: str, ports=None):
+        ip_dict = {
+            "name": ip,
+            "open_ports": ports
+        }
+
+        return ip_dict
+
+''' domain_dict()
         Description: creates the schema for collecting data of each domain
         Params:
             - domain: type str -> domain to structure it data
@@ -31,13 +47,12 @@ def retrieve_data(file_path: str):
         returns:
             - It return a dictionary which will be used then for filling with more data
 '''
-def fill_dict(domain: str, subdomain=None):
+def domain_dict(domain: str, subdomain=None):
     if subdomain != None:
         subdomain = subdomain + domain
     temp_dict = {
         "domain": domain,
         "ip_list":list(),
-        "open_ports":list(),
         "subdomain":{
             "name": subdomain,
             "ip_list":list()
@@ -62,9 +77,9 @@ def tranform_to_dict_in_threads(queried_info: list):
             futures = list(futures)
             for x in futures:
                 if type(x) == tuple:
-                    formalized_data.append(fill_dict(x[0], x[1]))
+                    formalized_data.append(domain_dict(x[0], x[1]))
                 else:                    
-                    formalized_data.append(fill_dict(x))
+                    formalized_data.append(domain_dict(x))
             log_module.log_cli('Data_Trasformation_Module------>Data transformed correctly the preset format is {<DOMAIN>: INFO}', "info", INFO)
             
             return formalized_data

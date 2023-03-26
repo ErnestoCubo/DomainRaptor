@@ -1,3 +1,4 @@
+import time
 import shodan
 import concurrent.futures
 from logging import DEBUG, INFO
@@ -5,18 +6,31 @@ from logging import DEBUG, INFO
 # Local modules imports
 from ...log import log_module
 from ...log.print import printing_module
+from ...data_transformation import data_transformation_module
 
 # Constants related to the data type given
 DOMAIN = 0
 SUBDOMAIN = 1
 PORTS = 2
 
-
-
 class Shodan_enum():
     def __init__(self, api_key) -> None:
         self.client = shodan.Shodan(api_key)
     
+    ''' port_search()
+        Description: Extract ports for each IP
+        Params:
+            - data: type dict -> dictionary containing domain/subdomain object info
+        returns:
+            - return the dict object with the parsed open ports info
+    '''
+    def port_search(self, ip_list: list):
+        for ip in ip_list:
+            host = self.client.host(ip)
+            ports_list = [item['port'] for item in host['data']]
+
+        return ports_list
+
     ''' filter_search()
         Description: Filters results
         Params:
@@ -29,24 +43,16 @@ class Shodan_enum():
     def filter_search(self, results: dict, name: str, type: int):
         temporal_list = list()
         for result in results['matches']:
-            if type == 0:
+            if type == DOMAIN:
                 if (name in result["domains"]) or name in result["hostnames"]:
-                    temporal_list.append(result['ip_str'])
-            elif type == 1:
+                    temporal_list.append(result["ip_str"])
+            elif type == SUBDOMAIN:
                 if name in result["hostnames"]:
-                    temporal_list.append(result['ip_str'])
-
+                    temporal_list.append(result["ip_str"])
+            elif type == PORTS:
+                temporal_list = self.port_search(result["ip_str"])
+        
         return temporal_list
-    
-    ''' port_search()
-        Description: Extract ports for each IP
-        Params:
-            - data: type dict -> dictionary containing domain/subdomain object info
-        returns:
-            - return the dict object with the parsed open ports info
-    '''
-    def port_search(self, data: dict):
-        return
     
     ''' subdomain_results()
         Description: Extract subdomain info for each given domain object
@@ -61,7 +67,14 @@ class Shodan_enum():
         results = list(dict.fromkeys(self.filter_search(results, data['subdomain']['name'], SUBDOMAIN)))
 
         return results
-    
+
+    def get_ip_dict(self, ip_list: list, ports=None):
+        temp_list = list()
+        for ip in ip_list:
+            temp_list.append(data_transformation_module.ip_dict(ip))
+
+        return temp_list
+
     ''' domain_results()
         Description: Extract domain info for each given domain object
         Params:
@@ -72,9 +85,12 @@ class Shodan_enum():
     def domain_results(self, data: dict):
         results = self.client.search(f"hostname:{data['domain']}")
         print(f"Result founds for  {data['domain']}: {results['total']}")
-        data["ip_list"] = list(dict.fromkeys(self.filter_search(results, data['domain'], DOMAIN)))
+        ip_list = list(dict.fromkeys(self.filter_search(results, data['domain'], DOMAIN)))
+        #open_ports = self.filter_search(results, data['domain'], PORTS)
+        data['ip_list'] = self.get_ip_dict(ip_list)
         if data["subdomain"]["name"] != None:
-            data["subdomain"]["ip_list"] = self.subdomain_results(data)
+            ip_dict = {"ip":i for i in self.subdomain_results(data)}
+            data["subdomain"]["ip_list"] = ip_dict
 
         return data
 

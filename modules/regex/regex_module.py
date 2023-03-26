@@ -46,8 +46,6 @@ def execute_in_threads(execution_threads: int, element_count: int, file_contents
             log_module.log_cli("Main------>Waiting threads to finish the work . . .", "info", INFO)
             results = future.result()
         log_module.log_cli("Main------>Execution finished", "info", INFO)
-
-        # Printing results
         log_module.log_cli("The matched patterns are:", "info", INFO)
         printing_module.print_elements(results)
 
