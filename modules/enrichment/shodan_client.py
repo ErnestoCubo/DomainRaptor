@@ -2,7 +2,7 @@ import shodan
 import requests
 from logging import DEBUG
 
-from ...log import log_module
+from ..utils import logger
 
 class Shodan_enum():
 
@@ -32,4 +32,4 @@ class Shodan_enum():
             return elements
             
         except shodan.APIError as e:
-            log_module.DEBUG(str(e), "debug", DEBUG)
+            logger.log_cli(str(e), "debug", DEBUG)
