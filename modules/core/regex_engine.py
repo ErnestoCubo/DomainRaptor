@@ -1,8 +1,8 @@
 import concurrent.futures
 import re
 from logging import INFO, ERROR, DEBUG
-from ..log import log_module
-from ..log.print import printing_module
+from ..utils import logger
+from ..output import printer
 
 REGEX_SPLIT_DOMAINS = re.compile(r"(?P<Subdomain>([\w-]+\.){1,10})?(?P<Domain>[\w-]+\.{1}[\w-]+$)")
 
@@ -20,25 +20,25 @@ def execute_in_threads(execution_threads: int, element_count: int, file_contents
             raise BufferError("[ERROR] Assigned threads are longer than the length of the list provided")
         length_elements_per_thread = element_count / execution_threads
         elements = [file_contents[x:x+int(length_elements_per_thread)] for x in range(0, element_count, int(length_elements_per_thread))]
-        log_module.log_cli("Main------>Preparing threads for extract domains", "info", INFO)
+        logger.log_cli("Main------>Preparing threads for extract domains", "info", INFO)
 
         # Adding multithreading
         with concurrent.futures.ProcessPoolExecutor() as ProccessExecutor:
-            log_module.log_cli("Main------>Execution started", "info", INFO)
+            logger.log_cli("Main------>Execution started", "info", INFO)
             future = ProccessExecutor.submit(find_patterns, elements, expr)
-            log_module.log_cli("Main------>Waiting threads to finish the work . . .", "info", INFO)
+            logger.log_cli("Main------>Waiting threads to finish the work . . .", "info", INFO)
             results = future.result()
             
-        log_module.log_cli("Main------>Execution finished", "info", INFO)
+        logger.log_cli("Main------>Execution finished", "info", INFO)
 
         # Printing results
-        log_module.log_cli("The matched patterns are:", "info", INFO)
-        printing_module.print_elements(results)
+        logger.log_cli("The matched patterns are:", "info", INFO)
+        printer.print_elements(results)
 
         return results
 
     except Exception as e:
-        log_module.log_cli(str(e), "debug", DEBUG)
+        logger.log_cli(str(e), "debug", DEBUG)
 
 def validate_domain():
     return
@@ -64,7 +64,7 @@ def extract_option(option):
         case '4':
             expr = r"^(([0-9a-fA-F]){1,4})\\:){7}([0-9a-fA-F]){1,4}"
         case _:
-            log_module.log_cli("Invalid expression option try again setting a valid -e <value>", "error", ERROR)
+            logger.log_cli("Invalid expression option try again setting a valid -e <value>", "error", ERROR)
             exit(1)
         
     return expr
