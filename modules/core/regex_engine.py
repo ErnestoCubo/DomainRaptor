@@ -39,6 +39,7 @@ def execute_in_threads(execution_threads: int, element_count: int, file_contents
 
     except Exception as e:
         logger.log_cli(str(e), "debug", DEBUG)
+        return []  # Return empty list on error instead of None
 
 def validate_domain():
     return
@@ -62,7 +63,7 @@ def extract_option(option):
         case '3':
             expr = r"([a-z,A-Z]+\:\/{2}[a-zA-Z0-9!@#$&()%-`.+,/\"]+)"
         case '4':
-            expr = r"^(([0-9a-fA-F]){1,4})\\:){7}([0-9a-fA-F]){1,4}"
+            expr = r"^(([0-9a-fA-F]{1,4}):){7}([0-9a-fA-F]{1,4})$"
         case _:
             logger.log_cli("Invalid expression option try again setting a valid -e <value>", "error", ERROR)
             exit(1)

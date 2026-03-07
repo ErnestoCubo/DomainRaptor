@@ -27,14 +27,14 @@ def extract_domain(structure_domains: str):
     
     return structure_domains[3]
 
-def tranform_to_dict_in_threads(queried_info: list):
+
+def transform_to_dict_in_threads(queried_info: list) -> dict | None:
     formalized_data = dict()
     try:
         with concurrent.futures.ProcessPoolExecutor(max_workers=10) as ThreadExecutor:
             logger.log_cli("Data_Transformation_Module------>Transforming data", "info", INFO)
             futures = ThreadExecutor.map(regex_engine.split_domain, queried_info)
             futures = list(futures)
-            print(futures)
             for x in futures:
                 if type(x) != str:
                     formalized_data[x[1]] = {
@@ -53,9 +53,10 @@ def tranform_to_dict_in_threads(queried_info: list):
                             "name": x,
                             "IPs":list()
                         }
-            logger.log_cli('Data_Trasformation_Module------>Data transformed correctly the preset format is {<DOMAIN>: INFO}', "info", INFO)
+            logger.log_cli('Data_Transformation_Module------>Data transformed correctly', "info", INFO)
             
             return formalized_data
     except Exception as e:
         logger.log_cli(str(e), "debug", DEBUG)
+        return None  # Explicit return on error
         return None

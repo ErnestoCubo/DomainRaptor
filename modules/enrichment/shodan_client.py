@@ -4,9 +4,11 @@ from logging import DEBUG
 
 from ..utils import logger
 
-class Shodan_enum():
 
-    def __init__(self, api_key) -> None:
+class ShodanClient:
+    """Client for interacting with Shodan API."""
+
+    def __init__(self, api_key: str) -> None:
         self.client = shodan.Shodan(api_key)
         self.FACETS = [
             'org',
@@ -20,16 +22,27 @@ class Shodan_enum():
             ('country', 100),
         ]
 
-    def basic_search(self, elements: dict):
+    def basic_search(self, elements: dict) -> dict:
+        """Search Shodan for information about domains.
+        
+        Args:
+            elements: Dictionary of domains to search.
+            
+        Returns:
+            Enriched dictionary with IP information.
+        """
+        if elements is None:
+            return {}
+            
         try:
-            print(elements.keys())
             for key in elements.keys():
                 results = self.client.search(key)
-                print(f"Result founds for  {key}: {results['total']}")
+                logger.log_cli(f"Results found for {key}: {results['total']}", "info", DEBUG)
                 for result in results['matches']:
                     elements[key]["Domain"]["IPs"].append(result['ip_str'])
             
             return elements
             
         except shodan.APIError as e:
-            logger.log_cli(str(e), "debug", DEBUG)
+            logger.log_cli(f"Shodan API error: {e}", "debug", DEBUG)
+            return elements  # Return original elements on error

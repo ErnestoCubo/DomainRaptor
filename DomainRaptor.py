@@ -32,13 +32,22 @@ def main(args):
 
     regexed_list = regex_engine.execute_in_threads(execution_threads, element_count, file_contents, expr)
 
+    # Initialize domain_dict to avoid NameError when expr != '2'
+    domain_dict = None
+    
     if select_expr == '2':
-        domain_dict = data_transformer.tranform_to_dict_in_threads(regexed_list)
-        if domain_dict != None:
+        domain_dict = data_transformer.transform_to_dict_in_threads(regexed_list)
+        if domain_dict is not None:
             printer.print_elements(domain_dict)
-    shodan_object = shodan_client.Shodan_enum(api_key=api_key)
-    domain_dict = shodan_object.basic_search(domain_dict)
-    printer.print_elements(domain_dict)
+            
+            # Only perform Shodan enrichment if we have domains and an API key
+            if api_key:
+                shodan_object = shodan_client.ShodanClient(api_key=api_key)
+                domain_dict = shodan_object.basic_search(domain_dict)
+                printer.print_elements(domain_dict)
+    else:
+        # For other expression types, just print the extracted patterns
+        printer.print_elements(regexed_list)
 
     return 0
 
