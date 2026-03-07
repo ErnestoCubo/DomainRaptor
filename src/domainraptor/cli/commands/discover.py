@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
 from domainraptor.core.config import AppConfig, ScanMode
-from domainraptor.core.types import Asset, AssetType, ScanResult
+from domainraptor.core.types import ScanResult
 from domainraptor.utils.output import (
     console,
     create_progress,
@@ -33,7 +33,7 @@ app = typer.Typer(
 def discover_callback(
     ctx: typer.Context,
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Target domain or IP to discover"),
     ] = None,
     subdomains: Annotated[
@@ -61,11 +61,11 @@ def discover_callback(
         typer.Option("--recursive", "-r", help="Recursively discover assets"),
     ] = False,
     sources: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--sources", help="Comma-separated list of sources to use"),
     ] = None,
     exclude_sources: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--exclude", help="Comma-separated list of sources to exclude"),
     ] = None,
     save: Annotated[
@@ -194,21 +194,20 @@ def discover_callback(
 
 def _discover_dns(target: str, result: ScanResult) -> None:
     """Discover DNS records for target."""
-    # Placeholder - will implement with dnspython
-    from domainraptor.core.types import DnsRecord
+    try:
+        from domainraptor.discovery.dns import DnsClient
 
-    # Example placeholder records
-    result.dns_records.append(DnsRecord(record_type="A", value="93.184.216.34"))
-    result.dns_records.append(DnsRecord(record_type="MX", value="mail.example.com", priority=10))
+        client = DnsClient()
+        records = client.query(target)
+        result.dns_records.extend(records)
 
-    result.assets.append(
-        Asset(
-            type=AssetType.IP,
-            value="93.184.216.34",
-            parent=target,
-            source="dns",
-        )
-    )
+        # Also resolve IPs
+        ip_assets = client.resolve_ip(target)
+        result.assets.extend(ip_assets)
+    except ImportError:
+        result.errors.append("DNS client not available (missing dnspython)")
+    except Exception as e:
+        result.errors.append(f"DNS discovery failed: {e}")
 
 
 def _discover_subdomains(
@@ -219,40 +218,52 @@ def _discover_subdomains(
     exclude: list[str] | None,
 ) -> None:
     """Discover subdomains using configured sources."""
-    # Placeholder - will implement with crt.sh, hackertarget, etc.
-    placeholder_subs = [
-        f"www.{target}",
-        f"mail.{target}",
-        f"api.{target}",
-    ]
+    try:
+        from domainraptor.discovery.crtsh import CrtShClient
+        from domainraptor.discovery.hackertarget import HackerTargetClient
 
-    for sub in placeholder_subs:
-        result.assets.append(
-            Asset(
-                type=AssetType.SUBDOMAIN,
-                value=sub,
-                parent=target,
-                source="crt_sh",
-            )
-        )
+        # Build list of clients to use
+        available_clients = {
+            "crt_sh": CrtShClient,
+            "hackertarget": HackerTargetClient,
+        }
+
+        clients_to_use = []
+        for name, client_cls in available_clients.items():
+            # Skip if explicitly excluded
+            if exclude and name in exclude:
+                continue
+            # Skip if sources specified and not in list
+            if sources and name not in sources:
+                continue
+            clients_to_use.append((name, client_cls()))
+
+        # Query each client
+        for name, client in clients_to_use:
+            try:
+                assets = client.query(target)
+                result.assets.extend(assets)
+            except Exception as e:
+                result.errors.append(f"Source {name} failed: {e}")
+
+    except ImportError as e:
+        result.errors.append(f"Subdomain discovery not available: {e}")
+    except Exception as e:
+        result.errors.append(f"Subdomain discovery failed: {e}")
 
 
 def _discover_certificates(target: str, result: ScanResult) -> None:
     """Discover SSL/TLS certificates."""
-    # Placeholder - will implement with crt.sh API and sslyze
-    from domainraptor.core.types import Certificate
+    try:
+        from domainraptor.discovery.crtsh import CrtShClient
 
-    result.certificates.append(
-        Certificate(
-            subject=f"*.{target}",
-            issuer="Let's Encrypt Authority X3",
-            serial_number="ABC123",
-            not_before=datetime(2024, 1, 1),
-            not_after=datetime(2025, 1, 1),
-            san=[target, f"*.{target}"],
-            days_until_expiry=300,
-        )
-    )
+        client = CrtShClient()
+        certs = client.query_certificates(target)
+        result.certificates.extend(certs)
+    except ImportError:
+        result.errors.append("Certificate discovery not available (missing httpx)")
+    except Exception as e:
+        result.errors.append(f"Certificate discovery failed: {e}")
 
 
 def _discover_ports(target: str, result: ScanResult, config: AppConfig) -> None:
@@ -282,12 +293,26 @@ def _discover_ports(target: str, result: ScanResult, config: AppConfig) -> None:
 
 def _discover_whois(target: str, result: ScanResult) -> None:
     """Perform WHOIS lookup."""
-    # Placeholder - will implement with python-whois
-    result.metadata["whois"] = {
-        "registrar": "Example Registrar",
-        "creation_date": "1995-08-14",
-        "expiration_date": "2025-08-13",
-    }
+    try:
+        from domainraptor.discovery.whois_client import WhoisClient
+
+        client = WhoisClient()
+        info = client.query(target)
+        if info:
+            creation = info.creation_date.isoformat() if info.creation_date else None
+            expiration = info.expiration_date.isoformat() if info.expiration_date else None
+            result.metadata["whois"] = {
+                "registrar": info.registrar,
+                "creation_date": creation,
+                "expiration_date": expiration,
+                "nameservers": info.nameservers,
+                "dnssec": info.dnssec,
+                "days_until_expiry": info.days_until_expiry,
+            }
+    except ImportError:
+        result.errors.append("WHOIS client not available (missing python-whois)")
+    except Exception as e:
+        result.errors.append(f"WHOIS lookup failed: {e}")
 
 
 # ============================================
@@ -304,7 +329,7 @@ def discover_subdomains_cmd(
         typer.Option("--recursive", "-r", help="Recursively discover nested subdomains"),
     ] = False,
     wordlist: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--wordlist", "-w", help="Custom wordlist for bruteforce"),
     ] = None,
     bruteforce: Annotated[
@@ -313,10 +338,16 @@ def discover_subdomains_cmd(
     ] = False,
 ) -> None:
     """Discover subdomains only."""
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    from domainraptor.discovery import create_default_orchestrator
+
     print_info(f"Subdomain discovery for: {target}")
-    print_info(f"Recursive: {recursive} | Bruteforce: {bruteforce}")
-    # TODO: Implement dedicated subdomain discovery
+
+    orchestrator = create_default_orchestrator()
+    result = orchestrator.discover(target, resolve_ips=recursive)
+
+    print_success(f"Found {len(result.unique_subdomains)} unique subdomains")
+    if result.subdomains:
+        print_assets_table(result.subdomains)
 
 
 @app.command("dns")
@@ -329,9 +360,33 @@ def discover_dns_cmd(
     ] = "A,AAAA,MX,NS,TXT,CNAME,SOA",
 ) -> None:
     """Enumerate DNS records."""
+    from rich.table import Table
+
+    from domainraptor.discovery.dns import DnsClient
+
     print_info(f"DNS enumeration for: {target}")
-    print_info(f"Record types: {record_types}")
-    # TODO: Implement DNS enumeration
+
+    client = DnsClient()
+    types = [t.strip().upper() for t in record_types.split(",")]
+    records = client.query(target, record_types=types)
+
+    if records:
+        table = Table(title=f"DNS Records for {target}")
+        table.add_column("Type", style="cyan")
+        table.add_column("Value", style="green")
+        table.add_column("TTL", style="dim")
+        table.add_column("Priority", style="yellow")
+
+        for rec in records:
+            table.add_row(
+                rec.record_type,
+                rec.value,
+                str(rec.ttl) if rec.ttl else "-",
+                str(rec.priority) if rec.priority else "-",
+            )
+        console.print(table)
+    else:
+        print_warning("No DNS records found")
 
 
 @app.command("certs")
@@ -344,8 +399,21 @@ def discover_certs_cmd(
     ] = False,
 ) -> None:
     """Discover SSL/TLS certificates from CT logs."""
+    from domainraptor.discovery.crtsh import CrtShClient
+
     print_info(f"Certificate discovery for: {target}")
-    # TODO: Implement certificate discovery
+
+    client = CrtShClient()
+    certs = client.query_certificates(target)
+
+    if not include_expired:
+        certs = [c for c in certs if not c.is_expired]
+
+    if certs:
+        print_certificates_table(certs)
+        print_success(f"Found {len(certs)} certificates")
+    else:
+        print_warning("No certificates found")
 
 
 @app.command("ports")
@@ -357,7 +425,7 @@ def discover_ports_cmd(
         typer.Option("--range", "-r", help="Port range to scan"),
     ] = "1-1000",
     top_ports: Annotated[
-        Optional[int],
+        int | None,
         typer.Option("--top", "-t", help="Scan top N common ports"),
     ] = None,
 ) -> None:
@@ -373,5 +441,36 @@ def discover_whois_cmd(
     target: Annotated[str, typer.Argument(help="Target domain or IP")],
 ) -> None:
     """Perform WHOIS lookup."""
+    from rich.panel import Panel
+    from rich.table import Table
+
+    from domainraptor.discovery.whois_client import WhoisClient
+
     print_info(f"WHOIS lookup for: {target}")
-    # TODO: Implement WHOIS lookup
+
+    client = WhoisClient()
+    info = client.query(target)
+
+    if info:
+        table = Table(show_header=False, box=None)
+        table.add_column("Field", style="cyan")
+        table.add_column("Value", style="green")
+
+        created = info.creation_date.strftime("%Y-%m-%d") if info.creation_date else "N/A"
+        expires = info.expiration_date.strftime("%Y-%m-%d") if info.expiration_date else "N/A"
+        expiry_days = str(info.days_until_expiry) if info.days_until_expiry else "N/A"
+
+        table.add_row("Domain", info.domain)
+        table.add_row("Registrar", info.registrar or "N/A")
+        table.add_row("Created", created)
+        table.add_row("Expires", expires)
+        table.add_row("Days until expiry", expiry_days)
+        table.add_row("DNSSEC", "Yes" if info.dnssec else "No")
+        if info.nameservers:
+            table.add_row("Nameservers", ", ".join(info.nameservers[:4]))
+        if info.registrant_org:
+            table.add_row("Organization", info.registrant_org)
+
+        console.print(Panel(table, title=f"WHOIS: {target}"))
+    else:
+        print_error(f"WHOIS lookup failed for {target}")
