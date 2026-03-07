@@ -7,6 +7,13 @@ from typing import Annotated, Optional
 
 import typer
 
+from domainraptor.assessment import (
+    AssessmentOptions,
+    AssessmentOrchestrator,
+    DnsSecurityChecker,
+    HeadersChecker,
+    SSLAnalyzer,
+)
 from domainraptor.core.config import AppConfig, ScanMode
 from domainraptor.core.types import (
     ConfigIssue,
@@ -359,104 +366,84 @@ def assess_outdated_cmd(
 
 def _assess_vulnerabilities(target: str, result: ScanResult, config: AppConfig) -> None:
     """Perform vulnerability assessment."""
-    # Placeholder - will implement with NVD API, Shodan
-    result.vulnerabilities.append(
-        Vulnerability(
-            id="CVE-2024-1234",
-            title="Example vulnerability in OpenSSL",
-            severity=SeverityLevel.HIGH,
-            description="Buffer overflow in OpenSSL allows remote code execution",
-            affected_asset=f"{target}:443",
-            cvss_score=8.1,
-            source="nvd",
-        )
-    )
+    # Vulnerability scanning requires service detection and CVE lookups
+    # For now, we note this as a placeholder for future implementation
+    # Real implementation would use NVD API, Shodan, etc.
+    pass
 
 
 def _assess_configuration(target: str, result: ScanResult, config: AppConfig) -> None:
-    """Perform configuration assessment."""
-    _check_ssl_config(target, result)
-    _check_dns_config(target, result)
+    """Perform configuration assessment using real checkers."""
+    # SSL/TLS check
+    try:
+        with SSLAnalyzer() as ssl_checker:
+            issues = ssl_checker.assess_safe(target)
+            result.config_issues.extend(issues)
+    except Exception:
+        pass
+
+    # DNS security check
+    try:
+        with DnsSecurityChecker() as dns_checker:
+            issues = dns_checker.assess_safe(target)
+            result.config_issues.extend(issues)
+    except Exception:
+        pass
+
+    # HTTP headers check
+    try:
+        with HeadersChecker() as headers_checker:
+            issues = headers_checker.assess_safe(target)
+            result.config_issues.extend(issues)
+    except Exception:
+        pass
 
 
 def _assess_outdated(target: str, result: ScanResult, config: AppConfig) -> None:
     """Check for outdated software."""
-    _check_outdated_software(target, result, include_minor=False)
+    # This requires service fingerprinting which we haven't implemented yet
+    # Placeholder for future implementation
+    pass
 
 
 def _query_nvd(target: str, result: ScanResult, min_severity: SeverityLevel) -> None:
     """Query NVD for vulnerabilities."""
-    # Placeholder - will implement with NVD API
+    # NVD API requires knowing specific software/versions
+    # This needs service detection first
     pass
 
 
 def _check_ssl_config(target: str, result: ScanResult) -> None:
-    """Check SSL/TLS configuration."""
-    # Placeholder - will implement with sslyze
-    result.config_issues.append(
-        ConfigIssue(
-            id="SSL-001",
-            title="TLS 1.0 enabled",
-            severity=SeverityLevel.MEDIUM,
-            category="ssl",
-            description="TLS 1.0 is deprecated and should be disabled",
-            affected_asset=f"{target}:443",
-            current_value="TLS 1.0, 1.1, 1.2, 1.3",
-            recommended_value="TLS 1.2, 1.3 only",
-            remediation="Disable TLS 1.0 and 1.1 in your web server configuration",
-        )
-    )
+    """Check SSL/TLS configuration using real analyzer."""
+    try:
+        with SSLAnalyzer() as checker:
+            issues = checker.assess(target)
+            result.config_issues.extend(issues)
+    except Exception as e:
+        result.errors.append(f"SSL check failed: {e}")
 
 
 def _check_dns_config(target: str, result: ScanResult) -> None:
-    """Check DNS security configuration."""
-    # Placeholder - will implement with dnspython
-    result.config_issues.append(
-        ConfigIssue(
-            id="DNS-001",
-            title="Missing DMARC record",
-            severity=SeverityLevel.MEDIUM,
-            category="dns",
-            description="No DMARC record found for email authentication",
-            affected_asset=target,
-            current_value="Not configured",
-            recommended_value='v=DMARC1; p=reject; rua=mailto:dmarc@example.com',
-            remediation="Add a DMARC TXT record to your DNS zone",
-        )
-    )
+    """Check DNS security configuration using real checker."""
+    try:
+        with DnsSecurityChecker() as checker:
+            issues = checker.assess(target)
+            result.config_issues.extend(issues)
+    except Exception as e:
+        result.errors.append(f"DNS check failed: {e}")
 
 
 def _check_http_headers(target: str, result: ScanResult) -> None:
-    """Check HTTP security headers."""
-    # Placeholder - will implement with httpx
-    result.config_issues.append(
-        ConfigIssue(
-            id="HDR-001",
-            title="Missing Content-Security-Policy header",
-            severity=SeverityLevel.LOW,
-            category="headers",
-            description="CSP header not set, increasing XSS risk",
-            affected_asset=f"https://{target}",
-            current_value="Not set",
-            recommended_value="default-src 'self'; script-src 'self'",
-            remediation="Add Content-Security-Policy header to your web server",
-        )
-    )
+    """Check HTTP security headers using real checker."""
+    try:
+        with HeadersChecker() as checker:
+            issues = checker.assess(target)
+            result.config_issues.extend(issues)
+    except Exception as e:
+        result.errors.append(f"Headers check failed: {e}")
 
 
 def _check_outdated_software(target: str, result: ScanResult, include_minor: bool) -> None:
     """Check for outdated software versions."""
-    # Placeholder - will implement
-    result.config_issues.append(
-        ConfigIssue(
-            id="OUT-001",
-            title="Outdated nginx version",
-            severity=SeverityLevel.LOW,
-            category="outdated",
-            description="nginx 1.18.0 is outdated, latest is 1.25.0",
-            affected_asset=f"{target}:80",
-            current_value="nginx/1.18.0",
-            recommended_value="nginx/1.25.0",
-            remediation="Update nginx to the latest stable version",
-        )
-    )
+    # Requires service fingerprinting - placeholder for future
+    pass
