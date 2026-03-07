@@ -42,26 +42,37 @@ class WhoisInfo:
     # Additional
     raw: dict[str, Any] | None = None
 
+    def _normalize_date(self, dt: datetime | None) -> datetime | None:
+        """Remove timezone info for comparison."""
+        if dt is None:
+            return None
+        if dt.tzinfo is not None:
+            return dt.replace(tzinfo=None)
+        return dt
+
     @property
     def days_until_expiry(self) -> int | None:
         """Calculate days until domain expiration."""
-        if self.expiration_date is None:
+        exp = self._normalize_date(self.expiration_date)
+        if exp is None:
             return None
-        return (self.expiration_date - datetime.now()).days
+        return (exp - datetime.now()).days
 
     @property
     def is_expired(self) -> bool:
         """Check if domain has expired."""
-        if self.expiration_date is None:
+        exp = self._normalize_date(self.expiration_date)
+        if exp is None:
             return False
-        return self.expiration_date < datetime.now()
+        return exp < datetime.now()
 
     @property
     def age_days(self) -> int | None:
         """Calculate domain age in days."""
-        if self.creation_date is None:
+        creation = self._normalize_date(self.creation_date)
+        if creation is None:
             return None
-        return (datetime.now() - self.creation_date).days
+        return (datetime.now() - creation).days
 
 
 class WhoisClient:

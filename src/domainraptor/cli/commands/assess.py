@@ -38,7 +38,7 @@ def assess_callback(
     ctx: typer.Context,
     target: Annotated[
         Optional[str],
-        typer.Argument(help="Target domain or IP to assess"),
+        typer.Option("--target", "-T", help="Target domain or IP to assess"),
     ] = None,
 ) -> None:
     """

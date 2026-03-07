@@ -34,7 +34,7 @@ def discover_callback(
     ctx: typer.Context,
     target: Annotated[
         str | None,
-        typer.Argument(help="Target domain or IP to discover"),
+        typer.Option("--target", "-T", help="Target domain or IP to discover"),
     ] = None,
     subdomains: Annotated[
         bool,
@@ -78,20 +78,19 @@ def discover_callback(
 
     [bold cyan]Examples:[/bold cyan]
 
-        [dim]# Basic subdomain discovery[/dim]
-        domainraptor discover example.com
+        [dim]# Full discovery workflow[/dim]
+        domainraptor discover -T example.com
 
         [dim]# Deep discovery with port scanning[/dim]
-        domainraptor discover example.com --mode deep --ports
+        domainraptor discover -T example.com --ports
 
-        [dim]# Quick discovery, free sources only[/dim]
-        domainraptor discover example.com --mode quick --free-only
+        [dim]# Use specific sources only[/dim]
+        domainraptor discover -T example.com --sources crt_sh,hackertarget
 
-        [dim]# Discover using specific sources[/dim]
-        domainraptor discover example.com --sources crt_sh,hackertarget
-
-        [dim]# Stealth mode (slow, avoids detection)[/dim]
-        domainraptor discover example.com --mode stealth
+        [dim]# Individual commands (see subcommands)[/dim]
+        domainraptor discover dns example.com
+        domainraptor discover whois example.com
+        domainraptor discover certs example.com
     """
     if target is None:
         # If no target and no subcommand, show help
