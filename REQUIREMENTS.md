@@ -646,43 +646,105 @@ Total               ~480 MB + OS
 
 ## 12. Roadmap
 
-### 12.1 Version Milestones
+### 12.1 Development Phases
 
-#### v0.2.0 - Foundation (Q1 2026)
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      DEVELOPMENT PHASES - MARCH 2026                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Phase   Description                              Status                    │
+│  ─────   ───────────────────────────────────────  ───────                   │
+│  0-2     Bug fixes, Dev tools, CLI structure      ✅ COMPLETE               │
+│  3       Discovery (crt.sh, DNS, WHOIS, etc.)     ✅ COMPLETE               │
+│  4       Assessment (SSL, Headers, DNS security)  ✅ COMPLETE               │
+│  5       Storage (SQLite persistence)             📋 NEXT                   │
+│  6       Watch/Monitoring (continuous scan)       📋 PLANNED                │
+│  7       Compare (historical diff)                📋 PLANNED                │
+│  8       Reporting (JSON, HTML, Markdown, PDF)    📋 PLANNED                │
+│  9       Web UI (FastAPI + React)                 📋 FUTURE                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 12.2 Version Milestones
+
+#### v0.2.0 - Foundation (Q1 2026) ✅ COMPLETE
 
 - [x] Project structure reorganization
-- [ ] Fix critical bugs (Phase 0)
-- [ ] Development environment setup
-- [ ] CI/CD pipeline
-- [ ] 80% test coverage
+- [x] Fix critical bugs (Phase 0)
+- [x] Development environment setup (Ruff, pyproject.toml)
+- [x] CLI framework with Typer + Rich
+- [x] Core types and configuration
 
-#### v0.3.0 - CLI Complete (Q2 2026)
+#### v0.3.0 - Discovery & Assessment (Q1 2026) ✅ COMPLETE
 
-- [ ] All 4 extraction options working
-- [ ] Export to JSON/CSV
-- [ ] WHOIS integration
+- [x] Discovery module with free data sources:
+  - [x] crt.sh (Certificate Transparency)
+  - [x] HackerTarget (DNS/subdomains)
+  - [x] dnspython (DNS resolution)
+  - [x] python-whois (WHOIS lookup)
+- [x] Discovery orchestrator (parallel execution)
+- [x] Assessment module:
+  - [x] SSL/TLS analyzer (protocols, ciphers, certs)
+  - [x] HTTP security headers checker (HSTS, CSP, etc.)
+  - [x] DNS security checker (DNSSEC, SPF, DMARC, DKIM, CAA)
+- [x] Assessment orchestrator
 
-#### v0.5.0 - Web Beta (Q2-Q3 2026)
+#### v0.4.0 - Persistence & Monitoring (Q2 2026) 🔄 IN PROGRESS
 
-- [ ] FastAPI backend
-- [ ] Basic React frontend
+- [ ] SQLite storage backend
+- [ ] Scan history persistence
+- [ ] Watch mode (continuous monitoring)
+- [ ] Change detection and alerts
+- [ ] Compare scans over time
+
+#### v0.5.0 - Reporting (Q2 2026)
+
+- [ ] JSON export
+- [ ] HTML reports with templates
+- [ ] Markdown reports
+- [ ] PDF generation
+- [ ] Executive summary templates
+
+#### v1.0.0 - Production Ready (Q3-Q4 2026)
+
+- [ ] Web UI (FastAPI backend + React frontend)
 - [ ] User authentication
-
-#### v1.0.0 - Production Ready (Q4 2026)
-
-- [ ] All planned features
 - [ ] Full documentation
 - [ ] Security audit completed
+- [ ] 80% test coverage
 
-### 12.2 Priority Matrix
+### 12.3 Feature Status
+
+| Feature | Status | Phase |
+|---------|--------|-------|
+| Subdomain Discovery (crt.sh) | ✅ Complete | 3 |
+| Subdomain Discovery (HackerTarget) | ✅ Complete | 3 |
+| DNS Resolution | ✅ Complete | 3 |
+| WHOIS Lookup | ✅ Complete | 3 |
+| SSL/TLS Analysis | ✅ Complete | 4 |
+| HTTP Headers Audit | ✅ Complete | 4 |
+| DNS Security (SPF/DMARC/DKIM) | ✅ Complete | 4 |
+| DNSSEC Validation | ✅ Complete | 4 |
+| CAA Record Check | ✅ Complete | 4 |
+| SQLite Storage | 📋 Planned | 5 |
+| Watch Mode | 📋 Planned | 6 |
+| Scan Comparison | 📋 Planned | 7 |
+| Report Generation | 📋 Planned | 8 |
+| CVE Correlation | 📋 Planned | Future |
+| Web UI | 📋 Planned | Future |
+
+### 12.4 Priority Matrix
 
 | Task | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| Phase 0 bugs | High | Low | P0 - NOW |
-| Dev env setup | High | Medium | P1 |
-| Export feature | High | Low | P2 |
-| WHOIS (#7) | Medium | Low | P3 |
+| Storage module | High | Medium | P0 - NEXT |
+| Watch/Monitor | High | Medium | P1 |
+| Report export | High | Low | P2 |
+| Scan comparison | Medium | Low | P3 |
 | Web UI | High | High | P4 |
+| CVE correlation | Medium | Medium | P5 |
 
 ---
 
@@ -693,7 +755,7 @@ Total               ~480 MB + OS
 ```bash
 git clone https://github.com/YOUR_USERNAME/DomainRaptor.git
 cd DomainRaptor
-uv sync --dev
+pip install -e ".[dev]"
 pre-commit install
 git checkout -b feature/your-feature
 ```
