@@ -1,8 +1,8 @@
 # DomainRaptor Ruff Configuration
 # https://docs.astral.sh/ruff/configuration/
 
-# Target Python 3.12
-target-version = "py312"
+# Target Python 3.10+ for broader compatibility
+target-version = "py310"
 
 # Line length (same as black default, but more readable for security tools)
 line-length = 100
@@ -28,20 +28,20 @@ include = ["*.py", "*.pyi"]
 [lint]
 # Enable rule categories
 select = [
-    "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
-    "F",      # Pyflakes (undefined names, unused imports)
-    "I",      # isort (import sorting)
-    "UP",     # pyupgrade (modern Python syntax)
-    "B",      # flake8-bugbear (common bugs)
-    "SIM",    # flake8-simplify (code simplification)
-    "C4",     # flake8-comprehensions (better comprehensions)
-    "S",      # flake8-bandit (security checks - critical for this project)
-    "T20",    # flake8-print (catch debug prints)
-    "RET",    # flake8-return (return statement issues)
-    "PTH",    # flake8-use-pathlib (prefer pathlib)
-    "PERF",   # perflint (performance issues)
-    "RUF",    # Ruff-specific rules
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes (undefined names, unused imports)
+    "I",    # isort (import sorting)
+    "UP",   # pyupgrade (modern Python syntax)
+    "B",    # flake8-bugbear (common bugs)
+    "SIM",  # flake8-simplify (code simplification)
+    "C4",   # flake8-comprehensions (better comprehensions)
+    "S",    # flake8-bandit (security checks - critical for this project)
+    "T20",  # flake8-print (catch debug prints)
+    "RET",  # flake8-return (return statement issues)
+    "PTH",  # flake8-use-pathlib (prefer pathlib)
+    "PERF", # perflint (performance issues)
+    "RUF",  # Ruff-specific rules
 ]
 
 # Ignore specific rules that are too strict or conflict
@@ -89,7 +89,12 @@ section-order = [
 
 [lint.flake8-bugbear]
 # Extend immutable calls to include common patterns
-extend-immutable-calls = ["typer.Argument", "typer.Option", "fastapi.Depends", "fastapi.Query"]
+extend-immutable-calls = [
+    "typer.Argument",
+    "typer.Option",
+    "fastapi.Depends",
+    "fastapi.Query",
+]
 
 [lint.flake8-bandit]
 # Hardcoded temp directory - often needed

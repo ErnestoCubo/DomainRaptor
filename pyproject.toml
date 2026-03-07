@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "Cyber Intelligence tool for domain reconnaissance and vulnerability assessment"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 keywords = ["security", "reconnaissance", "osint", "domain", "vulnerability"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -14,6 +14,8 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Security",
