@@ -728,7 +728,7 @@ Total               ~480 MB + OS
 | DNS Security (SPF/DMARC/DKIM) | ✅ Complete | 4 |
 | DNSSEC Validation | ✅ Complete | 4 |
 | CAA Record Check | ✅ Complete | 4 |
-| SQLite Storage | 📋 Planned | 5 |
+| SQLite Storage | ✅ Complete | 5 |
 | Watch Mode | 📋 Planned | 6 |
 | Scan Comparison | 📋 Planned | 7 |
 | Report Generation | 📋 Planned | 8 |
@@ -739,8 +739,8 @@ Total               ~480 MB + OS
 
 | Task | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| Storage module | High | Medium | P0 - NEXT |
-| Watch/Monitor | High | Medium | P1 |
+| Storage module | ✅ Complete | Medium | P0 - DONE |
+| Watch/Monitor | High | Medium | P1 - NEXT |
 | Report export | High | Low | P2 |
 | Scan comparison | Medium | Low | P3 |
 | Web UI | High | High | P4 |

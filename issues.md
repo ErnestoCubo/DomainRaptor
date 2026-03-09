@@ -478,15 +478,15 @@ Implement SQLite storage to persist scan results, assets, and findings.
 
 ### Acceptance Criteria
 
-- [ ] SQLite database initialization
-- [ ] Scan CRUD operations
-- [ ] Asset storage
-- [ ] ConfigIssue storage
-- [ ] Migration support
+- [x] SQLite database initialization
+- [x] Scan CRUD operations
+- [x] Asset storage
+- [x] ConfigIssue storage
+- [x] Migration support
 
 **Labels:** `phase-5`, `storage`, `enhancement`
 **Milestone:** v0.4.0 - Persistence
-**Status:** 📋 TODO
+**Status:** ✅ DONE
 
 ---
 
@@ -510,16 +510,16 @@ domainraptor db backup <path>
 
 ### Acceptance Criteria
 
-- [ ] List scans with filters
-- [ ] Show scan details
-- [ ] Delete individual scans
-- [ ] Export scan to file
-- [ ] Prune old scans
-- [ ] Backup database
+- [x] List scans with filters
+- [x] Show scan details
+- [x] Delete individual scans
+- [x] Export scan to file
+- [x] Prune old scans
+- [ ] Backup database (optional - deferred)
 
 **Labels:** `phase-5`, `storage`, `cli`, `enhancement`
 **Milestone:** v0.4.0 - Persistence
-**Status:** 📋 TODO
+**Status:** ✅ DONE
 
 ---
 
