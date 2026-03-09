@@ -862,9 +862,9 @@ domainraptor assess -T example.com
 
 ```
 ╭─────────────── DNS Records for example.com ───────────────╮
-│ Type  │ Value                  │ TTL    │ Priority       │
-│ A     │ 93.184.216.34          │ 86400  │ -              │
-│ MX    │ mail.example.com       │ 86400  │ 10             │
+│ Type  │ Value                  │ TTL    │ Priority        │
+│ A     │ 93.184.216.34          │ 86400  │ -               │
+│ MX    │ mail.example.com       │ 86400  │ 10              │
 ╰───────────────────────────────────────────────────────────╯
 ```
 
@@ -872,9 +872,9 @@ domainraptor assess -T example.com
 
 ```
 ╭────────────── Configuration Issues ──────────────╮
-│ ID      │ Severity │ Category │ Title           │
-│ DNS-001 │ MEDIUM   │ dns      │ DNSSEC not...   │
-│ HDR-001 │ HIGH     │ headers  │ Missing HSTS... │
+│ ID      │ Severity │ Category │ Title            │
+│ DNS-001 │ MEDIUM   │ dns      │ DNSSEC not...    │
+│ HDR-001 │ HIGH     │ headers  │ Missing HSTS...  │
 ╰──────────────────────────────────────────────────╯
 ```
 

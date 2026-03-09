@@ -47,6 +47,10 @@ def assess_callback(
         Optional[str],
         typer.Option("--target", "-T", help="Target domain or IP to assess"),
     ] = None,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
 ) -> None:
     """
     🛡️ Assess security posture of a target.
@@ -116,6 +120,17 @@ def assess_callback(
     if result.config_issues:
         console.print()
         print_config_issues_table(result.config_issues)
+
+    # Save to database
+    if save:
+        try:
+            from domainraptor.storage import ScanRepository
+
+            repo = ScanRepository()
+            scan_id = repo.save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as e:
+            print_warning(f"Failed to save results: {e}")
 
 
 # ============================================

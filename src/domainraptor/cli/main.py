@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 
 from domainraptor import __version__
-from domainraptor.cli.commands import assess, compare, discover, report, watch
+from domainraptor.cli.commands import assess, compare, db, discover, report, watch
 from domainraptor.core.config import AppConfig, OutputFormat, ScanMode
 from domainraptor.utils.output import print_banner, print_error, print_info
 
@@ -28,6 +28,7 @@ app.add_typer(assess.app, name="assess", help="🛡️ Assess vulnerabilities an
 app.add_typer(watch.app, name="watch", help="👁️ Monitor targets for changes")
 app.add_typer(compare.app, name="compare", help="📊 Compare scan results")
 app.add_typer(report.app, name="report", help="📄 Generate reports")
+app.add_typer(db.app, name="db", help="💾 Database management")
 
 console = Console()
 

@@ -187,8 +187,14 @@ def discover_callback(
 
     # Save to database
     if save:
-        # TODO: Save to database
-        print_info(f"Results saved for: {target}")
+        try:
+            from domainraptor.storage import ScanRepository
+
+            repo = ScanRepository()
+            scan_id = repo.save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as e:
+            print_warning(f"Failed to save results: {e}")
 
 
 def _discover_dns(target: str, result: ScanResult) -> None:
