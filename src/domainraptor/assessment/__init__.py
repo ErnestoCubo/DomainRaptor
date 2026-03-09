@@ -41,4 +41,3 @@ __all__ = [
     "AssessmentProgress",
     "run_assessment",
 ]
-

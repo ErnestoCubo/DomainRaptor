@@ -185,7 +185,7 @@ graph TB
         SOC[SOC Analyst]
         BB[Bug Bounty Hunter]
     end
-    
+
     subgraph DomainRaptor
         UC1[UC1: Extract Patterns]
         UC2[UC2: Enrich with Shodan]
@@ -195,16 +195,16 @@ graph TB
         UC6[UC6: Detect Phishing]
         UC7[UC7: Score Risk]
     end
-    
+
     RT --> UC1
     RT --> UC2
     RT --> UC4
     RT --> UC6
-    
+
     SOC --> UC5
     SOC --> UC7
     SOC --> UC4
-    
+
     BB --> UC1
     BB --> UC2
     BB --> UC3
@@ -315,25 +315,25 @@ graph TB
         CLI[CLI Interface]
         WEB[Web Browser]
     end
-    
+
     subgraph "Application Layer"
         API[FastAPI Backend]
         WORKER[Background Workers]
     end
-    
+
     subgraph "Data Layer"
         SQLITE[(SQLite)]
         MEILI[(Meilisearch)]
         REDIS[(Redis Cache)]
     end
-    
+
     subgraph "External Services"
         SHODAN[Shodan API]
         WHOIS[WHOIS Servers]
         FREE[Free APIs]
         GROQ[Groq AI API]
     end
-    
+
     CLI --> API
     WEB --> API
     API --> WORKER
@@ -466,12 +466,12 @@ sources:
     - python-whois
     - sslyze
     - nvd_nist
-    
+
   tier2_freemium:  # Optional, free registration
     - alienvault_otx
     - urlscan_io
     - censys
-    
+
   tier3_paid:  # User provides API key
     - shodan
     - virustotal
@@ -518,14 +518,14 @@ erDiagram
     USER ||--o{ SCAN : creates
     SCAN ||--o{ RESULT : contains
     RESULT ||--o{ FINDING : has
-    
+
     USER {
         uuid id PK
         string email UK
         string password_hash
         datetime created_at
     }
-    
+
     SCAN {
         uuid id PK
         uuid user_id FK
@@ -534,7 +534,7 @@ erDiagram
         enum status
         datetime created_at
     }
-    
+
     RESULT {
         uuid id PK
         uuid scan_id FK
@@ -543,7 +543,7 @@ erDiagram
         json data
         float risk_score
     }
-    
+
     FINDING {
         uuid id PK
         uuid result_id FK
@@ -574,21 +574,21 @@ graph LR
         RUFF[Ruff Check]
         FORMAT[Ruff Format]
     end
-    
+
     subgraph "Stage 2: Test"
         UNIT[Unit Tests]
         COV[Coverage 80%]
     end
-    
+
     subgraph "Stage 3: Security"
         BANDIT[Bandit SAST]
         SAFETY[Safety CVE]
     end
-    
+
     subgraph "Stage 4: Build"
         DOCKER[Docker Build]
     end
-    
+
     RUFF --> FORMAT --> UNIT --> COV
     COV --> BANDIT --> SAFETY --> DOCKER
 ```
@@ -658,8 +658,9 @@ Total               ~480 MB + OS
 │  0-2     Bug fixes, Dev tools, CLI structure      ✅ COMPLETE               │
 │  3       Discovery (crt.sh, DNS, WHOIS, etc.)     ✅ COMPLETE               │
 │  4       Assessment (SSL, Headers, DNS security)  ✅ COMPLETE               │
-│  5       Storage (SQLite persistence)             📋 NEXT                   │
-│  6       Watch/Monitoring (continuous scan)       📋 PLANNED                │
+│  5       Storage (SQLite persistence)             ✅ COMPLETE               │
+│  X1      External APIs (Shodan, VT, ST)           ✅ COMPLETE               │
+│  6       Watch/Monitoring (continuous scan)       📋 NEXT                   │
 │  7       Compare (historical diff)                📋 PLANNED                │
 │  8       Reporting (JSON, HTML, Markdown, PDF)    📋 PLANNED                │
 │  9       Web UI (FastAPI + React)                 📋 FUTURE                 │
@@ -693,11 +694,32 @@ Total               ~480 MB + OS
 
 #### v0.4.0 - Persistence & Monitoring (Q2 2026) 🔄 IN PROGRESS
 
-- [ ] SQLite storage backend
-- [ ] Scan history persistence
+- [x] SQLite storage backend
+- [x] Scan history persistence
 - [ ] Watch mode (continuous monitoring)
 - [ ] Change detection and alerts
 - [ ] Compare scans over time
+
+#### v0.3.5 - External API Integrations (Phase X1) ✅ COMPLETE
+
+- [x] API key management CLI (`domainraptor config`)
+  - [x] Set/get/list API keys
+  - [x] Test key validity
+  - [x] Secure storage in `~/.domainraptor/.env`
+- [x] Shodan integration:
+  - [x] Host information (ports, services, banners)
+  - [x] DNS subdomain enumeration
+  - [x] Vulnerability detection (CVE mapping)
+- [x] VirusTotal integration:
+  - [x] Domain/IP reputation scores
+  - [x] Subdomain enumeration
+  - [x] Threat intelligence metadata
+- [x] SecurityTrails integration:
+  - [x] Domain information
+  - [x] Subdomain enumeration
+  - [x] Historical DNS data
+- [x] Graceful error handling (never crash on API errors)
+- [x] Integration with discover command (`--sources shodan,virustotal`)
 
 #### v0.5.0 - Reporting (Q2 2026)
 
@@ -729,6 +751,10 @@ Total               ~480 MB + OS
 | DNSSEC Validation | ✅ Complete | 4 |
 | CAA Record Check | ✅ Complete | 4 |
 | SQLite Storage | ✅ Complete | 5 |
+| API Key Management | ✅ Complete | X1 |
+| Shodan Integration | ✅ Complete | X1 |
+| VirusTotal Integration | ✅ Complete | X1 |
+| SecurityTrails Integration | ✅ Complete | X1 |
 | Watch Mode | 📋 Planned | 6 |
 | Scan Comparison | 📋 Planned | 7 |
 | Report Generation | 📋 Planned | 8 |
@@ -740,6 +766,7 @@ Total               ~480 MB + OS
 | Task | Impact | Effort | Priority |
 |------|--------|--------|----------|
 | Storage module | ✅ Complete | Medium | P0 - DONE |
+| External APIs | ✅ Complete | Medium | - DONE |
 | Watch/Monitor | High | Medium | P1 - NEXT |
 | Report export | High | Low | P2 |
 | Scan comparison | Medium | Low | P3 |

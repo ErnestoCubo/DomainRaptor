@@ -66,9 +66,7 @@ class DatabaseManager:
     def _get_schema_version(self, conn: sqlite3.Connection) -> int:
         """Get current schema version."""
         try:
-            cursor = conn.execute(
-                "SELECT value FROM metadata WHERE key = 'schema_version'"
-            )
+            cursor = conn.execute("SELECT value FROM metadata WHERE key = 'schema_version'")
             row = cursor.fetchone()
             return int(row["value"]) if row else 0
         except sqlite3.OperationalError:
@@ -224,9 +222,7 @@ class DatabaseManager:
             """
         )
 
-    def _migrate_schema(
-        self, conn: sqlite3.Connection, from_version: int, to_version: int
-    ) -> None:
+    def _migrate_schema(self, conn: sqlite3.Connection, from_version: int, to_version: int) -> None:
         """Run schema migrations."""
         # Add migrations here as needed
         # for version in range(from_version + 1, to_version + 1):
@@ -240,8 +236,15 @@ class DatabaseManager:
             stats = {}
 
             # Count records in each table
-            for table in ["scans", "assets", "dns_records", "certificates",
-                         "config_issues", "vulnerabilities", "watch_targets"]:
+            for table in [
+                "scans",
+                "assets",
+                "dns_records",
+                "certificates",
+                "config_issues",
+                "vulnerabilities",
+                "watch_targets",
+            ]:
                 cursor = conn.execute(f"SELECT COUNT(*) as count FROM {table}")
                 stats[table] = cursor.fetchone()["count"]
 

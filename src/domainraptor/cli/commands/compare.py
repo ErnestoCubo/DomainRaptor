@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
+from rich.table import Table
 
 from domainraptor.core.config import AppConfig
 from domainraptor.core.types import AssetType, Change, ChangeType
@@ -13,11 +13,9 @@ from domainraptor.utils.output import (
     console,
     create_progress,
     print_changes_table,
-    print_error,
     print_info,
     print_success,
 )
-from rich.table import Table
 
 app = typer.Typer(
     name="compare",
@@ -59,7 +57,7 @@ def compare_history_cmd(
         typer.Option("--last", "-l", help="Compare last N scans"),
     ] = 2,
     since: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--since", "-s", help="Compare since date (YYYY-MM-DD)"),
     ] = None,
 ) -> None:
@@ -203,7 +201,7 @@ def compare_baseline_cmd(
     ctx: typer.Context,
     target: Annotated[str, typer.Argument(help="Target to compare against baseline")],
     baseline_id: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--baseline", "-b", help="Specific baseline scan ID"),
     ] = None,
 ) -> None:

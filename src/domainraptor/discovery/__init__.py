@@ -13,6 +13,7 @@ from domainraptor.discovery.orchestrator import (
     DiscoveryResult,
     create_default_orchestrator,
 )
+from domainraptor.discovery.shodan_client import ShodanClient, ShodanHostResult
 from domainraptor.discovery.whois_client import WhoisClient, WhoisInfo
 
 __all__ = [
@@ -25,6 +26,8 @@ __all__ = [
     "DnsConfig",
     "HackerTargetClient",
     "RateLimiter",
+    "ShodanClient",
+    "ShodanHostResult",
     "SubdomainClient",
     "WhoisClient",
     "WhoisInfo",

@@ -1,5 +1,5 @@
 """CLI commands package."""
 
-from domainraptor.cli.commands import assess, compare, db, discover, report, watch
+from domainraptor.cli.commands import assess, compare, config, db, discover, report, watch
 
-__all__ = ["discover", "assess", "watch", "compare", "report", "db"]
+__all__ = ["discover", "assess", "watch", "compare", "report", "db", "config"]

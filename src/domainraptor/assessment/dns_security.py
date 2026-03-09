@@ -6,10 +6,10 @@ import logging
 import re
 from dataclasses import dataclass, field
 
-import dns.resolver
 import dns.dnssec
 import dns.exception
 import dns.rdatatype
+import dns.resolver
 
 from domainraptor.assessment.base import AssessmentConfig, ConfigurationChecker
 from domainraptor.core.types import ConfigIssue, SeverityLevel
@@ -129,7 +129,7 @@ class DnsSecurityChecker(ConfigurationChecker):
         info.dmarc_record = self._get_txt_record(dmarc_domain, "v=DMARC1")
         if info.dmarc_record:
             # Extract policy
-            match = re.search(r'p=(\w+)', info.dmarc_record, re.IGNORECASE)
+            match = re.search(r"p=(\w+)", info.dmarc_record, re.IGNORECASE)
             if match:
                 info.dmarc_policy = match.group(1).lower()
 

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
+from rich.table import Table
 
 from domainraptor.core.config import AppConfig
-from domainraptor.core.types import AssetType, Change, ChangeType, ScanResult, WatchTarget
+from domainraptor.core.types import AssetType, Change, ChangeType, WatchTarget
 from domainraptor.utils.output import (
     console,
     create_progress,
@@ -18,7 +19,6 @@ from domainraptor.utils.output import (
     print_success,
     print_warning,
 )
-from rich.table import Table
 
 app = typer.Typer(
     name="watch",
@@ -75,11 +75,11 @@ def add_cmd(
         typer.Option("--type", "-t", help="Watch type: domain, ip, certificate"),
     ] = "domain",
     notify: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--notify", "-n", help="Notification channel (email, webhook, slack)"),
     ] = None,
     tags: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--tags", help="Comma-separated tags for organization"),
     ] = None,
 ) -> None:
@@ -205,7 +205,7 @@ def list_cmd(ctx: typer.Context) -> None:
 def run_cmd(
     ctx: typer.Context,
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Specific target to check (default: all due)"),
     ] = None,
     force: Annotated[

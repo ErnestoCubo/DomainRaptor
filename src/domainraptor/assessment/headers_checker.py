@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from domainraptor.assessment.base import AssessmentConfig, ConfigurationChecker
+from domainraptor.assessment.base import ConfigurationChecker
 from domainraptor.core.types import ConfigIssue, SeverityLevel
 
 logger = logging.getLogger(__name__)

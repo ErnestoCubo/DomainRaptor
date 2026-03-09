@@ -211,9 +211,7 @@ def delete_scan_cmd(
         raise typer.Exit(1)
 
     if not force:
-        confirm = typer.confirm(
-            f"Delete scan {scan_id} ({scan.target}, {scan.scan_type})?"
-        )
+        confirm = typer.confirm(f"Delete scan {scan_id} ({scan.target}, {scan.scan_type})?")
         if not confirm:
             print_info("Cancelled")
             raise typer.Exit(0)
@@ -276,39 +274,47 @@ def export_scan_cmd(
 
         # Assets
         for asset in data.get("assets", []):
-            rows.append({
-                "category": "asset",
-                "type": asset["type"],
-                "value": asset["value"],
-                "source": asset.get("source", ""),
-            })
+            rows.append(
+                {
+                    "category": "asset",
+                    "type": asset["type"],
+                    "value": asset["value"],
+                    "source": asset.get("source", ""),
+                }
+            )
 
         # DNS records
         for rec in data.get("dns_records", []):
-            rows.append({
-                "category": "dns",
-                "type": rec["type"],
-                "value": rec["value"],
-                "extra": str(rec.get("ttl", "")),
-            })
+            rows.append(
+                {
+                    "category": "dns",
+                    "type": rec["type"],
+                    "value": rec["value"],
+                    "extra": str(rec.get("ttl", "")),
+                }
+            )
 
         # Issues
         for issue in data.get("config_issues", []):
-            rows.append({
-                "category": "issue",
-                "type": issue["category"],
-                "value": issue["title"],
-                "severity": issue["severity"],
-            })
+            rows.append(
+                {
+                    "category": "issue",
+                    "type": issue["category"],
+                    "value": issue["title"],
+                    "severity": issue["severity"],
+                }
+            )
 
         # Vulnerabilities
         for vuln in data.get("vulnerabilities", []):
-            rows.append({
-                "category": "vulnerability",
-                "type": vuln["id"],
-                "value": vuln["title"],
-                "severity": vuln["severity"],
-            })
+            rows.append(
+                {
+                    "category": "vulnerability",
+                    "type": vuln["id"],
+                    "value": vuln["title"],
+                    "severity": vuln["severity"],
+                }
+            )
 
         if output:
             with open(output, "w", newline="") as f:
@@ -360,9 +366,7 @@ def prune_scans_cmd(
     repo = ScanRepository()
 
     if not force:
-        confirm = typer.confirm(
-            f"Delete all scans older than {older_than} days?"
-        )
+        confirm = typer.confirm(f"Delete all scans older than {older_than} days?")
         if not confirm:
             print_info("Cancelled")
             raise typer.Exit(0)

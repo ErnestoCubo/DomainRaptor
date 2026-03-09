@@ -3,29 +3,24 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
 from domainraptor.assessment import (
-    AssessmentOptions,
-    AssessmentOrchestrator,
     DnsSecurityChecker,
     HeadersChecker,
     SSLAnalyzer,
 )
-from domainraptor.core.config import AppConfig, ScanMode
+from domainraptor.core.config import AppConfig
 from domainraptor.core.types import (
-    ConfigIssue,
     ScanResult,
     SeverityLevel,
-    Vulnerability,
 )
 from domainraptor.utils.output import (
     console,
     create_progress,
     print_config_issues_table,
-    print_error,
     print_info,
     print_scan_summary,
     print_success,
@@ -44,7 +39,7 @@ app = typer.Typer(
 def assess_callback(
     ctx: typer.Context,
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--target", "-T", help="Target domain or IP to assess"),
     ] = None,
     save: Annotated[
@@ -236,7 +231,7 @@ def assess_config_cmd(
     ctx: typer.Context,
     target: Annotated[str, typer.Argument(help="Target domain or IP")],
     category: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--category", "-c", help="Check specific category: ssl, dns, headers, all"),
     ] = "all",
     best_practices: Annotated[

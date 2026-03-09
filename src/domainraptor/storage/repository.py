@@ -194,9 +194,7 @@ class ScanRepository:
             )
 
             # Load assets
-            for asset_row in conn.execute(
-                "SELECT * FROM assets WHERE scan_id = ?", (scan_id,)
-            ):
+            for asset_row in conn.execute("SELECT * FROM assets WHERE scan_id = ?", (scan_id,)):
                 scan.assets.append(
                     Asset(
                         type=AssetType(asset_row["type"]),
@@ -210,9 +208,7 @@ class ScanRepository:
                 )
 
             # Load DNS records
-            for dns_row in conn.execute(
-                "SELECT * FROM dns_records WHERE scan_id = ?", (scan_id,)
-            ):
+            for dns_row in conn.execute("SELECT * FROM dns_records WHERE scan_id = ?", (scan_id,)):
                 scan.dns_records.append(
                     DnsRecord(
                         record_type=dns_row["record_type"],
@@ -487,9 +483,7 @@ class WatchRepository:
     def get_by_target(self, target: str) -> WatchTarget | None:
         """Get watch target by target name."""
         with self.db.get_connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM watch_targets WHERE target = ?", (target,)
-            )
+            cursor = conn.execute("SELECT * FROM watch_targets WHERE target = ?", (target,))
             row = cursor.fetchone()
             if not row:
                 return None
@@ -564,6 +558,7 @@ class WatchRepository:
             return
 
         from datetime import timedelta
+
         next_check = checked_at + timedelta(hours=watch_target.interval_hours)
 
         with self.db.get_connection() as conn:
@@ -579,9 +574,7 @@ class WatchRepository:
     def remove(self, target: str) -> bool:
         """Remove a watch target."""
         with self.db.get_connection() as conn:
-            cursor = conn.execute(
-                "DELETE FROM watch_targets WHERE target = ?", (target,)
-            )
+            cursor = conn.execute("DELETE FROM watch_targets WHERE target = ?", (target,))
             return cursor.rowcount > 0
 
     def set_enabled(self, target: str, enabled: bool) -> bool:

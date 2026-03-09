@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Generic, TypeVar
 
 import httpx
@@ -109,11 +109,7 @@ def filter_by_min_severity(
 ) -> list[T]:
     """Filter items by minimum severity level."""
     min_level = SEVERITY_ORDER.get(min_severity, 0)
-    return [
-        item
-        for item in items
-        if SEVERITY_ORDER.get(item.severity, 0) >= min_level
-    ]
+    return [item for item in items if SEVERITY_ORDER.get(item.severity, 0) >= min_level]
 
 
 def sort_by_severity(items: list[T], reverse: bool = True) -> list[T]:

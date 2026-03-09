@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
+from rich.panel import Panel
 
 from domainraptor.core.config import AppConfig, OutputFormat
 from domainraptor.utils.output import (
@@ -14,11 +15,9 @@ from domainraptor.utils.output import (
     create_progress,
     format_json,
     format_yaml,
-    print_error,
     print_info,
     print_success,
 )
-from rich.panel import Panel
 
 app = typer.Typer(
     name="report",
@@ -56,7 +55,7 @@ def generate_cmd(
     ctx: typer.Context,
     target: Annotated[str, typer.Argument(help="Target to generate report for")],
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--output", "-o", help="Output file path"),
     ] = None,
     format_type: Annotated[
@@ -72,11 +71,11 @@ def generate_cmd(
         typer.Option("--remediation", "-r", help="Include remediation steps"),
     ] = True,
     scan_id: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--scan", "-s", help="Specific scan ID to report on"),
     ] = None,
     template: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--template", "-t", help="Report template to use"),
     ] = None,
 ) -> None:
@@ -136,7 +135,7 @@ def summary_cmd(
     ctx: typer.Context,
     target: Annotated[str, typer.Argument(help="Target to summarize")],
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--output", "-o", help="Output file path"),
     ] = None,
 ) -> None:
@@ -202,7 +201,7 @@ Target analyzed with standard scan mode.
 def list_cmd(
     ctx: typer.Context,
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Argument(help="Filter by target"),
     ] = None,
     limit: Annotated[
@@ -284,7 +283,7 @@ def schedule_cmd(
         typer.Option("--frequency", "-f", help="Report frequency: daily, weekly, monthly"),
     ] = "weekly",
     recipients: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--recipients", "-r", help="Comma-separated email recipients"),
     ] = None,
 ) -> None:

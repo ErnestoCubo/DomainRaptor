@@ -106,6 +106,7 @@ class AppConfig:
             "DOMAINRAPTOR_DB_PATH": ("db_path", Path),
             "SHODAN_API_KEY": ("sources.shodan.api_key", str),
             "VIRUSTOTAL_API_KEY": ("sources.virustotal.api_key", str),
+            "SECURITYTRAILS_API_KEY": ("sources.securitytrails.api_key", str),
             "CENSYS_API_KEY": ("sources.censys.api_key", str),
         }
 

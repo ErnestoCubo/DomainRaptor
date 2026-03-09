@@ -106,7 +106,7 @@ class BaseClient(ABC, Generic[T]):
                 last_error = e
                 if e.response.status_code in (429, 503):
                     # Rate limited or service unavailable - wait and retry
-                    wait_time = 2 ** attempt
+                    wait_time = 2**attempt
                     logger.warning(f"{self.name}: Rate limited, waiting {wait_time}s")
                     time.sleep(wait_time)
                 elif e.response.status_code >= 500:

@@ -200,8 +200,7 @@ class DiscoveryOrchestrator:
         """Run discovery clients in parallel using thread pool."""
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_client = {
-                executor.submit(client.query, target): client
-                for client in self._clients
+                executor.submit(client.query, target): client for client in self._clients
             }
 
             for future in as_completed(future_to_client):

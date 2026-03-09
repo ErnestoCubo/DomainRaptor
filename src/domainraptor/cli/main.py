@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
 
 from domainraptor import __version__
-from domainraptor.cli.commands import assess, compare, db, discover, report, watch
+from domainraptor.cli.commands import assess, compare, config, db, discover, report, watch
 from domainraptor.core.config import AppConfig, OutputFormat, ScanMode
 from domainraptor.utils.output import print_banner, print_error, print_info
 
@@ -29,6 +29,7 @@ app.add_typer(watch.app, name="watch", help="👁️ Monitor targets for changes
 app.add_typer(compare.app, name="compare", help="📊 Compare scan results")
 app.add_typer(report.app, name="report", help="📄 Generate reports")
 app.add_typer(db.app, name="db", help="💾 Database management")
+app.add_typer(config.app, name="config", help="⚙️  Configure API keys and settings")
 
 console = Console()
 
@@ -75,7 +76,7 @@ def main_callback(
         ),
     ] = False,
     config: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--config",
             "-c",
@@ -103,7 +104,7 @@ def main_callback(
         ),
     ] = OutputFormat.TABLE,
     output_file: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--output",
             "-o",
@@ -194,7 +195,7 @@ def config_cmd(
         typer.Option("--init", "-i", help="Initialize default configuration"),
     ] = False,
     set_key: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--set", help="Set a config value (key=value)"),
     ] = None,
 ) -> None:
@@ -238,11 +239,11 @@ def db_cmd(
         typer.Option("--vacuum", help="Vacuum database to reclaim space"),
     ] = False,
     export_path: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--export", help="Export database to file"),
     ] = None,
     import_path: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--import", help="Import database from file"),
     ] = None,
 ) -> None:
@@ -286,7 +287,7 @@ def import_cmd(
         typer.Argument(help="File to import (JSON, CSV, or YAML)"),
     ],
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--target", "-t", help="Target domain to associate with imported data"),
     ] = None,
     merge: Annotated[

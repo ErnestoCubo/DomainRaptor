@@ -251,10 +251,80 @@ def _discover_subdomains(
             except Exception as e:
                 result.errors.append(f"Source {name} failed: {e}")
 
+        # Add external API sources if not excluded and not in free-only mode
+        _discover_subdomains_external(target, result, config, sources, exclude)
+
     except ImportError as e:
         result.errors.append(f"Subdomain discovery not available: {e}")
     except Exception as e:
         result.errors.append(f"Subdomain discovery failed: {e}")
+
+
+def _discover_subdomains_external(
+    target: str,
+    result: ScanResult,
+    config: AppConfig,
+    sources: list[str] | None,
+    exclude: list[str] | None,
+) -> None:
+    """Discover subdomains using external API sources (Shodan, VT, SecurityTrails)."""
+    import os
+
+    # Shodan DNS subdomain enumeration
+    if (not sources or "shodan" in sources) and (not exclude or "shodan" not in exclude):
+        if os.environ.get("SHODAN_API_KEY"):
+            try:
+                from domainraptor.discovery.shodan_client import ShodanClient
+
+                client = ShodanClient()
+                assets, services, vulns, errors = client.query_safe(target)
+                result.assets.extend(assets)
+                result.services.extend(services)
+                result.vulnerabilities.extend(vulns)
+                result.errors.extend(errors)
+            except Exception as e:
+                result.errors.append(f"Shodan failed: {e}")
+
+    # VirusTotal subdomains
+    if (not sources or "virustotal" in sources) and (not exclude or "virustotal" not in exclude):
+        if os.environ.get("VIRUSTOTAL_API_KEY"):
+            try:
+                from domainraptor.enrichment.virustotal import VirusTotalClient
+
+                client = VirusTotalClient()
+                reputation, subdomains, errors = client.query_safe(target)
+                result.assets.extend(subdomains)
+                if reputation:
+                    result.metadata["virustotal"] = {
+                        "malicious": reputation.malicious,
+                        "suspicious": reputation.suspicious,
+                        "harmless": reputation.harmless,
+                        "reputation_score": reputation.reputation_score,
+                        "detection_ratio": reputation.detection_ratio,
+                    }
+                result.errors.extend(errors)
+            except Exception as e:
+                result.errors.append(f"VirusTotal failed: {e}")
+
+    # SecurityTrails subdomains
+    if (not sources or "securitytrails" in sources) and (
+        not exclude or "securitytrails" not in exclude
+    ):
+        if os.environ.get("SECURITYTRAILS_API_KEY"):
+            try:
+                from domainraptor.enrichment.securitytrails import SecurityTrailsClient
+
+                client = SecurityTrailsClient()
+                domain_info, subdomains, errors = client.query_safe(target)
+                result.assets.extend(subdomains)
+                if domain_info:
+                    result.metadata["securitytrails"] = {
+                        "subdomain_count": domain_info.subdomain_count,
+                        "current_dns": domain_info.current_dns,
+                    }
+                result.errors.extend(errors)
+            except Exception as e:
+                result.errors.append(f"SecurityTrails failed: {e}")
 
 
 def _discover_certificates(target: str, result: ScanResult) -> None:
@@ -272,12 +342,71 @@ def _discover_certificates(target: str, result: ScanResult) -> None:
 
 
 def _discover_ports(target: str, result: ScanResult, config: AppConfig) -> None:
-    """Discover open ports and services."""
-    # Placeholder - will implement with Shodan or local scanning
-    from domainraptor.core.types import Service
+    """Discover open ports and services using Shodan."""
+    import os
+    import re
 
-    if not config.free_only:
-        # Use Shodan if API key available
+    # Check if target is an IP
+    ipv4_pattern = r"^(\d{1,3}\.){3}\d{1,3}$"
+    is_ip = bool(re.match(ipv4_pattern, target))
+
+    if not is_ip:
+        # Need to resolve domain to IP first
+        try:
+            import socket
+
+            ip = socket.gethostbyname(target)
+        except Exception:
+            result.errors.append(f"Could not resolve {target} for port scanning")
+            return
+    else:
+        ip = target
+
+    # Use Shodan if API key available
+    if os.environ.get("SHODAN_API_KEY"):
+        try:
+            from domainraptor.discovery.shodan_client import ShodanClient
+
+            client = ShodanClient()
+            host_info = client.host_info(ip)
+
+            result.services.extend(host_info.services)
+
+            # Add vulnerability data
+            for cve_id in host_info.vulns:
+                from domainraptor.core.types import SeverityLevel, Vulnerability
+
+                result.vulnerabilities.append(
+                    Vulnerability(
+                        id=cve_id,
+                        title=f"CVE {cve_id}",
+                        severity=SeverityLevel.MEDIUM,
+                        description=f"Vulnerability detected on {ip}",
+                        affected_asset=ip,
+                        source="shodan",
+                    )
+                )
+
+            # Add host metadata
+            result.metadata["shodan_host"] = {
+                "ip": host_info.ip,
+                "hostnames": host_info.hostnames,
+                "country": host_info.country,
+                "org": host_info.org,
+                "asn": host_info.asn,
+                "ports": host_info.ports,
+                "os": host_info.os,
+            }
+
+        except Exception as e:
+            # Don't fail entirely - just log the error
+            result.errors.append(f"Shodan port scan failed: {e}")
+    else:
+        # No Shodan key - add placeholder info
+        from domainraptor.core.types import Service
+
+        result.metadata["port_scan_note"] = "Set SHODAN_API_KEY for detailed port/service info"
+        # Add basic HTTPS/HTTP assuming standard web service
         result.services.append(
             Service(
                 port=443,
@@ -291,7 +420,7 @@ def _discover_ports(target: str, result: ScanResult, config: AppConfig) -> None:
                 port=80,
                 protocol="tcp",
                 service_name="http",
-                version="nginx/1.18.0",
+                version="",
             )
         )
 
