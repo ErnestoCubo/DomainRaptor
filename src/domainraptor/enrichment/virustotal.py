@@ -12,6 +12,7 @@ Docs: https://developers.virustotal.com/reference
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import time
@@ -142,9 +143,7 @@ class VirusTotalClient(BaseClient[ReputationResult]):
         self._last_request_time: float = 0
 
         if not self.api_key:
-            logger.debug(
-                "VirusTotal: No API key configured. Set VIRUSTOTAL_API_KEY env var."
-            )
+            logger.debug("VirusTotal: No API key configured. Set VIRUSTOTAL_API_KEY env var.")
 
     def _check_api_key(self) -> None:
         """Verify API key is set."""
@@ -184,9 +183,7 @@ class VirusTotalClient(BaseClient[ReputationResult]):
                     raise VirusTotalQuotaExceededError(
                         "VirusTotal daily quota exceeded. Try again tomorrow."
                     )
-                raise VirusTotalRateLimitError(
-                    "VirusTotal rate limit exceeded. Waiting..."
-                )
+                raise VirusTotalRateLimitError("VirusTotal rate limit exceeded. Waiting...")
             if response.status_code == 404:
                 raise VirusTotalNotFoundError(f"Not found in VirusTotal: {context}")
 
@@ -218,19 +215,15 @@ class VirusTotalClient(BaseClient[ReputationResult]):
 
         return self._parse_domain_result(data, domain)
 
-    def _parse_domain_result(
-        self, data: dict[str, Any], domain: str
-    ) -> ReputationResult:
+    def _parse_domain_result(self, data: dict[str, Any], domain: str) -> ReputationResult:
         """Parse VirusTotal domain API response."""
         attrs = data.get("data", {}).get("attributes", {})
         stats = attrs.get("last_analysis_stats", {})
 
         last_analysis = None
         if attrs.get("last_analysis_date"):
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 last_analysis = datetime.fromtimestamp(attrs["last_analysis_date"])
-            except (ValueError, TypeError):
-                pass
 
         return ReputationResult(
             resource=domain,
@@ -284,10 +277,8 @@ class VirusTotalClient(BaseClient[ReputationResult]):
 
         last_analysis = None
         if attrs.get("last_analysis_date"):
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 last_analysis = datetime.fromtimestamp(attrs["last_analysis_date"])
-            except (ValueError, TypeError):
-                pass
 
         return ReputationResult(
             resource=ip,
@@ -404,7 +395,7 @@ class VirusTotalClient(BaseClient[ReputationResult]):
         except VirusTotalRateLimitError as e:
             errors.append(f"VirusTotal: {e}")
         except VirusTotalNotFoundError:
-            pass  # Not an error
+            logger.debug(f"Target {target} not found in VirusTotal")
         except VirusTotalError as e:
             errors.append(f"VirusTotal: {e}")
         except Exception as e:
@@ -415,9 +406,9 @@ class VirusTotalClient(BaseClient[ReputationResult]):
             try:
                 subdomains = self.get_subdomains(target)
             except VirusTotalAPIKeyError:
-                pass  # Already reported above
+                logger.debug("Skipping subdomains - API key error already reported")
             except VirusTotalQuotaExceededError:
-                pass  # Already reported above
+                logger.debug("Skipping subdomains - quota exceeded already reported")
             except VirusTotalRateLimitError as e:
                 errors.append(f"VirusTotal subdomains: {e}")
             except VirusTotalError as e:

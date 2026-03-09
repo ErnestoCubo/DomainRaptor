@@ -245,7 +245,10 @@ class DatabaseManager:
                 "vulnerabilities",
                 "watch_targets",
             ]:
-                cursor = conn.execute(f"SELECT COUNT(*) as count FROM {table}")
+                # Table names are from hardcoded list - safe from injection
+                cursor = conn.execute(
+                    f"SELECT COUNT(*) as count FROM {table}"  # noqa: S608 # nosec B608
+                )
                 stats[table] = cursor.fetchone()["count"]
 
             # Database file size

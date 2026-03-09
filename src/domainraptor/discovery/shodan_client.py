@@ -11,6 +11,7 @@ Docs: https://shodan.readthedocs.io/
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import re
@@ -174,8 +175,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
             service = Service(
                 port=port,
                 protocol=transport,
-                service_name=item.get("product", "")
-                or item.get("_shodan", {}).get("module", ""),
+                service_name=item.get("product", "") or item.get("_shodan", {}).get("module", ""),
                 version=item.get("version", "") or "",
                 banner=item.get("data", "")[:500] if item.get("data") else "",
                 cpe=item.get("cpe", []) or [],
@@ -189,12 +189,8 @@ class ShodanClient(BaseClient[ShodanHostResult]):
 
         last_update = None
         if data.get("last_update"):
-            try:
-                last_update = datetime.fromisoformat(
-                    data["last_update"].replace("Z", "+00:00")
-                )
-            except (ValueError, AttributeError):
-                pass
+            with contextlib.suppress(ValueError, AttributeError):
+                last_update = datetime.fromisoformat(data["last_update"].replace("Z", "+00:00"))
 
         return ShodanHostResult(
             ip=data.get("ip_str", ""),
@@ -399,23 +395,23 @@ class ShodanClient(BaseClient[ShodanHostResult]):
                 services = host.services
 
                 if include_vulns:
-                    for cve_id in host.vulns:
-                        vulns.append(
-                            Vulnerability(
-                                id=cve_id,
-                                title=f"CVE {cve_id}",
-                                severity=SeverityLevel.MEDIUM,
-                                affected_asset=target,
-                                source="shodan",
-                            )
+                    vulns.extend(
+                        Vulnerability(
+                            id=cve_id,
+                            title=f"CVE {cve_id}",
+                            severity=SeverityLevel.MEDIUM,
+                            affected_asset=target,
+                            source="shodan",
                         )
+                        for cve_id in host.vulns
+                    )
             except ShodanAPIKeyError as e:
                 if not errors:  # Don't duplicate API key error
                     errors.append(f"Shodan: {e}")
             except ShodanRateLimitError as e:
                 errors.append(f"Shodan: {e}")
             except ShodanNotFoundError:
-                pass  # Not an error - host just not in Shodan
+                logger.debug(f"Host {target} not found in Shodan database")
             except ShodanError as e:
                 errors.append(f"Shodan host: {e}")
             except Exception as e:

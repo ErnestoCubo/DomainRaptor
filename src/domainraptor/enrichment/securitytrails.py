@@ -13,6 +13,7 @@ Docs: https://docs.securitytrails.com/reference
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 from dataclasses import dataclass, field
@@ -119,9 +120,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
 
         super().__init__(config)
 
-        self.api_key = (
-            api_key or config.api_key or os.environ.get("SECURITYTRAILS_API_KEY")
-        )
+        self.api_key = api_key or config.api_key or os.environ.get("SECURITYTRAILS_API_KEY")
 
         if not self.api_key:
             logger.debug(
@@ -158,7 +157,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
                             "SecurityTrails monthly quota exceeded."
                         )
                 except (ValueError, KeyError):
-                    pass
+                    logger.debug("Could not parse error message from SecurityTrails response")
                 raise SecurityTrailsAPIKeyError(
                     "SecurityTrails access denied. Check API key permissions."
                 )
@@ -167,9 +166,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
                     "SecurityTrails rate limit exceeded. Try again later."
                 )
             if response.status_code == 404:
-                raise SecurityTrailsNotFoundError(
-                    f"Domain not found in SecurityTrails: {context}"
-                )
+                raise SecurityTrailsNotFoundError(f"Domain not found in SecurityTrails: {context}")
 
     def get_domain(self, domain: str) -> DomainInfo:
         """Get information about a domain.
@@ -249,9 +246,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(
-                f"SecurityTrails: Subdomain enumeration failed for {domain}: {e}"
-            )
+            logger.error(f"SecurityTrails: Subdomain enumeration failed for {domain}: {e}")
             raise SecurityTrailsError(f"Subdomain enumeration failed: {e}") from e
 
         assets: list[Asset] = []
@@ -273,9 +268,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         logger.info(f"SecurityTrails: Found {len(assets)} subdomains for {domain}")
         return assets
 
-    def get_dns_history(
-        self, domain: str, record_type: str = "a"
-    ) -> list[HistoricalDnsRecord]:
+    def get_dns_history(self, domain: str, record_type: str = "a") -> list[HistoricalDnsRecord]:
         """Get historical DNS records for a domain.
 
         Args:
@@ -326,15 +319,11 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
             first_seen = None
             last_seen = None
             if item.get("first_seen"):
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     first_seen = datetime.strptime(item["first_seen"], "%Y-%m-%d")
-                except (ValueError, TypeError):
-                    pass
             if item.get("last_seen"):
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     last_seen = datetime.strptime(item["last_seen"], "%Y-%m-%d")
-                except (ValueError, TypeError):
-                    pass
 
             records.append(
                 HistoricalDnsRecord(
@@ -406,9 +395,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         blocks = data.get("blocks", [])
         domains: list[str] = []
         for block in blocks:
-            for site in block.get("sites", []):
-                if site:
-                    domains.append(site)
+            domains.extend(site for site in block.get("sites", []) if site)
 
         return domains
 
@@ -449,7 +436,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsRateLimitError as e:
             errors.append(f"SecurityTrails: {e}")
         except SecurityTrailsNotFoundError:
-            pass  # Not an error
+            logger.debug(f"Domain {target} not found in SecurityTrails")
         except SecurityTrailsError as e:
             errors.append(f"SecurityTrails: {e}")
         except Exception as e:
@@ -459,9 +446,9 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         try:
             subdomains = self.get_subdomains(target)
         except SecurityTrailsAPIKeyError:
-            pass  # Already reported
+            logger.debug("Skipping subdomains - API key error already reported")
         except SecurityTrailsQuotaExceededError:
-            pass  # Already reported
+            logger.debug("Skipping subdomains - quota exceeded already reported")
         except SecurityTrailsRateLimitError as e:
             errors.append(f"SecurityTrails subdomains: {e}")
         except SecurityTrailsError as e:
@@ -477,7 +464,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
                     hist = self.get_dns_history(target, record_type)
                     if hist:
                         history[record_type.upper()] = hist
-                except SecurityTrailsError as e:
+                except SecurityTrailsError as e:  # noqa: PERF203
                     errors.append(f"SecurityTrails history ({record_type}): {e}")
                 except Exception as e:
                     errors.append(f"SecurityTrails history unexpected: {e}")

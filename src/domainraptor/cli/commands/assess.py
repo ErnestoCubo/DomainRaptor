@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from typing import Annotated
 
@@ -171,7 +172,7 @@ def assess_vulns_cmd(
         [dim]# Include exploit availability[/dim]
         domainraptor assess vulns example.com --exploits
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = ctx.obj.get("config", AppConfig())
 
     print_info(f"Vulnerability assessment for: [bold]{target}[/bold]")
     print_info(f"Min severity: {min_severity.value} | CVE check: {cve_check}")
@@ -262,7 +263,7 @@ def assess_config_cmd(
         [dim]# DNS security check[/dim]
         domainraptor assess config example.com --category dns
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = ctx.obj.get("config", AppConfig())
 
     print_info(f"Configuration assessment for: [bold]{target}[/bold]")
     print_info(f"Category: {category}")
@@ -336,7 +337,7 @@ def assess_outdated_cmd(
         [dim]# Include minor updates[/dim]
         domainraptor assess outdated example.com --include-minor
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = ctx.obj.get("config", AppConfig())
 
     print_info(f"Outdated software check for: [bold]{target}[/bold]")
 
@@ -385,28 +386,19 @@ def _assess_vulnerabilities(target: str, result: ScanResult, config: AppConfig) 
 def _assess_configuration(target: str, result: ScanResult, config: AppConfig) -> None:
     """Perform configuration assessment using real checkers."""
     # SSL/TLS check
-    try:
-        with SSLAnalyzer() as ssl_checker:
-            issues = ssl_checker.assess_safe(target)
-            result.config_issues.extend(issues)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception), SSLAnalyzer() as ssl_checker:
+        issues = ssl_checker.assess_safe(target)
+        result.config_issues.extend(issues)
 
     # DNS security check
-    try:
-        with DnsSecurityChecker() as dns_checker:
-            issues = dns_checker.assess_safe(target)
-            result.config_issues.extend(issues)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception), DnsSecurityChecker() as dns_checker:
+        issues = dns_checker.assess_safe(target)
+        result.config_issues.extend(issues)
 
     # HTTP headers check
-    try:
-        with HeadersChecker() as headers_checker:
-            issues = headers_checker.assess_safe(target)
-            result.config_issues.extend(issues)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception), HeadersChecker() as headers_checker:
+        issues = headers_checker.assess_safe(target)
+        result.config_issues.extend(issues)
 
 
 def _assess_outdated(target: str, result: ScanResult, config: AppConfig) -> None:

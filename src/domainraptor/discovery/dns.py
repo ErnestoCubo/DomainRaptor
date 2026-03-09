@@ -6,6 +6,7 @@ NS, CNAME, SOA, and other record types.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass
 from typing import Any, ClassVar
@@ -105,7 +106,7 @@ class DnsClient:
                     if record:
                         records.append(record)
 
-            except dns.resolver.NoAnswer:
+            except dns.resolver.NoAnswer:  # noqa: PERF203
                 logger.debug(f"DNS: No {rtype} records for {target}")
             except dns.resolver.NXDOMAIN:
                 logger.warning(f"DNS: Domain {target} does not exist")
@@ -135,32 +136,32 @@ class DnsClient:
         # IPv4
         try:
             answers = self.resolver.resolve(target, "A")
-            for rdata in answers:
-                assets.append(
-                    Asset(
-                        type=AssetType.IP,
-                        value=str(rdata),
-                        parent=target,
-                        source=self.name,
-                        metadata={"ip_version": 4},
-                    )
+            assets.extend(
+                Asset(
+                    type=AssetType.IP,
+                    value=str(rdata),
+                    parent=target,
+                    source=self.name,
+                    metadata={"ip_version": 4},
                 )
+                for rdata in answers
+            )
         except Exception as e:
             logger.debug(f"DNS: No A records for {target}: {e}")
 
         # IPv6
         try:
             answers = self.resolver.resolve(target, "AAAA")
-            for rdata in answers:
-                assets.append(
-                    Asset(
-                        type=AssetType.IP,
-                        value=str(rdata),
-                        parent=target,
-                        source=self.name,
-                        metadata={"ip_version": 6},
-                    )
+            assets.extend(
+                Asset(
+                    type=AssetType.IP,
+                    value=str(rdata),
+                    parent=target,
+                    source=self.name,
+                    metadata={"ip_version": 6},
                 )
+                for rdata in answers
+            )
         except Exception as e:
             logger.debug(f"DNS: No AAAA records for {target}: {e}")
 
@@ -204,21 +205,17 @@ class DnsClient:
         }
 
         # Check for DNSKEY records
-        try:
+        with contextlib.suppress(Exception):
             answers = self.resolver.resolve(target, "DNSKEY")
             if answers:
                 result["dnskey"] = True
                 result["enabled"] = True
-        except Exception:
-            pass
 
         # Check for DS records (delegation signer)
-        try:
+        with contextlib.suppress(Exception):
             answers = self.resolver.resolve(target, "DS")
             if answers:
                 result["ds"] = True
-        except Exception:
-            pass
 
         return result
 
@@ -238,7 +235,7 @@ class DnsClient:
         }
 
         # Check SPF (in TXT records)
-        try:
+        with contextlib.suppress(Exception):
             answers = self.resolver.resolve(target, "TXT")
             for rdata in answers:
                 txt_value = str(rdata).strip('"')
@@ -246,11 +243,9 @@ class DnsClient:
                     result["spf"]["configured"] = True
                     result["spf"]["record"] = txt_value
                     break
-        except Exception:
-            pass
 
         # Check DMARC
-        try:
+        with contextlib.suppress(Exception):
             answers = self.resolver.resolve(f"_dmarc.{target}", "TXT")
             for rdata in answers:
                 txt_value = str(rdata).strip('"')
@@ -258,8 +253,6 @@ class DnsClient:
                     result["dmarc"]["configured"] = True
                     result["dmarc"]["record"] = txt_value
                     break
-        except Exception:
-            pass
 
         return result
 
