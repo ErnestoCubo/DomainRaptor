@@ -1,0 +1,116 @@
+# DomainRaptor Ruff Configuration
+# https://docs.astral.sh/ruff/configuration/
+
+# Target Python 3.10+ for broader compatibility
+target-version = "py310"
+
+# Line length (same as black default, but more readable for security tools)
+line-length = 100
+
+# Exclude common non-source directories
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".mypy_cache",
+    ".pytest_cache",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "*.egg-info",
+    "node_modules",
+]
+
+# Files to analyze
+include = ["*.py", "*.pyi"]
+
+[lint]
+# Enable rule categories
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes (undefined names, unused imports)
+    "I",    # isort (import sorting)
+    "UP",   # pyupgrade (modern Python syntax)
+    "B",    # flake8-bugbear (common bugs)
+    "SIM",  # flake8-simplify (code simplification)
+    "C4",   # flake8-comprehensions (better comprehensions)
+    "S",    # flake8-bandit (security checks - critical for this project)
+    "T20",  # flake8-print (catch debug prints)
+    "RET",  # flake8-return (return statement issues)
+    "PTH",  # flake8-use-pathlib (prefer pathlib)
+    "PERF", # perflint (performance issues)
+    "RUF",  # Ruff-specific rules
+]
+
+# Ignore specific rules that are too strict or conflict
+ignore = [
+    "E501",   # Line too long - handled by formatter
+    "B008",   # Function call in argument defaults - needed for Typer/FastAPI
+    "S101",   # Assert used - allowed in tests
+    "S104",   # Possible binding to all interfaces - intentional for servers
+    "S311",   # Pseudo-random generators - acceptable for non-crypto use
+    "RET504", # Unnecessary assignment before return - sometimes clearer
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when prefixed with underscore
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[lint.per-file-ignores]
+# Tests can use assert, magic values, and prints for debugging
+"tests/**/*.py" = ["S101", "PLR2004", "T20"]
+# Init files often have unused imports for re-export
+"__init__.py" = ["F401"]
+# CLI entry points may have prints
+"**/cli.py" = ["T20"]
+# Migration scripts may have hardcoded credentials for local dev
+"**/migrations/*.py" = ["S105", "S106"]
+
+[lint.isort]
+# Force single-line imports for clarity in security tools
+force-single-line = false
+# Group imports by type
+combine-as-imports = true
+# Known first-party modules
+known-first-party = ["domainraptor", "modules"]
+# Section order
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[lint.flake8-bugbear]
+# Extend immutable calls to include common patterns
+extend-immutable-calls = [
+    "typer.Argument",
+    "typer.Option",
+    "fastapi.Depends",
+    "fastapi.Query",
+]
+
+[lint.flake8-bandit]
+# Hardcoded temp directory - often needed
+check-typed-exception = true
+
+[lint.pydocstyle]
+convention = "google"
+
+[format]
+# Use double quotes (black style)
+quote-style = "double"
+# Indent with spaces
+indent-style = "space"
+# Unix line endings
+line-ending = "lf"
+# Enable magic trailing comma
+skip-magic-trailing-comma = false
+# Format docstrings
+docstring-code-format = true
