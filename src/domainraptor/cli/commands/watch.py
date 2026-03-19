@@ -84,7 +84,7 @@ def add_cmd(
     ] = None,
 ) -> None:
     """
-    ➕ Add a target to the watch list.
+    [+] Add a target to the watch list.
 
     [bold cyan]Interval formats:[/bold cyan]
         • 1h  - Every hour
@@ -103,7 +103,7 @@ def add_cmd(
         [dim]# Watch certificate expiration[/dim]
         domainraptor watch add example.com --type certificate
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    ctx.obj.get("config", AppConfig())
 
     # Parse interval
     interval_hours = _parse_interval(interval)
@@ -154,7 +154,7 @@ def remove_cmd(
         typer.Option("--force", "-f", help="Remove without confirmation"),
     ] = False,
 ) -> None:
-    """➖ Remove a target from the watch list."""
+    """[-] Remove a target from the watch list."""
     if target not in _watch_targets:
         print_error(f"Not watching: {target}")
         raise typer.Exit(1)
@@ -312,7 +312,7 @@ def status_cmd(
     ctx: typer.Context,
     target: Annotated[str, typer.Argument(help="Target to show status for")],
 ) -> None:
-    """ℹ️ Show detailed status for a watched target."""
+    """[i] Show detailed status for a watched target."""
     if target not in _watch_targets:
         print_error(f"Not watching: {target}")
         raise typer.Exit(1)
@@ -346,12 +346,11 @@ def _parse_interval(interval: str) -> int | None:
 
         if unit == "h":
             return value
-        elif unit == "d":
+        if unit == "d":
             return value * 24
-        elif unit == "m":
+        if unit == "m":
             return max(1, value // 60)  # Convert minutes to hours, min 1
-        else:
-            return None
+        return None
     except (ValueError, IndexError):
         return None
 

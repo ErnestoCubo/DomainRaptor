@@ -77,7 +77,7 @@ def compare_history_cmd(
         [dim]# Compare since specific date[/dim]
         domainraptor compare history example.com --since 2024-01-01
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    ctx.obj.get("config", AppConfig())
 
     print_info(f"Comparing scan history for: [bold]{target}[/bold]")
     print_info(f"Last {last} scans")

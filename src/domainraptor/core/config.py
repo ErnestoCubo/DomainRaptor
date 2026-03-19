@@ -88,7 +88,7 @@ class AppConfig:
 
         # Load from file
         if config_path and config_path.exists():
-            with open(config_path) as f:
+            with config_path.open() as f:
                 config_data = yaml.safe_load(f) or {}
 
         # Override with environment variables
@@ -182,7 +182,7 @@ class AppConfig:
             },
         }
 
-        with open(config_path, "w") as f:
+        with config_path.open("w") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
 

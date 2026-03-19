@@ -100,7 +100,7 @@ def generate_cmd(
         [dim]# Include history and remediation[/dim]
         domainraptor report generate example.com --history --remediation
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    ctx.obj.get("config", AppConfig())
 
     print_info(f"Generating {format_type.upper()} report for: [bold]{target}[/bold]")
 
@@ -357,14 +357,13 @@ def _format_report(data: dict, format_type: str) -> str:
     """Format report data into requested format."""
     if format_type == "json":
         return format_json(data)
-    elif format_type == "yaml":
+    if format_type == "yaml":
         return format_yaml(data)
-    elif format_type == "md":
+    if format_type == "md":
         return _format_markdown(data)
-    elif format_type == "html":
+    if format_type == "html":
         return _format_html(data)
-    else:
-        return format_json(data)
+    return format_json(data)
 
 
 def _format_markdown(data: dict) -> str:

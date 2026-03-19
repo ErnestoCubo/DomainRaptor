@@ -87,6 +87,25 @@ class BaseClient(ABC, Generic[T]):
     def __exit__(self, *args: Any) -> None:
         self.close()
 
+    def _single_request_attempt(
+        self, method: str, url: str, **kwargs: Any
+    ) -> tuple[httpx.Response | None, Exception | None, bool]:
+        """Make a single HTTP request attempt.
+
+        Returns:
+            Tuple of (response, error, should_retry).
+        """
+        try:
+            response = self.client.request(method, url, **kwargs)
+            response.raise_for_status()
+            return response, None, False
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code in (429, 503) or e.response.status_code >= 500:
+                return None, e, True
+            return None, e, False
+        except httpx.RequestError as e:
+            return None, e, True
+
     def _request(
         self,
         method: str,
@@ -98,27 +117,30 @@ class BaseClient(ABC, Generic[T]):
 
         last_error: Exception | None = None
         for attempt in range(self.config.retries):
-            try:
-                response = self.client.request(method, url, **kwargs)
-                response.raise_for_status()
+            response, error, should_retry = self._single_request_attempt(method, url, **kwargs)
+
+            if response is not None:
                 return response
-            except httpx.HTTPStatusError as e:
-                last_error = e
-                if e.response.status_code in (429, 503):
-                    # Rate limited or service unavailable - wait and retry
+
+            last_error = error
+            if not should_retry:
+                if error is not None:
+                    raise error
+                break
+
+            # Log and wait before retry
+            if isinstance(error, httpx.HTTPStatusError):
+                if error.response.status_code in (429, 503):
                     wait_time = 2**attempt
                     logger.warning(f"{self.name}: Rate limited, waiting {wait_time}s")
                     time.sleep(wait_time)
-                elif e.response.status_code >= 500:
-                    # Server error - retry
-                    logger.warning(f"{self.name}: Server error {e.response.status_code}, retrying")
-                    time.sleep(1)
                 else:
-                    # Client error - don't retry
-                    raise
-            except httpx.RequestError as e:
-                last_error = e
-                logger.warning(f"{self.name}: Request error on attempt {attempt + 1}: {e}")
+                    logger.warning(
+                        f"{self.name}: Server error {error.response.status_code}, retrying"
+                    )
+                    time.sleep(1)
+            else:
+                logger.warning(f"{self.name}: Request error on attempt {attempt + 1}: {error}")
                 time.sleep(1)
 
         msg = f"{self.name}: Request failed after {self.config.retries} attempts"

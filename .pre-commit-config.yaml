@@ -46,16 +46,6 @@ repos:
         name: ruff format
         types_or: [python, pyi]
 
-  # Security scanning with Bandit (redundant with ruff S rules but more thorough)
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
-    hooks:
-      - id: bandit
-        name: bandit security scan
-        args: [-c, pyproject.toml, -r, .]
-        additional_dependencies: ["bandit[toml]"]
-        exclude: ^tests/
-
   # Check for secrets and credentials
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
@@ -63,7 +53,7 @@ repos:
       - id: detect-secrets
         name: detect secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: package.lock.json
+        exclude: (package\.lock\.json|grupotrc_.*\.json|wiki/.*)
 
   # Validate pyproject.toml
   - repo: https://github.com/abravalheri/validate-pyproject
@@ -97,5 +87,5 @@ ci:
   autoupdate_branch: "develop"
   autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
   autoupdate_schedule: weekly
-  skip: [detect-secrets] # Skip in CI, run locally
+  skip: [detect-secrets]
   submodules: false

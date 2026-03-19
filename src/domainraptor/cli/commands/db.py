@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -19,6 +20,8 @@ from domainraptor.utils.output import (
     print_vulnerabilities_table,
     print_warning,
 )
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="db",
@@ -82,7 +85,7 @@ def list_scans_cmd(
                 dt = datetime.fromisoformat(started)
                 started = dt.strftime("%Y-%m-%d %H:%M")
             except ValueError:
-                pass
+                logger.debug(f"Failed to parse date: {started}")
 
         table.add_row(
             str(scan["id"]),
@@ -270,54 +273,54 @@ def export_scan_cmd(
         import io
 
         # Flatten for CSV
-        rows = []
+        rows: list[dict[str, str]] = []
 
         # Assets
-        for asset in data.get("assets", []):
-            rows.append(
-                {
-                    "category": "asset",
-                    "type": asset["type"],
-                    "value": asset["value"],
-                    "source": asset.get("source", ""),
-                }
-            )
+        rows.extend(
+            {
+                "category": "asset",
+                "type": asset["type"],
+                "value": asset["value"],
+                "source": asset.get("source", ""),
+            }
+            for asset in data.get("assets", [])
+        )
 
         # DNS records
-        for rec in data.get("dns_records", []):
-            rows.append(
-                {
-                    "category": "dns",
-                    "type": rec["type"],
-                    "value": rec["value"],
-                    "extra": str(rec.get("ttl", "")),
-                }
-            )
+        rows.extend(
+            {
+                "category": "dns",
+                "type": rec["type"],
+                "value": rec["value"],
+                "extra": str(rec.get("ttl", "")),
+            }
+            for rec in data.get("dns_records", [])
+        )
 
         # Issues
-        for issue in data.get("config_issues", []):
-            rows.append(
-                {
-                    "category": "issue",
-                    "type": issue["category"],
-                    "value": issue["title"],
-                    "severity": issue["severity"],
-                }
-            )
+        rows.extend(
+            {
+                "category": "issue",
+                "type": issue["category"],
+                "value": issue["title"],
+                "severity": issue["severity"],
+            }
+            for issue in data.get("config_issues", [])
+        )
 
         # Vulnerabilities
-        for vuln in data.get("vulnerabilities", []):
-            rows.append(
-                {
-                    "category": "vulnerability",
-                    "type": vuln["id"],
-                    "value": vuln["title"],
-                    "severity": vuln["severity"],
-                }
-            )
+        rows.extend(
+            {
+                "category": "vulnerability",
+                "type": vuln["id"],
+                "value": vuln["title"],
+                "severity": vuln["severity"],
+            }
+            for vuln in data.get("vulnerabilities", [])
+        )
 
         if output:
-            with open(output, "w", newline="") as f:
+            with output.open("w", newline="") as f:
                 if rows:
                     writer = csv.DictWriter(f, fieldnames=rows[0].keys())
                     writer.writeheader()
@@ -394,7 +397,7 @@ def stats_cmd() -> None:
     scans = scan_repo.list_scans(limit=10000)
 
     # Count unique targets
-    targets = set(s["target"] for s in scans)
+    targets = {s["target"] for s in scans}
 
     # Count by type
     by_type: dict[str, int] = {}

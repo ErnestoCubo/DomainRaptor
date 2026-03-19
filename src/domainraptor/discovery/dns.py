@@ -30,6 +30,14 @@ class DnsConfig:
     retry_servfail: bool = True
 
 
+@dataclass
+class DnsQueryResult:
+    """Result of a DNS query for a single record type."""
+
+    records: list[DnsRecord]
+    should_break: bool = False
+
+
 class DnsClient:
     """DNS resolver client for record enumeration.
 
@@ -98,29 +106,44 @@ class DnsClient:
         records: list[DnsRecord] = []
 
         for rtype in record_types:
-            try:
-                answers = self.resolver.resolve(target, rtype)
-
-                for rdata in answers:
-                    record = self._parse_record(rtype, rdata, answers.rrset.ttl)
-                    if record:
-                        records.append(record)
-
-            except dns.resolver.NoAnswer:  # noqa: PERF203
-                logger.debug(f"DNS: No {rtype} records for {target}")
-            except dns.resolver.NXDOMAIN:
-                logger.warning(f"DNS: Domain {target} does not exist")
-                break  # No point querying more record types
-            except dns.resolver.NoNameservers:
-                logger.error(f"DNS: No nameservers available for {target}")
+            result = self._query_record_type(target, rtype)
+            if result.records:
+                records.extend(result.records)
+            if result.should_break:
                 break
-            except dns.exception.Timeout:
-                logger.warning(f"DNS: Timeout querying {rtype} for {target}")
-            except Exception as e:
-                logger.debug(f"DNS: Error querying {rtype} for {target}: {e}")
 
         logger.info(f"DNS: Found {len(records)} records for {target}")
         return records
+
+    def _query_record_type(self, target: str, rtype: str) -> DnsQueryResult:
+        """Query a single DNS record type.
+
+        Returns:
+            DnsQueryResult with records and whether to stop querying.
+        """
+        try:
+            answers = self.resolver.resolve(target, rtype)
+            records = []
+            for rdata in answers:
+                record = self._parse_record(rtype, rdata, answers.rrset.ttl)
+                if record:
+                    records.append(record)
+            return DnsQueryResult(records=records, should_break=False)
+        except dns.resolver.NoAnswer:
+            logger.debug(f"DNS: No {rtype} records for {target}")
+            return DnsQueryResult(records=[], should_break=False)
+        except dns.resolver.NXDOMAIN:
+            logger.warning(f"DNS: Domain {target} does not exist")
+            return DnsQueryResult(records=[], should_break=True)
+        except dns.resolver.NoNameservers:
+            logger.error(f"DNS: No nameservers available for {target}")
+            return DnsQueryResult(records=[], should_break=True)
+        except dns.exception.Timeout:
+            logger.warning(f"DNS: Timeout querying {rtype} for {target}")
+            return DnsQueryResult(records=[], should_break=False)
+        except Exception as e:
+            logger.debug(f"DNS: Error querying {rtype} for {target}: {e}")
+            return DnsQueryResult(records=[], should_break=False)
 
     def resolve_ip(self, target: str) -> list[Asset]:
         """Resolve a domain to IP addresses.

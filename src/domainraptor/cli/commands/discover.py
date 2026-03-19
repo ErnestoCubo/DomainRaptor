@@ -215,6 +215,15 @@ def _discover_dns(target: str, result: ScanResult) -> None:
         result.errors.append(f"DNS discovery failed: {e}")
 
 
+def _query_discovery_client(name: str, client: object, target: str) -> tuple[list, str | None]:
+    """Query a discovery client and return assets or error."""
+    try:
+        assets = client.query(target)  # type: ignore[attr-defined]
+        return assets, None
+    except Exception as e:
+        return [], f"Source {name} failed: {e}"
+
+
 def _discover_subdomains(
     target: str,
     result: ScanResult,
@@ -243,13 +252,12 @@ def _discover_subdomains(
                 continue
             clients_to_use.append((name, client_cls()))
 
-        # Query each client
+        # Query each client using helper function to avoid try-except in loop
         for name, client in clients_to_use:
-            try:
-                assets = client.query(target)
-                result.assets.extend(assets)
-            except Exception as e:
-                result.errors.append(f"Source {name} failed: {e}")
+            assets, error = _query_discovery_client(name, client, target)
+            result.assets.extend(assets)
+            if error:
+                result.errors.append(error)
 
         # Add external API sources if not excluded and not in free-only mode
         _discover_subdomains_external(target, result, config, sources, exclude)
@@ -271,60 +279,67 @@ def _discover_subdomains_external(
     import os
 
     # Shodan DNS subdomain enumeration
-    if (not sources or "shodan" in sources) and (not exclude or "shodan" not in exclude):
-        if os.environ.get("SHODAN_API_KEY"):
-            try:
-                from domainraptor.discovery.shodan_client import ShodanClient
+    if (
+        (not sources or "shodan" in sources)
+        and (not exclude or "shodan" not in exclude)
+        and os.environ.get("SHODAN_API_KEY")
+    ):
+        try:
+            from domainraptor.discovery.shodan_client import ShodanClient
 
-                client = ShodanClient()
-                assets, services, vulns, errors = client.query_safe(target)
-                result.assets.extend(assets)
-                result.services.extend(services)
-                result.vulnerabilities.extend(vulns)
-                result.errors.extend(errors)
-            except Exception as e:
-                result.errors.append(f"Shodan failed: {e}")
+            client = ShodanClient()
+            assets, services, vulns, errors = client.query_safe(target)
+            result.assets.extend(assets)
+            result.services.extend(services)
+            result.vulnerabilities.extend(vulns)
+            result.errors.extend(errors)
+        except Exception as e:
+            result.errors.append(f"Shodan failed: {e}")
 
     # VirusTotal subdomains
-    if (not sources or "virustotal" in sources) and (not exclude or "virustotal" not in exclude):
-        if os.environ.get("VIRUSTOTAL_API_KEY"):
-            try:
-                from domainraptor.enrichment.virustotal import VirusTotalClient
+    if (
+        (not sources or "virustotal" in sources)
+        and (not exclude or "virustotal" not in exclude)
+        and os.environ.get("VIRUSTOTAL_API_KEY")
+    ):
+        try:
+            from domainraptor.enrichment.virustotal import VirusTotalClient
 
-                client = VirusTotalClient()
-                reputation, subdomains, errors = client.query_safe(target)
-                result.assets.extend(subdomains)
-                if reputation:
-                    result.metadata["virustotal"] = {
-                        "malicious": reputation.malicious,
-                        "suspicious": reputation.suspicious,
-                        "harmless": reputation.harmless,
-                        "reputation_score": reputation.reputation_score,
-                        "detection_ratio": reputation.detection_ratio,
-                    }
-                result.errors.extend(errors)
-            except Exception as e:
-                result.errors.append(f"VirusTotal failed: {e}")
+            client = VirusTotalClient()
+            reputation, subdomains, errors = client.query_safe(target)
+            result.assets.extend(subdomains)
+            if reputation:
+                result.metadata["virustotal"] = {
+                    "malicious": reputation.malicious,
+                    "suspicious": reputation.suspicious,
+                    "harmless": reputation.harmless,
+                    "reputation_score": reputation.reputation_score,
+                    "detection_ratio": reputation.detection_ratio,
+                }
+            result.errors.extend(errors)
+        except Exception as e:
+            result.errors.append(f"VirusTotal failed: {e}")
 
     # SecurityTrails subdomains
-    if (not sources or "securitytrails" in sources) and (
-        not exclude or "securitytrails" not in exclude
+    if (
+        (not sources or "securitytrails" in sources)
+        and (not exclude or "securitytrails" not in exclude)
+        and os.environ.get("SECURITYTRAILS_API_KEY")
     ):
-        if os.environ.get("SECURITYTRAILS_API_KEY"):
-            try:
-                from domainraptor.enrichment.securitytrails import SecurityTrailsClient
+        try:
+            from domainraptor.enrichment.securitytrails import SecurityTrailsClient
 
-                client = SecurityTrailsClient()
-                domain_info, subdomains, errors = client.query_safe(target)
-                result.assets.extend(subdomains)
-                if domain_info:
-                    result.metadata["securitytrails"] = {
-                        "subdomain_count": domain_info.subdomain_count,
-                        "current_dns": domain_info.current_dns,
-                    }
-                result.errors.extend(errors)
-            except Exception as e:
-                result.errors.append(f"SecurityTrails failed: {e}")
+            client = SecurityTrailsClient()
+            domain_info, subdomains, errors = client.query_safe(target)
+            result.assets.extend(subdomains)
+            if domain_info:
+                result.metadata["securitytrails"] = {
+                    "subdomain_count": domain_info.subdomain_count,
+                    "current_dns": domain_info.current_dns,
+                }
+            result.errors.extend(errors)
+        except Exception as e:
+            result.errors.append(f"SecurityTrails failed: {e}")
 
 
 def _discover_certificates(target: str, result: ScanResult) -> None:

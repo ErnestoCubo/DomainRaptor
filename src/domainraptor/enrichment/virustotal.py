@@ -153,6 +153,23 @@ class VirusTotalClient(BaseClient[ReputationResult]):
                 "or use 'domainraptor config set VIRUSTOTAL_API_KEY <key>'"
             )
 
+    def query(self, target: str) -> list[ReputationResult]:
+        """Query VirusTotal for information about a target.
+
+        Implements the BaseClient abstract method.
+
+        Args:
+            target: Domain or IP address to query
+
+        Returns:
+            List containing the ReputationResult (always single item)
+        """
+        if self._is_ip(target):
+            result = self.get_ip_report(target)
+        else:
+            result = self.get_domain_report(target)
+        return [result]
+
     def _rate_limit(self) -> None:
         """Enforce rate limiting for free tier."""
         elapsed = time.time() - self._last_request_time

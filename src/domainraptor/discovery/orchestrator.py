@@ -213,17 +213,25 @@ class DiscoveryOrchestrator:
                     logger.error(f"Client {client.name} failed: {e}")
                     result.errors[client.name] = str(e)
 
+    def _run_client_safe(self, client: Any, target: str) -> tuple[list[Asset], str | None]:
+        """Run a discovery client safely waiting for success or error."""
+        try:
+            logger.info(f"Running client: {client.name}")
+            assets = client.query(target)
+            return assets, None
+        except Exception as e:
+            logger.error(f"Client {client.name} failed: {e}")
+            return [], str(e)
+
     def _discover_sequential(self, target: str, result: DiscoveryResult) -> None:
         """Run discovery clients sequentially."""
         for client in self._clients:
-            try:
-                logger.info(f"Running client: {client.name}")
-                assets = client.query(target)
+            assets, error = self._run_client_safe(client, target)
+            if error:
+                result.errors[client.name] = error
+            else:
                 self._process_client_results(client.name, assets, result)
                 result.sources_used.append(client.name)
-            except Exception as e:
-                logger.error(f"Client {client.name} failed: {e}")
-                result.errors[client.name] = str(e)
 
     def _process_client_results(
         self,
@@ -263,6 +271,17 @@ class DiscoveryOrchestrator:
                 target_list.append(asset)
                 existing[asset.value] = asset
 
+    def _resolve_single_subdomain(self, subdomain: str) -> list[Asset]:
+        """Resolve IPs for a single subdomain."""
+        try:
+            ip_assets = self.dns_client.resolve_ip(subdomain)  # type: ignore[union-attr]
+            for ip_asset in ip_assets:
+                ip_asset.parent = subdomain
+            return ip_assets
+        except Exception as e:
+            logger.debug(f"Failed to resolve {subdomain}: {e}")
+            return []
+
     def _resolve_subdomain_ips(self, result: DiscoveryResult) -> None:
         """Resolve IPs for discovered subdomains."""
         if not self.dns_client:
@@ -275,13 +294,8 @@ class DiscoveryOrchestrator:
         logger.info(f"Resolving IPs for {len(to_resolve)} subdomains")
 
         for subdomain in to_resolve:
-            try:
-                ip_assets = self.dns_client.resolve_ip(subdomain)
-                for ip_asset in ip_assets:
-                    ip_asset.parent = subdomain
-                self._merge_assets(result.ips, ip_assets)
-            except Exception as e:
-                logger.debug(f"Failed to resolve {subdomain}: {e}")
+            ip_assets = self._resolve_single_subdomain(subdomain)
+            self._merge_assets(result.ips, ip_assets)
 
     def _deduplicate(self, result: DiscoveryResult) -> None:
         """Deduplicate assets in result."""

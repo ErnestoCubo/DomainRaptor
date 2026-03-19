@@ -19,9 +19,6 @@ from domainraptor.core.types import (
 __all__ = [
     # Config
     "AppConfig",
-    "OutputFormat",
-    "ScanMode",
-    "SourceConfig",
     # Types
     "Asset",
     "AssetType",
@@ -30,9 +27,12 @@ __all__ = [
     "ChangeType",
     "ConfigIssue",
     "DnsRecord",
+    "OutputFormat",
+    "ScanMode",
     "ScanResult",
     "Service",
     "SeverityLevel",
+    "SourceConfig",
     "Vulnerability",
     "WatchTarget",
 ]

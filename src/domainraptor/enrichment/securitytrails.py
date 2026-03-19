@@ -135,6 +135,22 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
                 "variable or use 'domainraptor config set SECURITYTRAILS_API_KEY <key>'"
             )
 
+    def query(self, target: str) -> list[DomainInfo]:
+        """Query SecurityTrails for information about a target.
+
+        Implements the BaseClient abstract method.
+
+        Args:
+            target: Domain to query (IPs are not supported)
+
+        Returns:
+            List containing the DomainInfo (always single item)
+        """
+        if self._is_ip(target):
+            return []
+        result = self.get_domain(target)
+        return [result]
+
     def _get_headers(self) -> dict[str, str]:
         """Get API request headers."""
         return {

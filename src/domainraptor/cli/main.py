@@ -41,12 +41,6 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-def banner_callback(value: bool) -> None:
-    """Print banner."""
-    if value:
-        print_banner()
-
-
 @app.callback()
 def main_callback(
     ctx: typer.Context,
@@ -125,13 +119,11 @@ def main_callback(
             help="Disable colored output",
         ),
     ] = False,
-    banner: Annotated[
+    no_banner: Annotated[
         bool,
         typer.Option(
-            "--banner",
-            help="Show banner",
-            callback=banner_callback,
-            is_eager=True,
+            "--no-banner",
+            help="Disable banner",
         ),
     ] = False,
 ) -> None:
@@ -173,6 +165,10 @@ def main_callback(
     # Store config in context for sub-commands
     ctx.ensure_object(dict)
     ctx.obj["config"] = app_config
+
+    # Print banner by default unless --no-banner
+    if not no_banner:
+        print_banner()
 
     if app_config.debug:
         print_info(f"Config loaded: mode={app_config.mode.value}, free_only={app_config.free_only}")
@@ -318,7 +314,7 @@ def export_cmd(
     ] = OutputFormat.JSON,
 ) -> None:
     """📤 Export data to file."""
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    ctx.obj.get("config", AppConfig())
     print_info(f"Exporting {target} to: {output} ({format_type.value})")
     # TODO: Implement export
     print_info("Export complete")

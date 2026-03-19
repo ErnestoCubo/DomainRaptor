@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from datetime import datetime
 from typing import Any
 
@@ -451,6 +452,20 @@ class ScanRepository:
         }
 
 
+def _row_to_watch_target(row: sqlite3.Row) -> WatchTarget:
+    """Convert a database row to a WatchTarget object."""
+    return WatchTarget(
+        target=row["target"],
+        watch_type=row["watch_type"],
+        interval_hours=row["interval_hours"],
+        last_check=_str_to_datetime(row["last_check"]),
+        next_check=_str_to_datetime(row["next_check"]),
+        enabled=bool(row["enabled"]),
+        notify_on=json.loads(row["notify_on"] or "[]"),
+        metadata=json.loads(row["metadata"] or "{}"),
+    )
+
+
 class WatchRepository:
     """Repository for watch target operations."""
 
@@ -464,7 +479,7 @@ class WatchRepository:
                 """
                 INSERT INTO watch_targets
                 (target, watch_type, interval_hours, last_check, next_check,
-                 enabled, notify_on, metadata)
+                enabled, notify_on, metadata)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
@@ -487,17 +502,7 @@ class WatchRepository:
             row = cursor.fetchone()
             if not row:
                 return None
-
-            return WatchTarget(
-                target=row["target"],
-                watch_type=row["watch_type"],
-                interval_hours=row["interval_hours"],
-                last_check=_str_to_datetime(row["last_check"]),
-                next_check=_str_to_datetime(row["next_check"]),
-                enabled=bool(row["enabled"]),
-                notify_on=json.loads(row["notify_on"] or "[]"),
-                metadata=json.loads(row["metadata"] or "{}"),
-            )
+            return _row_to_watch_target(row)
 
     def list_all(self, enabled_only: bool = False) -> list[WatchTarget]:
         """List all watch targets."""
@@ -507,21 +512,7 @@ class WatchRepository:
                 query += " WHERE enabled = 1"
             query += " ORDER BY target"
 
-            targets = []
-            for row in conn.execute(query):
-                targets.append(
-                    WatchTarget(
-                        target=row["target"],
-                        watch_type=row["watch_type"],
-                        interval_hours=row["interval_hours"],
-                        last_check=_str_to_datetime(row["last_check"]),
-                        next_check=_str_to_datetime(row["next_check"]),
-                        enabled=bool(row["enabled"]),
-                        notify_on=json.loads(row["notify_on"] or "[]"),
-                        metadata=json.loads(row["metadata"] or "{}"),
-                    )
-                )
-            return targets
+            return [_row_to_watch_target(row) for row in conn.execute(query)]
 
     def get_due_for_check(self) -> list[WatchTarget]:
         """Get watch targets due for checking."""
@@ -535,21 +526,7 @@ class WatchRepository:
                 """
             )
 
-            targets = []
-            for row in cursor:
-                targets.append(
-                    WatchTarget(
-                        target=row["target"],
-                        watch_type=row["watch_type"],
-                        interval_hours=row["interval_hours"],
-                        last_check=_str_to_datetime(row["last_check"]),
-                        next_check=_str_to_datetime(row["next_check"]),
-                        enabled=bool(row["enabled"]),
-                        notify_on=json.loads(row["notify_on"] or "[]"),
-                        metadata=json.loads(row["metadata"] or "{}"),
-                    )
-                )
-            return targets
+            return [_row_to_watch_target(row) for row in cursor]
 
     def update_check_time(self, target: str, checked_at: datetime) -> None:
         """Update last check time and calculate next check."""
