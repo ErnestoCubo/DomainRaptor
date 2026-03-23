@@ -40,7 +40,6 @@ env/
 # UV Package Manager
 # ========================
 .uv/
-uv.lock
 
 # ========================
 # IDE / Editors
