@@ -205,6 +205,18 @@ class TestSecurityTrailsClientHelpers:
         assert SecurityTrailsClient._is_ip("not-an-ip") is False
         assert SecurityTrailsClient._is_ip("") is False
 
+    def test_is_ip_with_out_of_range_octets(self) -> None:
+        """Test _is_ip rejects IPs with octets outside 0-255 range."""
+        # All octets must be 0-255
+        assert SecurityTrailsClient._is_ip("999.999.999.999") is False
+        assert SecurityTrailsClient._is_ip("256.1.1.1") is False
+        assert SecurityTrailsClient._is_ip("1.256.1.1") is False
+        assert SecurityTrailsClient._is_ip("1.1.256.1") is False
+        assert SecurityTrailsClient._is_ip("1.1.1.256") is False
+        # Boundary tests
+        assert SecurityTrailsClient._is_ip("0.0.0.0") is True
+        assert SecurityTrailsClient._is_ip("255.255.255.255") is True
+
 
 class TestSecurityTrailsClientResponseErrors:
     """Tests for response error handling."""

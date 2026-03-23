@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -9,9 +10,31 @@ import typer
 from rich.console import Console
 
 from domainraptor import __version__
-from domainraptor.cli.commands import assess, compare, config, db, discover, report, watch
+from domainraptor.cli.commands import assess, compare, config, db, discover, recon, report, watch
 from domainraptor.core.config import AppConfig, OutputFormat, ScanMode
 from domainraptor.utils.output import print_banner, print_error, print_info
+
+
+def _load_env_file() -> None:
+    """Load API keys from ~/.domainraptor/.env if it exists."""
+    env_file = Path.home() / ".domainraptor" / ".env"
+    if not env_file.exists():
+        return
+
+    with env_file.open() as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                # Only set if not already in environment (env vars take precedence)
+                if key not in os.environ:
+                    os.environ[key] = value
+
+
+# Load API keys at module import time
+_load_env_file()
 
 # Main application
 app = typer.Typer(
@@ -24,6 +47,7 @@ app = typer.Typer(
 
 # Register sub-commands
 app.add_typer(discover.app, name="discover", help="🔍 Discover domains, subdomains, and assets")
+app.add_typer(recon.app, name="recon", help="🎯 Full reconnaissance workflow")
 app.add_typer(assess.app, name="assess", help="🛡️ Assess vulnerabilities and configurations")
 app.add_typer(watch.app, name="watch", help="👁️ Monitor targets for changes")
 app.add_typer(compare.app, name="compare", help="📊 Compare scan results")

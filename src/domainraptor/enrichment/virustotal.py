@@ -6,7 +6,13 @@ VirusTotal provides:
 - Passive DNS data
 - Subdomain enumeration
 
-Free tier: 4 requests/min, 500/day
+Free tier limits (API v3):
+- Standard: 500 requests/day, 4 requests/min
+- Basic: 1 lookup/min, 1 lookup/day, 31 lookups/month
+
+This client defaults to basic tier limits for safety.
+To use standard tier, set VT_RATE_LIMIT_TIER=standard.
+
 Docs: https://developers.virustotal.com/reference
 """
 
@@ -117,23 +123,46 @@ class VirusTotalClient(BaseClient[ReputationResult]):
 
     BASE_URL = "https://www.virustotal.com/api/v3"
 
-    # Rate limiting for free tier: 4 req/min
-    MIN_REQUEST_INTERVAL = 15.0  # 15 seconds between requests (safe margin)
+    # Rate limiting constants
+    # Basic tier: 1 request/min (60 seconds between requests)
+    # Standard tier: 4 requests/min (15 seconds between requests)
+    RATE_LIMIT_BASIC = 60.0  # 60 seconds for basic tier
+    RATE_LIMIT_STANDARD = 15.0  # 15 seconds for standard tier
+
+    # Daily quotas
+    DAILY_QUOTA_BASIC = 1  # Basic tier: 1/day
+    DAILY_QUOTA_STANDARD = 500  # Standard tier: 500/day
 
     def __init__(
         self,
         api_key: str | None = None,
         config: ClientConfig | None = None,
+        rate_limit_tier: str | None = None,
     ) -> None:
         """Initialize VirusTotal client.
 
         Args:
             api_key: VirusTotal API key. Falls back to VIRUSTOTAL_API_KEY env var.
             config: Optional client configuration.
+            rate_limit_tier: Rate limit tier - "basic" (most restrictive)
+                           or "standard" (500 req/day, 4 req/min).
+                           Defaults to VT_RATE_LIMIT_TIER env var or "basic".
         """
+        # Get tier: explicit parameter > env var > default "basic"
+        if rate_limit_tier is not None:
+            tier = rate_limit_tier.lower()
+        else:
+            tier = os.environ.get("VT_RATE_LIMIT_TIER", "basic").lower()
+        self._tier = tier if tier in ("basic", "standard") else "basic"
+
+        # Set rate limit based on tier
+        min_interval = (
+            self.RATE_LIMIT_STANDARD if self._tier == "standard" else self.RATE_LIMIT_BASIC
+        )
+
         if config is None:
             config = ClientConfig(
-                rate_limit=0.25,  # 4 requests per minute = 0.067/s, use 0.25 to be safe
+                rate_limit=1.0 / min_interval,  # Convert to requests per second
                 timeout=30,
             )
 
@@ -141,9 +170,12 @@ class VirusTotalClient(BaseClient[ReputationResult]):
 
         self.api_key = api_key or config.api_key or os.environ.get("VIRUSTOTAL_API_KEY")
         self._last_request_time: float = 0
+        self._min_request_interval = min_interval
 
         if not self.api_key:
             logger.debug("VirusTotal: No API key configured. Set VIRUSTOTAL_API_KEY env var.")
+
+        logger.debug(f"VirusTotal: Using {self._tier} tier rate limits ({min_interval}s interval)")
 
     def _check_api_key(self) -> None:
         """Verify API key is set."""
@@ -171,11 +203,15 @@ class VirusTotalClient(BaseClient[ReputationResult]):
         return [result]
 
     def _rate_limit(self) -> None:
-        """Enforce rate limiting for free tier."""
+        """Enforce rate limiting based on tier.
+
+        Basic tier: 60 seconds between requests (1/min)
+        Standard tier: 15 seconds between requests (4/min)
+        """
         elapsed = time.time() - self._last_request_time
-        if elapsed < self.MIN_REQUEST_INTERVAL:
-            sleep_time = self.MIN_REQUEST_INTERVAL - elapsed
-            logger.debug(f"VirusTotal: Rate limiting, sleeping {sleep_time:.1f}s")
+        if elapsed < self._min_request_interval:
+            sleep_time = self._min_request_interval - elapsed
+            logger.debug(f"VirusTotal: Rate limiting ({self._tier}), sleeping {sleep_time:.1f}s")
             time.sleep(sleep_time)
         self._last_request_time = time.time()
 
@@ -437,8 +473,18 @@ class VirusTotalClient(BaseClient[ReputationResult]):
 
     @staticmethod
     def _is_ip(target: str) -> bool:
-        """Check if target is an IP address."""
+        """Check if target is a valid IP address.
+
+        Validates IPv4 addresses with proper octet range (0-255).
+        """
         import re
 
-        ipv4_pattern = r"^(\d{1,3}\.){3}\d{1,3}$"
-        return bool(re.match(ipv4_pattern, target))
+        if not target:
+            return False
+
+        ipv4_pattern = r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$"
+        match = re.match(ipv4_pattern, target)
+        if match:
+            # Validate each octet is 0-255
+            return all(0 <= int(octet) <= 255 for octet in match.groups())
+        return False

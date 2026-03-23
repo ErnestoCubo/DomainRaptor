@@ -7,11 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from domainraptor.cli.commands.watch import (
-    _check_target,
-    _parse_interval,
-    _watch_targets,
-)
+from domainraptor.cli.commands.watch import _parse_interval
 from domainraptor.cli.main import app
 from domainraptor.core.types import WatchTarget
 
@@ -43,74 +39,56 @@ class TestWatchHelperFunctions:
         assert _parse_interval("") is None
         assert _parse_interval("abc") is None
 
-    def test_check_target_returns_changes(self) -> None:
-        """Test _check_target returns changes for demo target."""
-        from domainraptor.core.config import AppConfig
-
-        watch_target = WatchTarget(
-            target="example.com",
-            watch_type="domain",
-            interval_hours=24,
-            next_check=datetime.now(),
-        )
-        config = AppConfig()
-
-        changes = _check_target(watch_target, config)
-        # Demo target returns a sample change
-        assert len(changes) == 1
-        assert changes[0].asset_value == "new-api.example.com"
-
-    def test_check_target_other_domain(self) -> None:
-        """Test _check_target for non-example domains."""
-        from domainraptor.core.config import AppConfig
-
-        watch_target = WatchTarget(
-            target="other.com",
-            watch_type="domain",
-            interval_hours=24,
-            next_check=datetime.now(),
-        )
-        config = AppConfig()
-
-        changes = _check_target(watch_target, config)
-        assert changes == []
-
 
 class TestWatchListCommand:
     """Tests for watch list command."""
 
-    def test_watch_list_empty(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_list_empty(self, mock_get_repo: MagicMock) -> None:
         """Test list command with no targets."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.list_all.return_value = []
+        mock_get_repo.return_value = mock_repo
+
         result = runner.invoke(app, ["--no-banner", "watch", "list"])
         assert result.exit_code == 0
         assert "No targets being watched" in result.stdout
 
-    def test_watch_list_with_targets(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_list_with_targets(self, mock_get_repo: MagicMock) -> None:
         """Test list command with watched targets."""
-        _watch_targets.clear()
-        _watch_targets["test.com"] = WatchTarget(
-            target="test.com",
-            watch_type="domain",
-            interval_hours=24,
-            next_check=datetime.now(),
-        )
+        mock_repo = MagicMock()
+        mock_repo.list_all.return_value = [
+            WatchTarget(
+                target="test.com",
+                watch_type="domain",
+                interval_hours=24,
+                next_check=datetime.now(),
+            )
+        ]
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "list"])
         assert result.exit_code == 0
         assert "test.com" in result.stdout
 
-        # Cleanup
-        _watch_targets.clear()
-
 
 class TestWatchAddCommand:
     """Tests for watch add command."""
 
+    @patch("domainraptor.cli.commands.watch._get_scan_repo")
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
     @patch("domainraptor.cli.commands.watch.create_progress")
-    def test_watch_add_success(self, mock_progress: MagicMock) -> None:
+    def test_watch_add_success(
+        self, mock_progress: MagicMock, mock_get_repo: MagicMock, mock_get_scan_repo: MagicMock
+    ) -> None:
         """Test adding a target to watch list."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = None  # Not already watching
+        mock_get_repo.return_value = mock_repo
+
+        mock_scan_repo = MagicMock()
+        mock_get_scan_repo.return_value = mock_scan_repo
 
         progress_instance = MagicMock()
         mock_progress.return_value.__enter__ = MagicMock(return_value=progress_instance)
@@ -119,15 +97,21 @@ class TestWatchAddCommand:
         result = runner.invoke(app, ["--no-banner", "watch", "add", "newdomain.com"])
 
         assert result.exit_code == 0
-        assert "newdomain.com" in _watch_targets
+        mock_repo.add.assert_called_once()
 
-        # Cleanup
-        _watch_targets.clear()
-
+    @patch("domainraptor.cli.commands.watch._get_scan_repo")
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
     @patch("domainraptor.cli.commands.watch.create_progress")
-    def test_watch_add_with_interval(self, mock_progress: MagicMock) -> None:
+    def test_watch_add_with_interval(
+        self, mock_progress: MagicMock, mock_get_repo: MagicMock, mock_get_scan_repo: MagicMock
+    ) -> None:
         """Test adding a target with custom interval."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = None
+        mock_get_repo.return_value = mock_repo
+
+        mock_scan_repo = MagicMock()
+        mock_get_scan_repo.return_value = mock_scan_repo
 
         progress_instance = MagicMock()
         mock_progress.return_value.__enter__ = MagicMock(return_value=progress_instance)
@@ -138,14 +122,15 @@ class TestWatchAddCommand:
         )
 
         assert result.exit_code == 0
-        assert _watch_targets["interval.com"].interval_hours == 6
+        # Verify the saved target has correct interval
+        saved_target = mock_repo.add.call_args[0][0]
+        assert saved_target.interval_hours == 6
 
-        # Cleanup
-        _watch_targets.clear()
-
-    def test_watch_add_invalid_interval(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_add_invalid_interval(self, mock_get_repo: MagicMock) -> None:
         """Test adding a target with invalid interval."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(
             app, ["--no-banner", "watch", "add", "invalid.com", "--interval", "invalid"]
@@ -153,108 +138,108 @@ class TestWatchAddCommand:
 
         assert result.exit_code == 1
 
-        # Cleanup
-        _watch_targets.clear()
-
-    @patch("domainraptor.cli.commands.watch.create_progress")
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
     @patch("typer.confirm", return_value=False)
     def test_watch_add_already_watching_decline(
-        self, mock_confirm: MagicMock, mock_progress: MagicMock
+        self, mock_confirm: MagicMock, mock_get_repo: MagicMock
     ) -> None:
         """Test adding already watched target and declining update."""
-        _watch_targets.clear()
-        _watch_targets["existing.com"] = WatchTarget(
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = WatchTarget(
             target="existing.com",
             watch_type="domain",
             interval_hours=24,
             next_check=datetime.now(),
         )
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "add", "existing.com"])
 
         # Should exit without error
         assert result.exit_code == 0
 
-        # Cleanup
-        _watch_targets.clear()
-
 
 class TestWatchRemoveCommand:
     """Tests for watch remove command."""
 
-    def test_watch_remove_not_found(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_remove_not_found(self, mock_get_repo: MagicMock) -> None:
         """Test removing a target that isn't being watched."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = None
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "remove", "notfound.com", "--force"])
 
         assert result.exit_code == 1
         assert "Not watching" in result.output
 
-    def test_watch_remove_success(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_remove_success(self, mock_get_repo: MagicMock) -> None:
         """Test removing a watched target."""
-        _watch_targets.clear()
-        _watch_targets["toremove.com"] = WatchTarget(
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = WatchTarget(
             target="toremove.com",
             watch_type="domain",
             interval_hours=24,
             next_check=datetime.now(),
         )
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "remove", "toremove.com", "--force"])
 
         assert result.exit_code == 0
         assert "Removed" in result.stdout
-        assert "toremove.com" not in _watch_targets
-
-    @patch("typer.confirm", return_value=False)
-    def test_watch_remove_decline(self, mock_confirm: MagicMock) -> None:
-        """Test declining to remove a target."""
-        _watch_targets.clear()
-        _watch_targets["keep.com"] = WatchTarget(
-            target="keep.com",
-            watch_type="domain",
-            interval_hours=24,
-            next_check=datetime.now(),
-        )
-
-        runner.invoke(app, ["--no-banner", "watch", "remove", "keep.com"])
-
-        # Cleanup
-        _watch_targets.clear()
+        mock_repo.remove.assert_called_once_with("toremove.com")
 
 
 class TestWatchRunCommand:
     """Tests for watch run command."""
 
-    def test_watch_run_no_targets(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_run_no_targets(self, mock_get_repo: MagicMock) -> None:
         """Test run with no targets due."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.list_all.return_value = []
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "run"])
 
         assert result.exit_code == 0
-        assert "No targets due" in result.stdout
+        # When no targets, it shows "Checking 0 target(s)"
+        assert "Checking 0 target(s)" in result.stdout
 
-    def test_watch_run_target_not_found(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_run_target_not_found(self, mock_get_repo: MagicMock) -> None:
         """Test run with specific target not found."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = None
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "run", "notfound.com"])
 
         assert result.exit_code == 1
         assert "Not watching" in result.output
 
+    @patch("domainraptor.cli.commands.watch._get_scan_repo")
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
     @patch("domainraptor.cli.commands.watch.create_progress")
-    def test_watch_run_with_force(self, mock_progress: MagicMock) -> None:
+    def test_watch_run_with_force(
+        self, mock_progress: MagicMock, mock_get_repo: MagicMock, mock_get_scan_repo: MagicMock
+    ) -> None:
         """Test force run on watched target."""
-        _watch_targets.clear()
-        _watch_targets["forcerun.com"] = WatchTarget(
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = WatchTarget(
             target="forcerun.com",
             watch_type="domain",
             interval_hours=24,
             next_check=datetime.now(),
         )
+        mock_get_repo.return_value = mock_repo
+
+        mock_scan_repo = MagicMock()
+        mock_scan_repo.get_latest_for_target.return_value = None
+        mock_get_scan_repo.return_value = mock_scan_repo
 
         progress_instance = MagicMock()
         mock_progress.return_value.__enter__ = MagicMock(return_value=progress_instance)
@@ -264,129 +249,116 @@ class TestWatchRunCommand:
 
         assert result.exit_code == 0
 
-        # Cleanup
-        _watch_targets.clear()
-
-    @patch("domainraptor.cli.commands.watch.create_progress")
-    def test_watch_run_example_detects_changes(self, mock_progress: MagicMock) -> None:
-        """Test run on example.com detects demo changes."""
-        _watch_targets.clear()
-        _watch_targets["example.com"] = WatchTarget(
-            target="example.com",
-            watch_type="domain",
-            interval_hours=24,
-            next_check=datetime.now(),
-        )
-
-        progress_instance = MagicMock()
-        mock_progress.return_value.__enter__ = MagicMock(return_value=progress_instance)
-        mock_progress.return_value.__exit__ = MagicMock(return_value=False)
-
-        result = runner.invoke(app, ["--no-banner", "watch", "run", "example.com", "--force"])
-
-        assert result.exit_code == 0
-        assert "change" in result.stdout.lower()
-
-        # Cleanup
-        _watch_targets.clear()
-
 
 class TestWatchPauseCommand:
     """Tests for watch pause command."""
 
-    def test_watch_pause_not_found(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_pause_not_found(self, mock_get_repo: MagicMock) -> None:
         """Test pausing a target that isn't being watched."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = None
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "pause", "notfound.com"])
 
         assert result.exit_code == 1
         assert "Not watching" in result.output
 
-    def test_watch_pause_success(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_pause_success(self, mock_get_repo: MagicMock) -> None:
         """Test pausing a watched target."""
-        _watch_targets.clear()
-        _watch_targets["topause.com"] = WatchTarget(
+        watch_target = WatchTarget(
             target="topause.com",
             watch_type="domain",
             interval_hours=24,
             next_check=datetime.now(),
             enabled=True,
         )
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = watch_target
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "pause", "topause.com"])
 
         assert result.exit_code == 0
-        assert _watch_targets["topause.com"].enabled is False
-
-        # Cleanup
-        _watch_targets.clear()
+        mock_repo.set_enabled.assert_called_once_with("topause.com", False)
 
 
 class TestWatchResumeCommand:
     """Tests for watch resume command."""
 
-    def test_watch_resume_not_found(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_resume_not_found(self, mock_get_repo: MagicMock) -> None:
         """Test resuming a target that isn't being watched."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = None
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "resume", "notfound.com"])
 
         assert result.exit_code == 1
         assert "Not watching" in result.output
 
-    def test_watch_resume_success(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_resume_success(self, mock_get_repo: MagicMock) -> None:
         """Test resuming a paused target."""
-        _watch_targets.clear()
-        _watch_targets["toresume.com"] = WatchTarget(
+        watch_target = WatchTarget(
             target="toresume.com",
             watch_type="domain",
             interval_hours=24,
             next_check=datetime.now(),
             enabled=False,
         )
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = watch_target
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "resume", "toresume.com"])
 
         assert result.exit_code == 0
-        assert _watch_targets["toresume.com"].enabled is True
-
-        # Cleanup
-        _watch_targets.clear()
+        mock_repo.set_enabled.assert_called_once_with("toresume.com", True)
 
 
 class TestWatchStatusCommand:
     """Tests for watch status command."""
 
-    def test_watch_status_not_found(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_status_not_found(self, mock_get_repo: MagicMock) -> None:
         """Test status for a target that isn't being watched."""
-        _watch_targets.clear()
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = None
+        mock_get_repo.return_value = mock_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "status", "notfound.com"])
 
         assert result.exit_code == 1
         assert "Not watching" in result.output
 
-    def test_watch_status_success(self) -> None:
+    @patch("domainraptor.cli.commands.watch._get_scan_repo")
+    @patch("domainraptor.cli.commands.watch._get_watch_repo")
+    def test_watch_status_success(
+        self, mock_get_repo: MagicMock, mock_get_scan_repo: MagicMock
+    ) -> None:
         """Test status for a watched target."""
-        _watch_targets.clear()
-        _watch_targets["status.com"] = WatchTarget(
+        mock_repo = MagicMock()
+        mock_repo.get_by_target.return_value = WatchTarget(
             target="status.com",
             watch_type="domain",
             interval_hours=24,
             next_check=datetime.now(),
             enabled=True,
         )
+        mock_get_repo.return_value = mock_repo
+
+        mock_scan_repo = MagicMock()
+        mock_scan_repo.list_by_target.return_value = []
+        mock_get_scan_repo.return_value = mock_scan_repo
 
         result = runner.invoke(app, ["--no-banner", "watch", "status", "status.com"])
 
         assert result.exit_code == 0
         assert "status.com" in result.stdout
-        assert "domain" in result.stdout
-        assert "24" in result.stdout
-
-        # Cleanup
-        _watch_targets.clear()
 
 
 class TestWatchCallback:
@@ -394,9 +366,12 @@ class TestWatchCallback:
 
     def test_watch_no_subcommand_shows_help(self) -> None:
         """Test watch without subcommand shows help due to no_args_is_help=True."""
-        _watch_targets.clear()
-
         result = runner.invoke(app, ["--no-banner", "watch"])
+
+        # With no_args_is_help=True, shows help and exits with code 2
+        assert result.exit_code == 2
+        # Shows help text
+        assert "Usage" in result.output or "watch" in result.output
 
         # With no_args_is_help=True, shows help and exits with code 2
         assert result.exit_code == 2

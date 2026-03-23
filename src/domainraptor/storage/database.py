@@ -12,7 +12,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Current schema version for migrations
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Default database location
 DEFAULT_DB_PATH = Path.home() / ".domainraptor" / "domainraptor.db"
@@ -219,16 +219,65 @@ class DatabaseManager:
             CREATE INDEX IF NOT EXISTS idx_watch_target ON watch_targets(target);
             CREATE INDEX IF NOT EXISTS idx_watch_enabled ON watch_targets(enabled);
             CREATE INDEX IF NOT EXISTS idx_watch_next_check ON watch_targets(next_check);
+
+            -- Services table - detected services from Shodan/port scans
+            CREATE TABLE IF NOT EXISTS services (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scan_id INTEGER NOT NULL,
+                ip TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                protocol TEXT DEFAULT 'tcp',
+                service_name TEXT,
+                version TEXT,
+                banner TEXT,
+                product TEXT,
+                os TEXT,
+                cpe TEXT DEFAULT '[]',
+                metadata TEXT DEFAULT '{}',
+                source TEXT DEFAULT 'shodan',
+                FOREIGN KEY (scan_id) REFERENCES scans(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_services_scan_id ON services(scan_id);
+            CREATE INDEX IF NOT EXISTS idx_services_ip ON services(ip);
+            CREATE INDEX IF NOT EXISTS idx_services_port ON services(port);
             """
         )
 
     def _migrate_schema(self, conn: sqlite3.Connection, from_version: int, to_version: int) -> None:
         """Run schema migrations."""
-        # Add migrations here as needed
-        # for version in range(from_version + 1, to_version + 1):
-        #     if version == 2:
-        #         self._migrate_to_v2(conn)
-        pass
+        for version in range(from_version + 1, to_version + 1):
+            if version == 2:
+                self._migrate_to_v2(conn)
+
+    def _migrate_to_v2(self, conn: sqlite3.Connection) -> None:
+        """Migrate from v1 to v2: Add services table."""
+        conn.executescript(
+            """
+            -- Services table - detected services from Shodan/port scans
+            CREATE TABLE IF NOT EXISTS services (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scan_id INTEGER NOT NULL,
+                ip TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                protocol TEXT DEFAULT 'tcp',
+                service_name TEXT,
+                version TEXT,
+                banner TEXT,
+                product TEXT,
+                os TEXT,
+                cpe TEXT DEFAULT '[]',
+                metadata TEXT DEFAULT '{}',
+                source TEXT DEFAULT 'shodan',
+                FOREIGN KEY (scan_id) REFERENCES scans(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_services_scan_id ON services(scan_id);
+            CREATE INDEX IF NOT EXISTS idx_services_ip ON services(ip);
+            CREATE INDEX IF NOT EXISTS idx_services_port ON services(port);
+            """
+        )
+        logger.info("Migrated to schema v2: Added services table")
 
     def get_stats(self) -> dict[str, Any]:
         """Get database statistics."""
@@ -243,6 +292,7 @@ class DatabaseManager:
                 "certificates",
                 "config_issues",
                 "vulnerabilities",
+                "services",
                 "watch_targets",
             ]:
                 # Table names are from hardcoded list - safe from injection

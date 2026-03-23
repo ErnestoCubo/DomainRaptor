@@ -23,6 +23,7 @@ DomainRaptor integrates with multiple security services. While basic functionali
 | **VirusTotal** | Optional | ✓ | Malware analysis, URL reputation, subdomain enumeration |
 | **SecurityTrails** | Optional | ✓ | Historical DNS, subdomain enumeration |
 | **Censys** | Optional | ✓ | Certificate search, host discovery |
+| **NVD** | Optional | ✓ | CVE enrichment with descriptions, CVSS scores |
 
 ---
 
@@ -96,6 +97,28 @@ domainraptor config set SECURITYTRAILS_API_KEY xyz987654321abcdefghijklmnopqrstu
 domainraptor config set CENSYS_API_KEY your_api_id:your_api_secret
 ```
 
+### NVD (National Vulnerability Database)
+
+1. Go to [https://nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key)
+2. Request a free API key
+3. Receive key via email
+
+**Without API key:**
+
+- ~5 requests per 30 seconds
+- Basic CVE lookup
+
+**With API key:**
+
+- ~50 requests per 30 seconds (10x faster)
+- Same features, higher throughput
+
+```bash
+domainraptor config set NVD_API_KEY your_nvd_api_key_here
+```
+
+> 💡 **Tip:** NVD enrichment is used by `domainraptor assess list --enrich` to fetch official CVE descriptions and CVSS scores.
+
 ---
 
 ## Configuration Methods
@@ -144,6 +167,7 @@ SHODAN_API_KEY=AbCdEf123456789GhIjKlMnOpQrStUvWx
 VIRUSTOTAL_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
 SECURITYTRAILS_API_KEY=xyz987654321abcdefghijklmnopqrstuvwxyz
 CENSYS_API_KEY=api_id:api_secret
+NVD_API_KEY=your_nvd_api_key_here
 ```
 
 ---

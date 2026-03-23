@@ -192,6 +192,15 @@ class ShodanClient(BaseClient[ShodanHostResult]):
             with contextlib.suppress(ValueError, AttributeError):
                 last_update = datetime.fromisoformat(data["last_update"].replace("Z", "+00:00"))
 
+        # Handle vulns - can be dict (older API) or list (newer API)
+        raw_vulns = data.get("vulns", [])
+        if isinstance(raw_vulns, dict):
+            vuln_list = list(raw_vulns.keys())
+        elif isinstance(raw_vulns, list):
+            vuln_list = raw_vulns
+        else:
+            vuln_list = []
+
         return ShodanHostResult(
             ip=data.get("ip_str", ""),
             hostnames=data.get("hostnames", []),
@@ -203,7 +212,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
             os=data.get("os"),
             ports=data.get("ports", []),
             services=services,
-            vulns=list(data.get("vulns", {}).keys()) if data.get("vulns") else [],
+            vulns=vuln_list,
             last_update=last_update,
             tags=data.get("tags", []),
         )
@@ -419,9 +428,42 @@ class ShodanClient(BaseClient[ShodanHostResult]):
 
         return assets, services, vulns, errors
 
+    def query(self, target: str) -> list[ShodanHostResult]:
+        """Query Shodan for a target (IP or domain).
+
+        For IPs: Returns host information.
+        For domains: Returns empty (use dns_domain for subdomain enumeration).
+
+        Args:
+            target: IP address or domain
+
+        Returns:
+            List containing ShodanHostResult for IPs, empty for domains
+        """
+        if self._is_ip(target):
+            try:
+                return [self.host_info(target)]
+            except ShodanNotFoundError:
+                return []
+        # For domains, use dns_domain() separately
+        return []
+
     @staticmethod
     def _is_ip(target: str) -> bool:
-        """Check if target is an IP address."""
-        ipv4_pattern = r"^(\d{1,3}\.){3}\d{1,3}$"
+        """Check if target is a valid IP address.
+
+        Validates IPv4 addresses with proper octet range (0-255).
+        """
+        if not target:
+            return False
+
+        # IPv4 validation with proper range check
+        ipv4_pattern = r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$"
+        match = re.match(ipv4_pattern, target)
+        if match:
+            # Validate each octet is 0-255
+            return all(0 <= int(octet) <= 255 for octet in match.groups())
+
+        # IPv6 validation (simplified - full addresses)
         ipv6_pattern = r"^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$"
-        return bool(re.match(ipv4_pattern, target) or re.match(ipv6_pattern, target))
+        return bool(re.match(ipv6_pattern, target))

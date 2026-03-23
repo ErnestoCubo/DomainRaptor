@@ -90,27 +90,46 @@ def print_info(message: str) -> None:
     console.print(f"[bold blue]i[/bold blue] {message}")
 
 
-def print_assets_table(assets: list[Asset]) -> None:
-    """Print discovered assets in a table format."""
+def print_assets_table(assets: list[Asset], show_ip: bool = True) -> None:
+    """Print discovered assets in a table format.
+
+    Args:
+        assets: List of discovered assets
+        show_ip: Whether to show IP column for subdomains (default: True)
+    """
     if not assets:
         print_warning("No assets found")
         return
 
+    # Check if any subdomain has IP metadata
+    has_ip_data = show_ip and any(
+        asset.type.value == "subdomain" and asset.metadata.get("ip") for asset in assets
+    )
+
     table = Table(title="Discovered Assets", show_header=True, header_style="bold cyan")
     table.add_column("Type", style="dim")
     table.add_column("Value", style="bold")
+    if has_ip_data:
+        table.add_column("IP", style="cyan")
     table.add_column("Parent")
     table.add_column("Source")
     table.add_column("First Seen")
 
     for asset in assets:
-        table.add_row(
+        row = [
             asset.type.value,
             asset.value,
-            asset.parent or "-",
-            asset.source,
-            asset.first_seen.strftime("%Y-%m-%d %H:%M"),
+        ]
+        if has_ip_data:
+            row.append(asset.metadata.get("ip", "-") if asset.type.value == "subdomain" else "-")
+        row.extend(
+            [
+                asset.parent or "-",
+                asset.source,
+                asset.first_seen.strftime("%Y-%m-%d %H:%M"),
+            ]
         )
+        table.add_row(*row)
 
     console.print(table)
 

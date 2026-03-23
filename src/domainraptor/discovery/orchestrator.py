@@ -283,7 +283,7 @@ class DiscoveryOrchestrator:
             return []
 
     def _resolve_subdomain_ips(self, result: DiscoveryResult) -> None:
-        """Resolve IPs for discovered subdomains."""
+        """Resolve IPs for discovered subdomains and update metadata."""
         if not self.dns_client:
             return
 
@@ -293,9 +293,24 @@ class DiscoveryOrchestrator:
 
         logger.info(f"Resolving IPs for {len(to_resolve)} subdomains")
 
+        # Create a map of subdomain value -> Asset for updating metadata
+        subdomain_map = {a.value.lower(): a for a in result.subdomains}
+
         for subdomain in to_resolve:
             ip_assets = self._resolve_single_subdomain(subdomain)
             self._merge_assets(result.ips, ip_assets)
+
+            # Update subdomain metadata with resolved IP
+            if ip_assets:
+                subdomain_key = subdomain.lower()
+                if subdomain_key in subdomain_map:
+                    # Store first IP in metadata for display
+                    subdomain_map[subdomain_key].metadata["ip"] = ip_assets[0].value
+                    # Store all IPs if multiple
+                    if len(ip_assets) > 1:
+                        subdomain_map[subdomain_key].metadata["all_ips"] = [
+                            a.value for a in ip_assets
+                        ]
 
     def _deduplicate(self, result: DiscoveryResult) -> None:
         """Deduplicate assets in result."""

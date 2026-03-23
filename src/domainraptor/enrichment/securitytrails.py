@@ -491,8 +491,18 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
 
     @staticmethod
     def _is_ip(target: str) -> bool:
-        """Check if target is an IP address."""
+        """Check if target is a valid IP address.
+
+        Validates IPv4 addresses with proper octet range (0-255).
+        """
         import re
 
-        ipv4_pattern = r"^(\d{1,3}\.){3}\d{1,3}$"
-        return bool(re.match(ipv4_pattern, target))
+        if not target:
+            return False
+
+        ipv4_pattern = r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$"
+        match = re.match(ipv4_pattern, target)
+        if match:
+            # Validate each octet is 0-255
+            return all(0 <= int(octet) <= 255 for octet in match.groups())
+        return False

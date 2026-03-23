@@ -67,6 +67,41 @@ domainraptor report generate example.com --scan abc123
 | `md` | .md | Markdown document | Documentation, GitHub |
 | `pdf` | .pdf | PDF document | Formal reports (requires wkhtmltopdf) |
 
+---
+
+## Vulnerability Details in Reports
+
+Reports include comprehensive vulnerability information when available:
+
+| Field | Description | Source |
+|-------|-------------|--------|
+| **CVE ID** | Unique vulnerability identifier | Shodan, NVD |
+| **Severity** | CRITICAL, HIGH, MEDIUM, LOW | CVSS calculation |
+| **CVSS Score** | Numerical vulnerability score (0-10) | NVD enrichment |
+| **Affected Asset** | IP or hostname affected | Scan results |
+| **Description** | Full vulnerability description | NVD API |
+| **Remediation** | Recommended fix steps | Knowledge base |
+| **Source** | Detection source (shodan, nmap, etc.) | Scan metadata |
+
+**Example HTML Report (Vulnerability Section):**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Vulnerabilities (52 total)                                      │
+├─────────────────────────────────────────────────────────────────┤
+│ CVE-2022-3358 │ HIGH │ CVSS 7.5 │ 168.119.238.139               │
+│ OpenSSL supports creating a custom cipher via the legacy        │
+│ EVP_CIPHER_meth_new() function...                               │
+├─────────────────────────────────────────────────────────────────┤
+│ CVE-2023-2650 │ MEDIUM │ CVSS 6.5 │ 168.119.238.139             │
+│ Processing some specially crafted ASN.1 object identifiers...   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+> 💡 **Tip:** Use `domainraptor assess list <SCAN_ID> --enrich` before generating reports to fetch full CVE descriptions from NVD.
+
+---
+
 **Example HTML Report Structure:**
 
 ```

@@ -449,3 +449,184 @@ def _check_outdated_software(target: str, result: ScanResult, include_minor: boo
     """Check for outdated software versions."""
     # Requires service fingerprinting - placeholder for future
     pass
+
+
+@app.command("list")
+def list_vulns_cmd(
+    ctx: typer.Context,
+    scan_id: Annotated[
+        int,
+        typer.Argument(help="Scan ID to list vulnerabilities from"),
+    ],
+    enrich: Annotated[
+        bool,
+        typer.Option("--enrich", "-e", help="Enrich with NVD descriptions (slower)"),
+    ] = False,
+    all_vulns: Annotated[
+        bool,
+        typer.Option("--all", "-a", help="Show all vulnerabilities (no limit)"),
+    ] = False,
+    output_json: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON"),
+    ] = False,
+    min_severity: Annotated[
+        str,
+        typer.Option("--min-severity", "-s", help="Filter by minimum severity"),
+    ] = "low",
+) -> None:
+    """
+    📋 List all vulnerabilities from a scan.
+
+    Shows detailed vulnerability information from a previous scan.
+    Use --enrich to fetch descriptions from NVD (National Vulnerability Database).
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# List vulns from scan 32[/dim]
+        domainraptor assess list 32
+
+        [dim]# Enrich with NVD descriptions[/dim]
+        domainraptor assess list 32 --enrich
+
+        [dim]# Show all as JSON[/dim]
+        domainraptor assess list 32 --all --json
+
+        [dim]# High severity only[/dim]
+        domainraptor assess list 32 --min-severity high
+    """
+    import json
+
+    from rich.panel import Panel
+    from rich.table import Table
+
+    from domainraptor.storage import ScanRepository
+
+    print_info(f"Loading vulnerabilities from scan {scan_id}...")
+
+    # Load scan
+    repo = ScanRepository()
+    scan = repo.get_by_id(scan_id)
+
+    if not scan:
+        print_warning(f"Scan {scan_id} not found")
+        raise typer.Exit(1)
+
+    vulns = scan.vulnerabilities
+
+    if not vulns:
+        print_warning(f"No vulnerabilities found in scan {scan_id}")
+        return
+
+    # Filter by severity
+    severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+    min_sev_value = severity_order.get(min_severity.lower(), 0)
+    vulns = [v for v in vulns if severity_order.get(v.severity.value.lower(), 0) >= min_sev_value]
+
+    print_info(f"Found {len(vulns)} vulnerabilities (min severity: {min_severity})")
+
+    # Enrich with NVD if requested
+    if enrich:
+        console.print()
+        print_info("Enriching with NVD data (this may take a while)...")
+        from domainraptor.discovery.nvd_client import NVDClient, NVDRateLimitError
+
+        client = NVDClient()
+        enriched_count = 0
+        try:
+            with create_progress() as progress:
+                task = progress.add_task("Fetching CVE details...", total=len(vulns))
+
+                for vuln in vulns:
+                    if vuln.id.startswith("CVE-"):
+                        try:
+                            info = client.get_cve(vuln.id)
+                            if info:
+                                vuln.description = info.description
+                                vuln.severity = SeverityLevel(info.severity.lower())
+                                vuln.cvss_score = info.cvss_v3_score
+                                vuln.cvss_vector = info.cvss_v3_vector
+                                enriched_count += 1
+                        except NVDRateLimitError:
+                            print_warning(
+                                f"Rate limited - enriched {enriched_count}/{len(vulns)} CVEs"
+                            )
+                            break
+                    progress.advance(task)
+
+            print_info(f"Enriched {enriched_count} of {len(vulns)} vulnerabilities")
+        finally:
+            client.close()
+
+    # Output
+    if output_json:
+        data = [
+            {
+                "id": v.id,
+                "title": v.title,
+                "severity": v.severity.value,
+                "description": v.description,
+                "affected_asset": v.affected_asset,
+                "cvss_score": v.cvss_score,
+                "source": v.source,
+            }
+            for v in vulns
+        ]
+        console.print(json.dumps(data, indent=2))
+    else:
+        # Print as table
+        limit = None if all_vulns else 30
+        displayed = vulns[:limit] if limit else vulns
+
+        table = Table(
+            title=f"Vulnerabilities - Scan {scan_id} ({len(vulns)} total)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("CVE ID", style="bold yellow", width=18)
+        table.add_column("Severity", width=10)
+        table.add_column("CVSS", width=6)
+        table.add_column("Affected", width=18)
+        table.add_column("Description", max_width=50)
+
+        severity_colors = {
+            "critical": "red bold",
+            "high": "red",
+            "medium": "yellow",
+            "low": "green",
+            "info": "blue",
+        }
+
+        for v in displayed:
+            sev = v.severity.value.lower()
+            color = severity_colors.get(sev, "white")
+            cvss = f"{v.cvss_score:.1f}" if v.cvss_score else "-"
+            desc = v.description[:80] + "..." if len(v.description) > 80 else v.description
+
+            table.add_row(
+                v.id,
+                f"[{color}]{sev.upper()}[/{color}]",
+                cvss,
+                v.affected_asset or "-",
+                desc or "No description available",
+            )
+
+        console.print(table)
+
+        if limit and len(vulns) > limit:
+            console.print(f"\n[dim]Showing {limit} of {len(vulns)}. Use --all to see all.[/dim]")
+
+        # Summary
+        console.print()
+        by_severity = {}
+        for v in vulns:
+            sev = v.severity.value
+            by_severity[sev] = by_severity.get(sev, 0) + 1
+
+        summary = " | ".join(
+            f"[{severity_colors.get(s.lower(), 'white')}]{s.upper()}: {c}[/{severity_colors.get(s.lower(), 'white')}]"
+            for s, c in sorted(
+                by_severity.items(), key=lambda x: severity_order.get(x[0].lower(), 0), reverse=True
+            )
+        )
+        console.print(Panel(summary, title="Summary by Severity"))

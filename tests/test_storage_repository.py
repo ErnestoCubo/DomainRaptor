@@ -500,6 +500,78 @@ class TestScanRepositoryLatestAndCount:
         assert count == 0
 
 
+class TestScanRepositoryListByTarget:
+    """Tests for list_by_target method."""
+
+    @pytest.fixture
+    def db_manager(self) -> DatabaseManager:
+        """Create a temporary database for testing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "test.db"
+            manager = DatabaseManager(db_path=db_path)
+            manager.initialize()
+            yield manager
+
+    @pytest.fixture
+    def repo(self, db_manager: DatabaseManager) -> ScanRepository:
+        """Create a repository with test database."""
+        return ScanRepository(db=db_manager)
+
+    def test_list_by_target_returns_scans(self, repo: ScanRepository) -> None:
+        """Test list_by_target returns scans for target."""
+        now = datetime.now()
+        for _i in range(5):
+            scan = ScanResult(
+                target="example.com", scan_type="full", status="completed", started_at=now
+            )
+            repo.save(scan)
+
+        scans = repo.list_by_target("example.com")
+        assert len(scans) == 5
+        for scan in scans:
+            assert scan.target == "example.com"
+
+    def test_list_by_target_empty(self, repo: ScanRepository) -> None:
+        """Test list_by_target returns empty for unknown target."""
+        scans = repo.list_by_target("nonexistent.com")
+        assert scans == []
+
+    def test_list_by_target_with_limit(self, repo: ScanRepository) -> None:
+        """Test list_by_target respects limit."""
+        now = datetime.now()
+        for _i in range(15):
+            scan = ScanResult(
+                target="example.com", scan_type="full", status="completed", started_at=now
+            )
+            repo.save(scan)
+
+        scans = repo.list_by_target("example.com", limit=5)
+        assert len(scans) == 5
+
+    def test_list_by_target_default_limit(self, repo: ScanRepository) -> None:
+        """Test list_by_target default limit is 10."""
+        now = datetime.now()
+        for _i in range(15):
+            scan = ScanResult(
+                target="example.com", scan_type="full", status="completed", started_at=now
+            )
+            repo.save(scan)
+
+        scans = repo.list_by_target("example.com")
+        assert len(scans) == 10
+
+    def test_list_by_target_excludes_other_targets(self, repo: ScanRepository) -> None:
+        """Test list_by_target only returns scans for specified target."""
+        now = datetime.now()
+        for target in ["example.com", "test.com", "example.com"]:
+            scan = ScanResult(target=target, scan_type="full", status="completed", started_at=now)
+            repo.save(scan)
+
+        scans = repo.list_by_target("example.com")
+        assert len(scans) == 2
+        assert all(s.target == "example.com" for s in scans)
+
+
 class TestScanRepositoryDeleteAndPrune:
     """Tests for delete and prune methods."""
 

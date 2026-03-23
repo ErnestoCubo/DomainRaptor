@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import Annotated
 
@@ -579,9 +580,109 @@ def discover_ports_cmd(
     ] = None,
 ) -> None:
     """Discover open ports and services."""
+    import re
+
+    from rich.panel import Panel
+    from rich.table import Table
+
     print_info(f"Port discovery for: {target}")
-    print_info(f"Range: {port_range}")
-    # TODO: Implement port discovery
+
+    # Check if target is an IP
+    ipv4_pattern = r"^(\d{1,3}\.){3}\d{1,3}$"
+    is_ip = bool(re.match(ipv4_pattern, target))
+
+    if not is_ip:
+        # Resolve domain to IP
+        try:
+            import socket
+
+            ip = socket.gethostbyname(target)
+            print_info(f"Resolved to: {ip}")
+        except Exception:
+            print_error(f"Could not resolve {target}")
+            raise typer.Exit(1) from None
+    else:
+        ip = target
+
+    # Use Shodan if API key available
+    if os.environ.get("SHODAN_API_KEY"):
+        try:
+            from domainraptor.discovery.shodan_client import ShodanClient
+
+            client = ShodanClient()
+            host_info = client.host_info(ip)
+
+            # Host info panel
+            info_table = Table(show_header=False, box=None)
+            info_table.add_column("Field", style="cyan")
+            info_table.add_column("Value", style="green")
+
+            info_table.add_row("IP", host_info.ip)
+            if host_info.hostnames:
+                info_table.add_row("Hostnames", ", ".join(host_info.hostnames[:3]))
+            info_table.add_row(
+                "Location",
+                f"{host_info.city}, {host_info.country}" if host_info.city else host_info.country,
+            )
+            info_table.add_row("Organization", host_info.org)
+            info_table.add_row("ASN", host_info.asn)
+            if host_info.os:
+                info_table.add_row("OS", host_info.os)
+
+            console.print(Panel(info_table, title="Host Information"))
+
+            # Services table
+            if host_info.services:
+                svc_table = Table(
+                    title=f"Open Ports ({len(host_info.ports)} found)",
+                    show_header=True,
+                    header_style="bold cyan",
+                )
+                svc_table.add_column("Port", style="bold yellow")
+                svc_table.add_column("Protocol")
+                svc_table.add_column("Service", style="green")
+                svc_table.add_column("Version")
+                svc_table.add_column("Banner", max_width=50)
+
+                for svc in host_info.services:
+                    svc_table.add_row(
+                        str(svc.port),
+                        svc.protocol,
+                        svc.service_name or "-",
+                        svc.version or "-",
+                        (svc.banner[:50] + "...")
+                        if svc.banner and len(svc.banner) > 50
+                        else (svc.banner or "-"),
+                    )
+
+                console.print(svc_table)
+            else:
+                print_warning("No open ports found in Shodan database")
+
+            # Vulnerabilities
+            if host_info.vulns:
+                console.print(
+                    Panel(
+                        "\n".join(f"• {cve}" for cve in host_info.vulns[:15])
+                        + (
+                            f"\n... and {len(host_info.vulns) - 15} more"
+                            if len(host_info.vulns) > 15
+                            else ""
+                        ),
+                        title=f"Vulnerabilities ({len(host_info.vulns)} CVEs)",
+                        border_style="red",
+                    )
+                )
+
+            print_success(f"Found {len(host_info.ports)} open ports, {len(host_info.vulns)} CVEs")
+
+        except Exception as e:
+            print_error(f"Shodan lookup failed: {e}")
+            raise typer.Exit(1) from None
+    else:
+        print_warning("SHODAN_API_KEY not configured")
+        print_info("Run: domainraptor config set SHODAN_API_KEY <your-key>")
+        print_info("Get a free key at: https://account.shodan.io/")
 
 
 @app.command("whois")

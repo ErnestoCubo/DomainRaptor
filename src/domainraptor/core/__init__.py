@@ -1,6 +1,14 @@
 """Core module - shared utilities, config, and base classes."""
 
 from domainraptor.core.config import AppConfig, OutputFormat, ScanMode, SourceConfig
+from domainraptor.core.risk import (
+    RiskAssessment,
+    RiskFactor,
+    RiskLevel,
+    calculate_risk_level,
+    get_risk_level_description,
+    get_risk_level_display,
+)
 from domainraptor.core.types import (
     Asset,
     AssetType,
@@ -17,9 +25,7 @@ from domainraptor.core.types import (
 )
 
 __all__ = [
-    # Config
     "AppConfig",
-    # Types
     "Asset",
     "AssetType",
     "Certificate",
@@ -28,6 +34,9 @@ __all__ = [
     "ConfigIssue",
     "DnsRecord",
     "OutputFormat",
+    "RiskAssessment",
+    "RiskFactor",
+    "RiskLevel",
     "ScanMode",
     "ScanResult",
     "Service",
@@ -35,4 +44,7 @@ __all__ = [
     "SourceConfig",
     "Vulnerability",
     "WatchTarget",
+    "calculate_risk_level",
+    "get_risk_level_description",
+    "get_risk_level_display",
 ]

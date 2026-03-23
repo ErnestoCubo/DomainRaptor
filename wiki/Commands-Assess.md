@@ -269,6 +269,66 @@ domainraptor assess outdated example.com --include-minor
 
 ---
 
+### `assess list`
+
+List vulnerabilities from a previous scan with optional NVD enrichment:
+
+```bash
+domainraptor assess list <SCAN_ID>
+```
+
+**Options:**
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--enrich` | `-e` | Fetch CVE descriptions from NVD API | `False` |
+| `--all` | `-a` | Show all vulnerabilities (no limit) | `False` |
+| `--json` | | Output as JSON | `False` |
+| `--min-severity` | `-s` | Minimum severity filter | `low` |
+
+**Examples:**
+
+```bash
+# List vulnerabilities from scan 34
+domainraptor assess list 34
+
+# Enrich with NVD descriptions and CVSS scores
+domainraptor assess list 34 --enrich
+
+# Filter by high severity only
+domainraptor assess list 34 --min-severity high
+
+# Export as JSON
+domainraptor assess list 34 --json > vulns.json
+```
+
+**Example Output:**
+
+```
+ℹ Found 52 vulnerabilities (min severity: low)
+
+                     Vulnerabilities - Scan 34 (52 total)
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ CVE ID          ┃ Severity ┃ CVSS   ┃ Affected          ┃ Description            ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ CVE-2022-3358   │ HIGH     │ 7.5    │ 168.119.238.139   │ OpenSSL cipher...      │
+│ CVE-2023-2650   │ MEDIUM   │ 6.5    │ 168.119.238.139   │ ASN.1 processing...    │
+│ CVE-2022-1292   │ HIGH     │ 7.3    │ 168.119.238.139   │ c_rehash script...     │
+└─────────────────┴──────────┴────────┴───────────────────┴────────────────────────┘
+```
+
+**With `--enrich` flag:**
+
+The `--enrich` option fetches official CVE descriptions from the [NVD API](https://nvd.nist.gov/):
+
+- Full vulnerability descriptions
+- Accurate CVSS v3 scores
+- Severity levels (CRITICAL, HIGH, MEDIUM, LOW)
+
+> ⚠️ **Note:** NVD API has rate limits (~5 req/30s without API key). For faster enrichment, set `NVD_API_KEY` in `~/.domainraptor/.env`.
+
+---
+
 ## Full Assessment Example
 
 Perform a complete security assessment:

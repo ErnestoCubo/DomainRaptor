@@ -668,10 +668,21 @@ class TestShodanIsIp:
 
     def test_invalid_ip(self) -> None:
         """Test invalid IPs are not detected."""
-        # Note: _is_ip uses simple regex and doesn't validate octet ranges
-        # 999.999.999.999 matches the pattern even though it's not a valid IP
-        assert ShodanClient._is_ip("999.999.999.999") is True  # Matches pattern
         assert ShodanClient._is_ip("1.2.3") is False  # Incomplete
+
+    def test_ip_with_out_of_range_octets(self) -> None:
+        """Test _is_ip rejects IPs with octets outside 0-255 range."""
+        # All octets must be 0-255
+        assert ShodanClient._is_ip("999.999.999.999") is False
+        assert ShodanClient._is_ip("256.1.1.1") is False
+        assert ShodanClient._is_ip("1.256.1.1") is False
+        assert ShodanClient._is_ip("1.1.256.1") is False
+        assert ShodanClient._is_ip("1.1.1.256") is False
+        assert ShodanClient._is_ip("300.400.500.600") is False
+        # Boundary tests - valid
+        assert ShodanClient._is_ip("0.0.0.0") is True
+        assert ShodanClient._is_ip("255.255.255.255") is True
+        assert ShodanClient._is_ip("127.0.0.1") is True
 
 
 # ============================================================================

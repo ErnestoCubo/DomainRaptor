@@ -15,6 +15,7 @@ from domainraptor.core.types import (
     ConfigIssue,
     DnsRecord,
     ScanResult,
+    Service,
     SeverityLevel,
     Vulnerability,
     WatchTarget,
@@ -173,6 +174,31 @@ class ScanRepository:
                     ),
                 )
 
+            # Insert services
+            for svc in scan.services:
+                conn.execute(
+                    """
+                    INSERT INTO services
+                    (scan_id, ip, port, protocol, service_name, version,
+                     banner, product, os, cpe, metadata, source)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        scan_id,
+                        svc.metadata.get("ip", ""),
+                        svc.port,
+                        svc.protocol,
+                        svc.service_name,
+                        svc.version,
+                        svc.banner,
+                        svc.metadata.get("product", ""),
+                        svc.metadata.get("os", ""),
+                        json.dumps(svc.cpe),
+                        json.dumps(svc.metadata),
+                        svc.metadata.get("source", "shodan"),
+                    ),
+                )
+
             logger.info(f"Saved scan {scan_id} for target {scan.target}")
             return scan_id
 
@@ -275,6 +301,25 @@ class ScanRepository:
                     )
                 )
 
+            # Load services
+            for svc_row in conn.execute("SELECT * FROM services WHERE scan_id = ?", (scan_id,)):
+                metadata = json.loads(svc_row["metadata"] or "{}")
+                metadata["ip"] = svc_row["ip"]
+                metadata["product"] = svc_row["product"] or ""
+                metadata["os"] = svc_row["os"] or ""
+                metadata["source"] = svc_row["source"] or "shodan"
+                scan.services.append(
+                    Service(
+                        port=svc_row["port"],
+                        protocol=svc_row["protocol"] or "tcp",
+                        service_name=svc_row["service_name"] or "",
+                        version=svc_row["version"] or "",
+                        banner=svc_row["banner"] or "",
+                        cpe=json.loads(svc_row["cpe"] or "[]"),
+                        metadata=metadata,
+                    )
+                )
+
             return scan
 
     def list_scans(
@@ -336,6 +381,23 @@ class ScanRepository:
             if row:
                 return self.get_by_id(row["id"])
             return None
+
+    def list_by_target(self, target: str, limit: int = 10) -> list[ScanResult]:
+        """Get recent scans for a target."""
+        results: list[ScanResult] = []
+        with self.db.get_connection() as conn:
+            query = """
+                SELECT id FROM scans
+                WHERE target = ?
+                ORDER BY started_at DESC
+                LIMIT ?
+            """
+            cursor = conn.execute(query, (target, limit))
+            for row in cursor:
+                scan = self.get_by_id(row["id"])
+                if scan:
+                    results.append(scan)
+        return results
 
     def delete(self, scan_id: int) -> bool:
         """Delete a scan and all related data."""

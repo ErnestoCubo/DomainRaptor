@@ -171,13 +171,14 @@ class TestVirusTotalClientAttributes:
         assert "virustotal.com" in VirusTotalClient.BASE_URL
         assert "v3" in VirusTotalClient.BASE_URL
 
-    def test_min_request_interval(self) -> None:
-        """Test minimum request interval is set."""
+    def test_rate_limit_constants(self) -> None:
+        """Test rate limit constants are set correctly."""
         from domainraptor.enrichment.virustotal import VirusTotalClient
 
-        assert VirusTotalClient.MIN_REQUEST_INTERVAL > 0
-        # Free tier is 4 req/min, so at least 15 seconds between requests
-        assert VirusTotalClient.MIN_REQUEST_INTERVAL >= 15.0
+        # Basic tier: 60 seconds (1 req/min)
+        assert VirusTotalClient.RATE_LIMIT_BASIC == 60.0
+        # Standard tier: 15 seconds (4 req/min)
+        assert VirusTotalClient.RATE_LIMIT_STANDARD == 15.0
 
 
 class TestVirusTotalClientInit:
@@ -249,6 +250,51 @@ class TestVirusTotalClientHelpers:
         """Test _is_ip with invalid inputs."""
         assert VirusTotalClient._is_ip("not-an-ip") is False
         assert VirusTotalClient._is_ip("192.168.1") is False
+
+    def test_is_ip_with_out_of_range_octets(self) -> None:
+        """Test _is_ip rejects IPs with octets outside 0-255 range."""
+        # All octets must be 0-255
+        assert VirusTotalClient._is_ip("999.999.999.999") is False
+        assert VirusTotalClient._is_ip("256.1.1.1") is False
+        assert VirusTotalClient._is_ip("1.256.1.1") is False
+        assert VirusTotalClient._is_ip("1.1.256.1") is False
+        assert VirusTotalClient._is_ip("1.1.1.256") is False
+        assert VirusTotalClient._is_ip("300.400.500.600") is False
+        # Boundary tests
+        assert VirusTotalClient._is_ip("0.0.0.0") is True
+        assert VirusTotalClient._is_ip("255.255.255.255") is True
+        assert VirusTotalClient._is_ip("127.0.0.1") is True
+
+
+class TestVirusTotalClientRateLimitTiers:
+    """Tests for rate limit tier configuration."""
+
+    def test_default_rate_limit_tier(self) -> None:
+        """Test default rate limit is basic tier (60 seconds)."""
+        client = VirusTotalClient(api_key="test-key")
+        assert client._min_request_interval == 60.0
+
+    def test_basic_rate_limit_tier(self) -> None:
+        """Test basic tier rate limit (60 seconds)."""
+        client = VirusTotalClient(api_key="test-key", rate_limit_tier="basic")
+        assert client._min_request_interval == 60.0
+
+    def test_standard_rate_limit_tier(self) -> None:
+        """Test standard tier rate limit (15 seconds)."""
+        client = VirusTotalClient(api_key="test-key", rate_limit_tier="standard")
+        assert client._min_request_interval == 15.0
+
+    @patch.dict("os.environ", {"VT_RATE_LIMIT_TIER": "standard"})
+    def test_rate_limit_tier_from_env(self) -> None:
+        """Test rate limit tier from environment variable."""
+        client = VirusTotalClient(api_key="test-key")
+        assert client._min_request_interval == 15.0
+
+    def test_rate_limit_tier_param_overrides_env(self) -> None:
+        """Test rate_limit_tier parameter takes precedence over env."""
+        with patch.dict("os.environ", {"VT_RATE_LIMIT_TIER": "standard"}):
+            client = VirusTotalClient(api_key="test-key", rate_limit_tier="basic")
+            assert client._min_request_interval == 60.0
 
 
 class TestVirusTotalClientRateLimit:

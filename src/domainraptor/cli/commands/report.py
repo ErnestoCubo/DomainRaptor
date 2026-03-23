@@ -10,6 +10,7 @@ import typer
 from rich.panel import Panel
 
 from domainraptor.core.config import AppConfig, OutputFormat
+from domainraptor.core.risk import calculate_risk_level, get_risk_level_description
 from domainraptor.utils.output import (
     console,
     create_progress,
@@ -312,45 +313,163 @@ def _build_report_data(
     include_remediation: bool,
     scan_id: str | None,
 ) -> dict:
-    """Build report data structure."""
-    # Placeholder - will load from database
-    return {
+    """Build report data structure from database."""
+    from domainraptor.storage.repository import ScanRepository
+
+    repo = ScanRepository()
+
+    # Get scan data
+    scan = repo.get_by_id(int(scan_id)) if scan_id else repo.get_latest_for_target(target)
+
+    if not scan:
+        # Return empty report structure if no scan found
+        return {
+            "target": target,
+            "generated_at": datetime.now().isoformat(),
+            "scan_id": None,
+            "message": f"No scan data found for {target}. Run a scan first.",
+            "summary": {
+                "total_assets": 0,
+                "total_subdomains": 0,
+                "total_services": 0,
+                "total_certificates": 0,
+                "total_vulnerabilities": 0,
+                "critical": 0,
+                "high": 0,
+                "medium": 0,
+                "low": 0,
+                "config_issues": 0,
+            },
+            "assets": [],
+            "dns_records": [],
+            "certificates": [],
+            "vulnerabilities": [],
+            "config_issues": [],
+        }
+
+    # Count vulnerabilities by severity
+    vuln_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for vuln in scan.vulnerabilities:
+        severity = vuln.severity.value.lower()
+        if severity in vuln_counts:
+            vuln_counts[severity] += 1
+
+    # Count subdomains
+    subdomains = [a for a in scan.assets if a.type.value == "subdomain"]
+
+    # Calculate risk assessment
+    risk_assessment = calculate_risk_level(scan)
+
+    # Build report data
+    data = {
         "target": target,
         "generated_at": datetime.now().isoformat(),
         "scan_id": scan_id or "latest",
+        "scan_type": scan.scan_type,
+        "scan_status": scan.status,
+        "scan_started": scan.started_at.isoformat() if scan.started_at else None,
+        "scan_completed": scan.completed_at.isoformat() if scan.completed_at else None,
+        "scan_duration_seconds": scan.duration_seconds,
+        "risk_assessment": {
+            "score": risk_assessment.score,
+            "level": risk_assessment.level.value,
+            "level_description": get_risk_level_description(risk_assessment.level),
+            "breakdown": {
+                "vulnerabilities": risk_assessment.vuln_contribution,
+                "configuration": risk_assessment.config_contribution,
+                "exposure": risk_assessment.exposure_contribution,
+                "reputation": risk_assessment.reputation_contribution,
+            },
+            "top_factors": risk_assessment.top_factors,
+        },
         "summary": {
-            "total_assets": 18,
-            "total_subdomains": 15,
-            "total_services": 5,
-            "total_vulnerabilities": 3,
-            "critical": 0,
-            "high": 1,
-            "medium": 2,
-            "low": 0,
-            "config_issues": 5,
+            "total_assets": len(scan.assets),
+            "total_subdomains": len(subdomains),
+            "total_services": len(scan.services),
+            "total_certificates": len(scan.certificates),
+            "total_vulnerabilities": len(scan.vulnerabilities),
+            "critical": vuln_counts["critical"],
+            "high": vuln_counts["high"],
+            "medium": vuln_counts["medium"],
+            "low": vuln_counts["low"],
+            "config_issues": len(scan.config_issues),
+            "dns_records": len(scan.dns_records),
         },
         "assets": [
-            {"type": "subdomain", "value": f"www.{target}"},
-            {"type": "subdomain", "value": f"api.{target}"},
-            {"type": "subdomain", "value": f"mail.{target}"},
+            {
+                "type": a.type.value,
+                "value": a.value,
+                "parent": a.parent,
+                "source": a.source,
+                "first_seen": a.first_seen.isoformat() if a.first_seen else None,
+            }
+            for a in scan.assets
+        ],
+        "dns_records": [
+            {
+                "type": r.record_type,
+                "value": r.value,
+                "ttl": r.ttl,
+                "priority": r.priority,
+            }
+            for r in scan.dns_records
+        ],
+        "certificates": [
+            {
+                "subject": c.subject,
+                "issuer": c.issuer,
+                "not_before": c.not_before.isoformat() if c.not_before else None,
+                "not_after": c.not_after.isoformat() if c.not_after else None,
+                "is_expired": c.is_expired,
+                "days_until_expiry": c.days_until_expiry,
+                "san": c.san,
+            }
+            for c in scan.certificates
         ],
         "vulnerabilities": [
             {
-                "id": "CVE-2024-1234",
-                "severity": "high",
-                "title": "Example vulnerability",
-                "remediation": "Update to latest version" if include_remediation else None,
+                "id": v.id,
+                "severity": v.severity.value,
+                "title": v.title,
+                "description": v.description,
+                "affected_asset": v.affected_asset,
+                "cvss_score": v.cvss_score,
+                "remediation": v.remediation if include_remediation else None,
+                "source": v.source,
             }
+            for v in scan.vulnerabilities
         ],
         "config_issues": [
             {
-                "id": "SSL-001",
-                "severity": "medium",
-                "title": "TLS 1.0 enabled",
-                "remediation": "Disable TLS 1.0 and 1.1" if include_remediation else None,
+                "id": i.id,
+                "severity": i.severity.value,
+                "title": i.title,
+                "category": i.category,
+                "description": i.description,
+                "affected_asset": i.affected_asset,
+                "current_value": i.current_value,
+                "recommended_value": i.recommended_value,
+                "remediation": i.remediation if include_remediation else None,
             }
+            for i in scan.config_issues
         ],
     }
+
+    # Add scan history if requested
+    if include_history:
+        history_scans = repo.list_by_target(target, limit=10)
+        data["history"] = [
+            {
+                "scan_type": s.scan_type,
+                "status": s.status,
+                "started_at": s.started_at.isoformat() if s.started_at else None,
+                "assets_found": len(s.assets),
+                "issues_found": len(s.config_issues) + len(s.vulnerabilities),
+            }
+            for s in history_scans
+        ]
+
+    return data
 
 
 def _format_report(data: dict, format_type: str) -> str:
@@ -368,10 +487,39 @@ def _format_report(data: dict, format_type: str) -> str:
 
 def _format_markdown(data: dict) -> str:
     """Format report as Markdown."""
+    risk = data.get("risk_assessment", {})
+    risk_emoji = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🔵", "INFO": "⚪"}.get(
+        risk.get("level", ""), ""
+    )
+
     md = f"""# Security Report: {data['target']}
 
 Generated: {data['generated_at']}
 
+## Risk Assessment
+
+| Metric | Value |
+|--------|-------|
+| **Risk Level** | {risk_emoji} **{risk.get('level', 'N/A')}** |
+| **Risk Score** | {risk.get('score', 0)}/100 |
+| Description | {risk.get('level_description', '')} |
+
+### Risk Breakdown
+
+| Category | Contribution |
+|----------|--------------|
+| Vulnerabilities (40%) | {risk.get('breakdown', {}).get('vulnerabilities', 0)} |
+| Configuration (25%) | {risk.get('breakdown', {}).get('configuration', 0)} |
+| Exposure (25%) | {risk.get('breakdown', {}).get('exposure', 0)} |
+| Reputation (10%) | {risk.get('breakdown', {}).get('reputation', 0)} |
+
+### Top Risk Factors
+
+"""
+    for factor in risk.get("top_factors", []):
+        md += f"- {factor}\n"
+
+    md += f"""
 ## Summary
 
 | Metric | Count |
@@ -384,13 +532,38 @@ Generated: {data['generated_at']}
 
 ## Vulnerabilities
 
-| ID | Severity | Title |
-|----|----------|-------|
+| ID | Severity | CVSS | Title | Description |
+|----|----------|------|-------|-------------|
 """
     for vuln in data.get("vulnerabilities", []):
-        md += f"| {vuln['id']} | {vuln['severity']} | {vuln['title']} |\n"
+        cvss = vuln.get("cvss_score")
+        cvss_str = f"{cvss:.1f}" if cvss else "-"
+        desc = (
+            vuln.get("description", "")[:80] + "..."
+            if len(vuln.get("description", "")) > 80
+            else vuln.get("description", "")
+        )
+        md += f"| {vuln['id']} | {vuln['severity']} | {cvss_str} | {vuln['title']} | {desc} |\n"
 
-    md += "\n## Configuration Issues\n\n"
+    # Add detailed vulnerability section
+    md += "\n### Vulnerability Details\n\n"
+    for vuln in data.get("vulnerabilities", []):
+        cvss = vuln.get("cvss_score")
+        cvss_str = f"{cvss:.1f}" if cvss else "N/A"
+        md += f"""#### {vuln['id']}
+
+- **Severity**: {vuln['severity']}
+- **CVSS Score**: {cvss_str}
+- **Affected Asset**: {vuln.get('affected_asset', 'N/A')}
+- **Source**: {vuln.get('source', 'N/A')}
+
+{vuln.get('description', 'No description available.')}
+
+"""
+        if vuln.get("remediation"):
+            md += f"**Remediation**: {vuln['remediation']}\n\n"
+
+    md += "## Configuration Issues\n\n"
     md += "| ID | Severity | Title |\n"
     md += "|----|----------|-------|\n"
     for issue in data.get("config_issues", []):
@@ -401,42 +574,153 @@ Generated: {data['generated_at']}
 
 def _format_html(data: dict) -> str:
     """Format report as HTML."""
+    risk = data.get("risk_assessment", {})
+    risk_color = {
+        "CRITICAL": "#dc2626",
+        "HIGH": "#ea580c",
+        "MEDIUM": "#ca8a04",
+        "LOW": "#2563eb",
+        "INFO": "#6b7280",
+    }.get(risk.get("level", ""), "#6b7280")
+
     html = f"""<!DOCTYPE html>
 <html>
 <head>
     <title>Security Report: {data['target']}</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; }}
-        h1 {{ color: #2563eb; }}
-        table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; background: #f9fafb; }}
+        .container {{ max-width: 1200px; margin: 0 auto; }}
+        h1 {{ color: #1f2937; }}
+        h2 {{ color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
         th, td {{ border: 1px solid #e5e7eb; padding: 12px; text-align: left; }}
-        th {{ background: #f3f4f6; }}
+        th {{ background: #f3f4f6; font-weight: 600; }}
         .critical {{ color: #dc2626; font-weight: bold; }}
         .high {{ color: #ea580c; }}
         .medium {{ color: #ca8a04; }}
         .low {{ color: #2563eb; }}
+        .risk-card {{ background: white; border-radius: 12px; padding: 24px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+        .risk-level {{ font-size: 32px; font-weight: bold; color: {risk_color}; }}
+        .risk-score {{ font-size: 24px; color: #6b7280; }}
+        .breakdown {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px; }}
+        .breakdown-item {{ text-align: center; padding: 12px; background: #f9fafb; border-radius: 8px; }}
+        .breakdown-value {{ font-size: 24px; font-weight: bold; color: #1f2937; }}
+        .breakdown-label {{ font-size: 12px; color: #6b7280; text-transform: uppercase; }}
+        .factors {{ margin-top: 16px; }}
+        .factor {{ padding: 8px 12px; background: #fef3c7; border-left: 3px solid #f59e0b; margin: 4px 0; }}
     </style>
 </head>
 <body>
+    <div class="container">
     <h1>Security Report: {data['target']}</h1>
     <p>Generated: {data['generated_at']}</p>
+
+    <div class="risk-card">
+        <h2 style="border: none; margin-top: 0;">Risk Assessment</h2>
+        <div style="display: flex; align-items: center; gap: 24px;">
+            <div class="risk-level">{risk.get('level', 'N/A')}</div>
+            <div class="risk-score">{risk.get('score', 0)}/100</div>
+        </div>
+        <p style="color: #6b7280;">{risk.get('level_description', '')}</p>
+
+        <div class="breakdown">
+            <div class="breakdown-item">
+                <div class="breakdown-value">{risk.get('breakdown', {}).get('vulnerabilities', 0)}</div>
+                <div class="breakdown-label">Vulnerabilities</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value">{risk.get('breakdown', {}).get('configuration', 0)}</div>
+                <div class="breakdown-label">Configuration</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value">{risk.get('breakdown', {}).get('exposure', 0)}</div>
+                <div class="breakdown-label">Exposure</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value">{risk.get('breakdown', {}).get('reputation', 0)}</div>
+                <div class="breakdown-label">Reputation</div>
+            </div>
+        </div>
+
+        <div class="factors">
+            <strong>Top Risk Factors:</strong>
+"""
+    for factor in risk.get("top_factors", []):
+        html += f'            <div class="factor">{factor}</div>\n'
+
+    html += f"""        </div>
+    </div>
 
     <h2>Summary</h2>
     <table>
         <tr><th>Metric</th><th>Count</th></tr>
         <tr><td>Total Assets</td><td>{data['summary']['total_assets']}</td></tr>
+        <tr><td>Subdomains</td><td>{data['summary']['total_subdomains']}</td></tr>
+        <tr><td>Services</td><td>{data['summary']['total_services']}</td></tr>
         <tr><td>Vulnerabilities</td><td>{data['summary']['total_vulnerabilities']}</td></tr>
         <tr><td>Config Issues</td><td>{data['summary']['config_issues']}</td></tr>
     </table>
 
-    <h2>Vulnerabilities</h2>
+    <h2>Vulnerabilities ({len(data.get('vulnerabilities', []))} total)</h2>
     <table>
-        <tr><th>ID</th><th>Severity</th><th>Title</th></tr>
+        <tr><th>ID</th><th>Severity</th><th>CVSS</th><th>Affected Asset</th><th>Description</th></tr>
 """
     for vuln in data.get("vulnerabilities", []):
-        html += f'        <tr><td>{vuln["id"]}</td><td class="{vuln["severity"]}">{vuln["severity"]}</td><td>{vuln["title"]}</td></tr>\n'
+        cvss = vuln.get("cvss_score")
+        cvss_str = f"{cvss:.1f}" if cvss else "-"
+        desc = (
+            vuln.get("description", "")[:100] + "..."
+            if len(vuln.get("description", "")) > 100
+            else vuln.get("description", "")
+        )
+        html += f'        <tr><td><strong>{vuln["id"]}</strong></td><td class="{vuln["severity"].lower()}">{vuln["severity"]}</td><td>{cvss_str}</td><td>{vuln.get("affected_asset", "")}</td><td>{desc}</td></tr>\n'
 
     html += """    </table>
+
+    <h3>Vulnerability Details</h3>
+"""
+    severity_colors = {
+        "CRITICAL": "#dc2626",
+        "HIGH": "#ea580c",
+        "MEDIUM": "#ca8a04",
+        "LOW": "#2563eb",
+    }
+    for vuln in data.get("vulnerabilities", []):
+        cvss = vuln.get("cvss_score")
+        cvss_str = f"{cvss:.1f}" if cvss else "N/A"
+        sev_class = vuln["severity"].lower()
+        border_color = severity_colors.get(vuln["severity"], "#6b7280")
+        cvss_badge = f"| CVSS {cvss_str}" if cvss else ""
+        remediation_html = (
+            f'<p style="margin-top: 8px; padding: 8px; background: #ecfdf5; border-radius: 4px; color: #059669;"><strong>Remediation:</strong> {vuln["remediation"]}</p>'
+            if vuln.get("remediation")
+            else ""
+        )
+        html += f"""
+    <div style="background: white; border-left: 4px solid {border_color}; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">{vuln["id"]}</strong>
+            <span class="{sev_class}" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">{vuln["severity"]} {cvss_badge}</span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">{vuln.get("description", "No description available.")}</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: {vuln.get("affected_asset", "N/A")}</span> |
+            <span>Source: {vuln.get("source", "N/A")}</span>
+        </div>
+        {remediation_html}
+    </div>
+"""
+
+    html += """
+    <h2>Configuration Issues</h2>
+    <table>
+        <tr><th>ID</th><th>Severity</th><th>Category</th><th>Title</th></tr>
+"""
+    for issue in data.get("config_issues", []):
+        html += f'        <tr><td>{issue["id"]}</td><td class="{issue["severity"].lower()}">{issue["severity"]}</td><td>{issue.get("category", "")}</td><td>{issue["title"]}</td></tr>\n'
+
+    html += """    </table>
+    </div>
 </body>
 </html>"""
 
