@@ -77,7 +77,7 @@ class TestHelperFunctions:
         config_dir = tmp_path / ".domainraptor"
         config_dir.mkdir(parents=True)
         env_file = config_dir / ".env"
-        env_file.write_text("VALID_KEY=value\n" "invalid line without equals\n" "# comment line\n")
+        env_file.write_text("VALID_KEY=value\ninvalid line without equals\n# comment line\n")
 
         with patch.object(Path, "home", return_value=tmp_path):
             result = _load_env_file()

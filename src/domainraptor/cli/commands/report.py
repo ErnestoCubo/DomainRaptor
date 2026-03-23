@@ -159,7 +159,7 @@ def summary_cmd(
     # Placeholder summary
     summary = f"""
 # Executive Summary: {target}
-Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}
 
 ## Overview
 Target analyzed with standard scan mode.
@@ -492,26 +492,26 @@ def _format_markdown(data: dict) -> str:
         risk.get("level", ""), ""
     )
 
-    md = f"""# Security Report: {data['target']}
+    md = f"""# Security Report: {data["target"]}
 
-Generated: {data['generated_at']}
+Generated: {data["generated_at"]}
 
 ## Risk Assessment
 
 | Metric | Value |
 |--------|-------|
-| **Risk Level** | {risk_emoji} **{risk.get('level', 'N/A')}** |
-| **Risk Score** | {risk.get('score', 0)}/100 |
-| Description | {risk.get('level_description', '')} |
+| **Risk Level** | {risk_emoji} **{risk.get("level", "N/A")}** |
+| **Risk Score** | {risk.get("score", 0)}/100 |
+| Description | {risk.get("level_description", "")} |
 
 ### Risk Breakdown
 
 | Category | Contribution |
 |----------|--------------|
-| Vulnerabilities (40%) | {risk.get('breakdown', {}).get('vulnerabilities', 0)} |
-| Configuration (25%) | {risk.get('breakdown', {}).get('configuration', 0)} |
-| Exposure (25%) | {risk.get('breakdown', {}).get('exposure', 0)} |
-| Reputation (10%) | {risk.get('breakdown', {}).get('reputation', 0)} |
+| Vulnerabilities (40%) | {risk.get("breakdown", {}).get("vulnerabilities", 0)} |
+| Configuration (25%) | {risk.get("breakdown", {}).get("configuration", 0)} |
+| Exposure (25%) | {risk.get("breakdown", {}).get("exposure", 0)} |
+| Reputation (10%) | {risk.get("breakdown", {}).get("reputation", 0)} |
 
 ### Top Risk Factors
 
@@ -524,11 +524,11 @@ Generated: {data['generated_at']}
 
 | Metric | Count |
 |--------|-------|
-| Total Assets | {data['summary']['total_assets']} |
-| Subdomains | {data['summary']['total_subdomains']} |
-| Services | {data['summary']['total_services']} |
-| Vulnerabilities | {data['summary']['total_vulnerabilities']} |
-| Config Issues | {data['summary']['config_issues']} |
+| Total Assets | {data["summary"]["total_assets"]} |
+| Subdomains | {data["summary"]["total_subdomains"]} |
+| Services | {data["summary"]["total_services"]} |
+| Vulnerabilities | {data["summary"]["total_vulnerabilities"]} |
+| Config Issues | {data["summary"]["config_issues"]} |
 
 ## Vulnerabilities
 
@@ -550,14 +550,14 @@ Generated: {data['generated_at']}
     for vuln in data.get("vulnerabilities", []):
         cvss = vuln.get("cvss_score")
         cvss_str = f"{cvss:.1f}" if cvss else "N/A"
-        md += f"""#### {vuln['id']}
+        md += f"""#### {vuln["id"]}
 
-- **Severity**: {vuln['severity']}
+- **Severity**: {vuln["severity"]}
 - **CVSS Score**: {cvss_str}
-- **Affected Asset**: {vuln.get('affected_asset', 'N/A')}
-- **Source**: {vuln.get('source', 'N/A')}
+- **Affected Asset**: {vuln.get("affected_asset", "N/A")}
+- **Source**: {vuln.get("source", "N/A")}
 
-{vuln.get('description', 'No description available.')}
+{vuln.get("description", "No description available.")}
 
 """
         if vuln.get("remediation"):
@@ -586,7 +586,7 @@ def _format_html(data: dict) -> str:
     html = f"""<!DOCTYPE html>
 <html>
 <head>
-    <title>Security Report: {data['target']}</title>
+    <title>Security Report: {data["target"]}</title>
     <style>
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; background: #f9fafb; }}
         .container {{ max-width: 1200px; margin: 0 auto; }}
@@ -612,32 +612,32 @@ def _format_html(data: dict) -> str:
 </head>
 <body>
     <div class="container">
-    <h1>Security Report: {data['target']}</h1>
-    <p>Generated: {data['generated_at']}</p>
+    <h1>Security Report: {data["target"]}</h1>
+    <p>Generated: {data["generated_at"]}</p>
 
     <div class="risk-card">
         <h2 style="border: none; margin-top: 0;">Risk Assessment</h2>
         <div style="display: flex; align-items: center; gap: 24px;">
-            <div class="risk-level">{risk.get('level', 'N/A')}</div>
-            <div class="risk-score">{risk.get('score', 0)}/100</div>
+            <div class="risk-level">{risk.get("level", "N/A")}</div>
+            <div class="risk-score">{risk.get("score", 0)}/100</div>
         </div>
-        <p style="color: #6b7280;">{risk.get('level_description', '')}</p>
+        <p style="color: #6b7280;">{risk.get("level_description", "")}</p>
 
         <div class="breakdown">
             <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get('breakdown', {}).get('vulnerabilities', 0)}</div>
+                <div class="breakdown-value">{risk.get("breakdown", {}).get("vulnerabilities", 0)}</div>
                 <div class="breakdown-label">Vulnerabilities</div>
             </div>
             <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get('breakdown', {}).get('configuration', 0)}</div>
+                <div class="breakdown-value">{risk.get("breakdown", {}).get("configuration", 0)}</div>
                 <div class="breakdown-label">Configuration</div>
             </div>
             <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get('breakdown', {}).get('exposure', 0)}</div>
+                <div class="breakdown-value">{risk.get("breakdown", {}).get("exposure", 0)}</div>
                 <div class="breakdown-label">Exposure</div>
             </div>
             <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get('breakdown', {}).get('reputation', 0)}</div>
+                <div class="breakdown-value">{risk.get("breakdown", {}).get("reputation", 0)}</div>
                 <div class="breakdown-label">Reputation</div>
             </div>
         </div>
@@ -654,14 +654,14 @@ def _format_html(data: dict) -> str:
     <h2>Summary</h2>
     <table>
         <tr><th>Metric</th><th>Count</th></tr>
-        <tr><td>Total Assets</td><td>{data['summary']['total_assets']}</td></tr>
-        <tr><td>Subdomains</td><td>{data['summary']['total_subdomains']}</td></tr>
-        <tr><td>Services</td><td>{data['summary']['total_services']}</td></tr>
-        <tr><td>Vulnerabilities</td><td>{data['summary']['total_vulnerabilities']}</td></tr>
-        <tr><td>Config Issues</td><td>{data['summary']['config_issues']}</td></tr>
+        <tr><td>Total Assets</td><td>{data["summary"]["total_assets"]}</td></tr>
+        <tr><td>Subdomains</td><td>{data["summary"]["total_subdomains"]}</td></tr>
+        <tr><td>Services</td><td>{data["summary"]["total_services"]}</td></tr>
+        <tr><td>Vulnerabilities</td><td>{data["summary"]["total_vulnerabilities"]}</td></tr>
+        <tr><td>Config Issues</td><td>{data["summary"]["config_issues"]}</td></tr>
     </table>
 
-    <h2>Vulnerabilities ({len(data.get('vulnerabilities', []))} total)</h2>
+    <h2>Vulnerabilities ({len(data.get("vulnerabilities", []))} total)</h2>
     <table>
         <tr><th>ID</th><th>Severity</th><th>CVSS</th><th>Affected Asset</th><th>Description</th></tr>
 """
