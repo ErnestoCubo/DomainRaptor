@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -319,14 +320,21 @@ def _build_report_data(
     repo = ScanRepository()
 
     # Get scan data
-    scan = repo.get_by_id(int(scan_id)) if scan_id else repo.get_latest_for_target(target)
+    scan = None
+    if scan_id:
+        try:
+            scan = repo.get_by_id(int(scan_id))
+        except ValueError:
+            logging.debug("Non-numeric scan_id '%s', treating as not found", scan_id)
+    else:
+        scan = repo.get_latest_for_target(target)
 
     if not scan:
         # Return empty report structure if no scan found
         return {
             "target": target,
             "generated_at": datetime.now().isoformat(),
-            "scan_id": None,
+            "scan_id": scan_id,
             "message": f"No scan data found for {target}. Run a scan first.",
             "summary": {
                 "total_assets": 0,
@@ -654,11 +662,11 @@ def _format_html(data: dict) -> str:
     <h2>Summary</h2>
     <table>
         <tr><th>Metric</th><th>Count</th></tr>
-        <tr><td>Total Assets</td><td>{data["summary"]["total_assets"]}</td></tr>
-        <tr><td>Subdomains</td><td>{data["summary"]["total_subdomains"]}</td></tr>
-        <tr><td>Services</td><td>{data["summary"]["total_services"]}</td></tr>
-        <tr><td>Vulnerabilities</td><td>{data["summary"]["total_vulnerabilities"]}</td></tr>
-        <tr><td>Config Issues</td><td>{data["summary"]["config_issues"]}</td></tr>
+        <tr><td>Total Assets</td><td>{data.get("summary", {}).get("total_assets", 0)}</td></tr>
+        <tr><td>Subdomains</td><td>{data.get("summary", {}).get("total_subdomains", 0)}</td></tr>
+        <tr><td>Services</td><td>{data.get("summary", {}).get("total_services", 0)}</td></tr>
+        <tr><td>Vulnerabilities</td><td>{data.get("summary", {}).get("total_vulnerabilities", 0)}</td></tr>
+        <tr><td>Config Issues</td><td>{data.get("summary", {}).get("config_issues", 0)}</td></tr>
     </table>
 
     <h2>Vulnerabilities ({len(data.get("vulnerabilities", []))} total)</h2>
