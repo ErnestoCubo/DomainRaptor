@@ -2,7 +2,7 @@
 
 ![DomainRaptor](DomainRaptor.jpg)
 
-[![Version](https://img.shields.io/badge/version-0.3.0-blue)](https://github.com/ErnestoCubo/DomainRaptor/releases)
+[![Version](https://img.shields.io/badge/version-0.5.0-blue)](https://github.com/ErnestoCubo/DomainRaptor/releases)
 [![Python](https://img.shields.io/badge/python-3.10%2B-green)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
 

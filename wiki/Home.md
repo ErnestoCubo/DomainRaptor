@@ -2,7 +2,7 @@
 
 Welcome to the official DomainRaptor documentation! DomainRaptor is a powerful **Cyber Intelligence Tool** for domain reconnaissance and security assessment.
 
-![Version](https://img.shields.io/badge/version-0.3.0-blue)
+![Version](https://img.shields.io/badge/version-0.5.0-blue)
 ![Python](https://img.shields.io/badge/python-3.10%2B-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
