@@ -724,3 +724,1080 @@ def discover_whois_cmd(
         console.print(Panel(table, title=f"WHOIS: {target}"))
     else:
         print_error(f"WHOIS lookup failed for {target}")
+
+
+# ============================================
+# Shodan Advanced Search Commands
+# ============================================
+
+
+@app.command("shodan-org")
+def discover_shodan_org_cmd(
+    ctx: typer.Context,
+    organization: Annotated[str, typer.Argument(help="Organization name to search")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 50,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Search Shodan for hosts belonging to an organization.
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Search for hosts owned by Google[/dim]
+        domainraptor discover shodan-org "Google LLC"
+
+        [dim]# Search with limited results[/dim]
+        domainraptor discover shodan-org "Microsoft Corporation" --limit 20
+    """
+    from rich.table import Table
+
+    print_info(f"Searching Shodan for organization: [bold]{organization}[/bold]")
+
+    if not os.environ.get("SHODAN_API_KEY"):
+        print_error("SHODAN_API_KEY not configured")
+        print_info("Run: domainraptor config set SHODAN_API_KEY <your-key>")
+        raise typer.Exit(1)
+
+    try:
+        from domainraptor.discovery.shodan_client import ShodanClient
+
+        client = ShodanClient()
+        results = client.search_by_org(organization, limit=limit)
+
+        if not results:
+            print_warning(f"No hosts found for organization: {organization}")
+            raise typer.Exit(0)
+
+        # Display results
+        table = Table(
+            title=f"Hosts for {organization} ({len(results)} found)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("IP", style="bold yellow")
+        table.add_column("Hostnames")
+        table.add_column("Ports", style="green")
+        table.add_column("Country")
+        table.add_column("ASN", style="dim")
+        table.add_column("Vulns", style="red")
+
+        for host in results:
+            ports_str = ", ".join(map(str, host.ports[:5]))
+            if len(host.ports) > 5:
+                ports_str += f"... (+{len(host.ports) - 5})"
+
+            hostnames_str = ", ".join(host.hostnames[:2]) if host.hostnames else "-"
+
+            vulns_str = str(len(host.vulns)) if host.vulns else "0"
+
+            table.add_row(
+                host.ip,
+                hostnames_str,
+                ports_str,
+                host.country or "-",
+                host.asn or "-",
+                vulns_str,
+            )
+
+        console.print(table)
+        print_success(f"Found {len(results)} hosts for {organization}")
+
+        # Save results if requested
+        if save:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=organization,
+                    scan_type="shodan-org",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for host in results:
+                    result.assets.append(
+                        Asset(
+                            type=AssetType.IP,
+                            value=host.ip,
+                            source="shodan",
+                            metadata={
+                                "hostnames": host.hostnames,
+                                "org": host.org,
+                                "ports": host.ports,
+                                "country": host.country,
+                                "asn": host.asn,
+                            },
+                        )
+                    )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise  # Re-raise Exit exceptions
+    except Exception as e:
+        print_error(f"Shodan search failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command("shodan-ssl")
+def discover_shodan_ssl_cmd(
+    ctx: typer.Context,
+    domain: Annotated[str, typer.Argument(help="Domain to search in SSL certificates")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 50,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Search Shodan for hosts with SSL certificates for a domain.
+
+    Discovers hosts serving SSL certificates that contain the specified
+    domain in their subject CN (Common Name).
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Find hosts with SSL certs for example.com[/dim]
+        domainraptor discover shodan-ssl example.com
+
+        [dim]# Find with limited results[/dim]
+        domainraptor discover shodan-ssl "*.google.com" --limit 10
+    """
+    from rich.table import Table
+
+    print_info(f"Searching Shodan for SSL certificates: [bold]{domain}[/bold]")
+
+    if not os.environ.get("SHODAN_API_KEY"):
+        print_error("SHODAN_API_KEY not configured")
+        print_info("Run: domainraptor config set SHODAN_API_KEY <your-key>")
+        raise typer.Exit(1)
+
+    try:
+        from domainraptor.discovery.shodan_client import ShodanClient
+
+        client = ShodanClient()
+        results = client.search_by_ssl(domain, limit=limit)
+
+        if not results:
+            print_warning(f"No hosts found with SSL certs for: {domain}")
+            raise typer.Exit(0)
+
+        # Display results
+        table = Table(
+            title=f"Hosts with SSL certs for {domain} ({len(results)} found)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("IP", style="bold yellow")
+        table.add_column("Hostnames")
+        table.add_column("Ports", style="green")
+        table.add_column("Organization")
+        table.add_column("Country")
+        table.add_column("Vulns", style="red")
+
+        for host in results:
+            ports_str = ", ".join(map(str, host.ports[:5]))
+            hostnames_str = ", ".join(host.hostnames[:2]) if host.hostnames else "-"
+            vulns_str = str(len(host.vulns)) if host.vulns else "0"
+
+            table.add_row(
+                host.ip,
+                hostnames_str,
+                ports_str,
+                host.org or "-",
+                host.country or "-",
+                vulns_str,
+            )
+
+        console.print(table)
+        print_success(f"Found {len(results)} hosts with SSL certs for {domain}")
+
+        # Save results if requested
+        if save:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=domain,
+                    scan_type="shodan-ssl",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for host in results:
+                    result.assets.append(
+                        Asset(
+                            type=AssetType.IP,
+                            value=host.ip,
+                            source="shodan",
+                            metadata={
+                                "hostnames": host.hostnames,
+                                "org": host.org,
+                                "ports": host.ports,
+                                "ssl_cert_domain": domain,
+                            },
+                        )
+                    )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise  # Re-raise Exit exceptions
+    except Exception as e:
+        print_error(f"Shodan SSL search failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command("shodan-asn")
+def discover_shodan_asn_cmd(
+    ctx: typer.Context,
+    asn: Annotated[str, typer.Argument(help="ASN to search (e.g., AS15169 or 15169)")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 50,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Search Shodan for hosts in a specific ASN.
+
+    Discovers all hosts belonging to an Autonomous System Number.
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Search for hosts in Google's ASN[/dim]
+        domainraptor discover shodan-asn AS15169
+
+        [dim]# Search without AS prefix[/dim]
+        domainraptor discover shodan-asn 15169 --limit 100
+    """
+    from rich.table import Table
+
+    print_info(f"Searching Shodan for ASN: [bold]{asn}[/bold]")
+
+    if not os.environ.get("SHODAN_API_KEY"):
+        print_error("SHODAN_API_KEY not configured")
+        print_info("Run: domainraptor config set SHODAN_API_KEY <your-key>")
+        raise typer.Exit(1)
+
+    try:
+        from domainraptor.discovery.shodan_client import ShodanClient
+
+        client = ShodanClient()
+        results = client.search_by_asn(asn, limit=limit)
+
+        if not results:
+            print_warning(f"No hosts found for ASN: {asn}")
+            raise typer.Exit(0)
+
+        # Display results
+        table = Table(
+            title=f"Hosts in {asn.upper()} ({len(results)} found)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("IP", style="bold yellow")
+        table.add_column("Hostnames")
+        table.add_column("Ports", style="green")
+        table.add_column("Organization")
+        table.add_column("Country")
+        table.add_column("Vulns", style="red")
+
+        for host in results:
+            ports_str = ", ".join(map(str, host.ports[:5]))
+            hostnames_str = ", ".join(host.hostnames[:2]) if host.hostnames else "-"
+            vulns_str = str(len(host.vulns)) if host.vulns else "0"
+
+            table.add_row(
+                host.ip,
+                hostnames_str,
+                ports_str,
+                host.org or "-",
+                host.country or "-",
+                vulns_str,
+            )
+
+        console.print(table)
+        print_success(f"Found {len(results)} hosts in ASN {asn}")
+
+        # Save results if requested
+        if save:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=asn,
+                    scan_type="shodan-asn",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for host in results:
+                    result.assets.append(
+                        Asset(
+                            type=AssetType.IP,
+                            value=host.ip,
+                            source="shodan",
+                            metadata={
+                                "hostnames": host.hostnames,
+                                "org": host.org,
+                                "ports": host.ports,
+                                "asn": host.asn,
+                            },
+                        )
+                    )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise  # Re-raise Exit exceptions
+    except Exception as e:
+        print_error(f"Shodan ASN search failed: {e}")
+        raise typer.Exit(1) from None
+
+
+# =============================================================================
+# ZoomEye Commands
+# =============================================================================
+
+
+@app.command("zoomeye-host")
+def discover_zoomeye_host_cmd(
+    ctx: typer.Context,
+    query: Annotated[str, typer.Argument(help="ZoomEye dork query (e.g., 'port:22', 'app:nginx')")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 20,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Search ZoomEye for hosts matching a query.
+
+    ZoomEye is a cyberspace search engine supporting complex dork queries.
+
+    [bold cyan]Common Queries:[/bold cyan]
+        • port:22         - Hosts with SSH
+        • app:nginx       - Nginx servers
+        • country:US      - US-based hosts
+        • org:"Google"    - Google-owned hosts
+        • hostname:*.example.com - Subdomains
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Search for SSH servers[/dim]
+        domainraptor discover zoomeye-host "port:22"
+
+        [dim]# Search for Apache servers in Germany[/dim]
+        domainraptor discover zoomeye-host "app:apache country:DE"
+    """
+    from rich.table import Table
+
+    print_info(f"Searching ZoomEye: [bold]{query}[/bold]")
+
+    if not os.environ.get("ZOOMEYE_API_KEY"):
+        print_error("ZOOMEYE_API_KEY not configured")
+        print_info("Run: domainraptor config set ZOOMEYE_API_KEY <your-key>")
+        raise typer.Exit(1)
+
+    try:
+        from domainraptor.discovery.zoomeye_client import ZoomEyeClient
+
+        client = ZoomEyeClient()
+        results = client.search_host(query, limit=limit)
+
+        if not results:
+            print_warning(f"No hosts found for query: {query}")
+            raise typer.Exit(0)
+
+        # Display results
+        table = Table(
+            title=f"ZoomEye Results ({len(results)} found)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("IP", style="bold yellow")
+        table.add_column("Ports", style="green")
+        table.add_column("Organization")
+        table.add_column("Country")
+        table.add_column("OS")
+        table.add_column("Device")
+
+        for host in results:
+            ports_str = ", ".join(map(str, host.ports[:5]))
+
+            table.add_row(
+                host.ip,
+                ports_str or "-",
+                host.org or "-",
+                host.country or "-",
+                host.os or "-",
+                host.device_type or "-",
+            )
+
+        console.print(table)
+        print_success(f"Found {len(results)} hosts")
+
+        # Save results if requested
+        if save:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=query,
+                    scan_type="zoomeye-host",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for host in results:
+                    result.assets.append(
+                        Asset(
+                            type=AssetType.IP,
+                            value=host.ip,
+                            source="zoomeye",
+                            metadata={
+                                "hostnames": host.hostnames,
+                                "org": host.org,
+                                "ports": host.ports,
+                                "device_type": host.device_type,
+                            },
+                        )
+                    )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        print_error(f"ZoomEye search failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command("zoomeye-org")
+def discover_zoomeye_org_cmd(
+    ctx: typer.Context,
+    org: Annotated[str, typer.Argument(help="Organization name to search")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 50,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Search ZoomEye for hosts by organization name.
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Search for Microsoft hosts[/dim]
+        domainraptor discover zoomeye-org "Microsoft"
+    """
+    from rich.table import Table
+
+    print_info(f"Searching ZoomEye for organization: [bold]{org}[/bold]")
+
+    if not os.environ.get("ZOOMEYE_API_KEY"):
+        print_error("ZOOMEYE_API_KEY not configured")
+        print_info("Run: domainraptor config set ZOOMEYE_API_KEY <your-key>")
+        raise typer.Exit(1)
+
+    try:
+        from domainraptor.discovery.zoomeye_client import ZoomEyeClient
+
+        client = ZoomEyeClient()
+        results = client.search_by_org(org, limit=limit)
+
+        if not results:
+            print_warning(f"No hosts found for organization: {org}")
+            raise typer.Exit(0)
+
+        table = Table(
+            title=f"ZoomEye: {org} ({len(results)} hosts)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("IP", style="bold yellow")
+        table.add_column("Ports", style="green")
+        table.add_column("Country")
+        table.add_column("OS")
+        table.add_column("Device")
+
+        for host in results:
+            ports_str = ", ".join(map(str, host.ports[:5]))
+            table.add_row(
+                host.ip,
+                ports_str or "-",
+                host.country or "-",
+                host.os or "-",
+                host.device_type or "-",
+            )
+
+        console.print(table)
+        print_success(f"Found {len(results)} hosts for {org}")
+
+        if save:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=org,
+                    scan_type="zoomeye-org",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for host in results:
+                    result.assets.append(
+                        Asset(
+                            type=AssetType.IP,
+                            value=host.ip,
+                            source="zoomeye",
+                            metadata={"org": host.org, "ports": host.ports},
+                        )
+                    )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        print_error(f"ZoomEye org search failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command("zoomeye-subdomains")
+def discover_zoomeye_subdomains_cmd(
+    ctx: typer.Context,
+    domain: Annotated[str, typer.Argument(help="Domain to search (e.g., 'example.com')")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 100,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Discover subdomains using ZoomEye domain search.
+
+    This endpoint works with FREE ZoomEye accounts (no credit consumption).
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Find subdomains for a domain[/dim]
+        domainraptor discover zoomeye-subdomains example.com
+
+        [dim]# Get more subdomains[/dim]
+        domainraptor discover zoomeye-subdomains example.com --limit 500
+    """
+    from rich.table import Table
+
+    print_info(f"Searching ZoomEye subdomains for: [bold]{domain}[/bold]")
+
+    if not os.environ.get("ZOOMEYE_API_KEY"):
+        print_error("ZOOMEYE_API_KEY not configured")
+        print_info("Run: domainraptor config set ZOOMEYE_API_KEY <your-key>")
+        raise typer.Exit(1)
+
+    try:
+        from domainraptor.discovery.zoomeye_client import ZoomEyeClient
+
+        client = ZoomEyeClient()
+        results = client.domain_search(domain, limit=limit)
+
+        if not results:
+            print_warning(f"No subdomains found for: {domain}")
+            raise typer.Exit(0)
+
+        table = Table(
+            title=f"ZoomEye Subdomains ({len(results)} found)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("Subdomain", style="bold yellow")
+        table.add_column("IPs")
+        table.add_column("Timestamp")
+
+        for r in results:
+            ips = r.get("ip", [])
+            ips_str = ", ".join(ips[:3]) if ips else "-"
+            if len(ips) > 3:
+                ips_str += f" (+{len(ips) - 3})"
+            table.add_row(
+                r.get("name", "-"),
+                ips_str,
+                r.get("timestamp", "-"),
+            )
+
+        console.print(table)
+        print_success(f"Found {len(results)} subdomains for {domain}")
+
+        if save:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=domain,
+                    scan_type="zoomeye-subdomains",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for r in results:
+                    name = r.get("name", "")
+                    if name and name.endswith(domain):
+                        result.assets.append(
+                            Asset(
+                                type=AssetType.SUBDOMAIN,
+                                value=name,
+                                parent=domain,
+                                source="zoomeye",
+                                metadata={
+                                    "ips": r.get("ip", []),
+                                    "timestamp": r.get("timestamp"),
+                                },
+                            )
+                        )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        print_error(f"ZoomEye subdomain search failed: {e}")
+        raise typer.Exit(1) from None
+
+
+# =============================================================================
+# Censys Commands
+# =============================================================================
+
+
+@app.command("censys-host")
+def discover_censys_host_cmd(
+    ctx: typer.Context,
+    query: Annotated[str, typer.Argument(help="Censys search query")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 25,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Search Censys for hosts matching a query.
+
+    Censys provides internet-wide scanning data with rich filtering.
+
+    [bold cyan]Query Examples:[/bold cyan]
+        • services.port: 22
+        • services.service_name: SSH
+        • autonomous_system.name: "Google"
+        • location.country: Germany
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Search for SSH servers[/dim]
+        domainraptor discover censys-host "services.port: 22"
+
+        [dim]# Search for NGINX servers[/dim]
+        domainraptor discover censys-host "services.http.response.headers.server: nginx"
+    """
+    from rich.table import Table
+
+    print_info(f"Searching Censys: [bold]{query}[/bold]")
+
+    # Check for PAT token or legacy credentials
+    has_token = os.environ.get("CENSYS_API_TOKEN") or (
+        os.environ.get("CENSYS_API_KEY", "").startswith("censys_")
+    )
+    has_legacy = os.environ.get("CENSYS_API_ID") and os.environ.get("CENSYS_API_SECRET")
+
+    if not has_token and not has_legacy:
+        print_error("Censys credentials not configured")
+        print_info("Run: domainraptor config set CENSYS_API_TOKEN <pat_token>")
+        print_info("  or for legacy API: set CENSYS_API_ID and CENSYS_API_SECRET")
+        raise typer.Exit(1)
+
+    try:
+        import re
+
+        from domainraptor.discovery.censys_client import (
+            CensysAPIKeyError,
+            CensysClient,
+        )
+
+        client = CensysClient()
+
+        # Check if query is a simple IP address (supports host lookup without paid subscription)
+        ip_pattern = r"^(\d{1,3}\.){3}\d{1,3}$"
+        if re.match(ip_pattern, query.strip()):
+            # Use direct IP lookup (works with free accounts)
+            result = client.get_host(query.strip())
+            results = [result] if result else []
+        else:
+            # Try search (requires paid subscription)
+            try:
+                results = client.search_hosts_all(query, limit=limit)
+            except CensysAPIKeyError as e:
+                print_error(str(e))
+                print_info("Tip: Use a direct IP address to lookup hosts with a free account")
+                print_info("     Example: domainraptor discover censys-host 8.8.8.8")
+                raise typer.Exit(1) from e
+
+        if not results:
+            print_warning(f"No hosts found for query: {query}")
+            raise typer.Exit(0)
+
+        table = Table(
+            title=f"Censys Results ({len(results)} found)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("IP", style="bold yellow")
+        table.add_column("Hostnames")
+        table.add_column("Ports", style="green")
+        table.add_column("AS Name")
+        table.add_column("Country")
+        table.add_column("Labels")
+
+        for host in results:
+            ports_str = ", ".join(map(str, host.ports[:5]))
+            hostnames_str = ", ".join(host.hostnames[:2]) if host.hostnames else "-"
+            labels_str = ", ".join(host.labels[:3]) if host.labels else "-"
+
+            table.add_row(
+                host.ip,
+                hostnames_str,
+                ports_str or "-",
+                host.autonomous_system[:30] if host.autonomous_system else "-",
+                host.country or "-",
+                labels_str,
+            )
+
+        console.print(table)
+        print_success(f"Found {len(results)} hosts")
+
+        if save:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=query,
+                    scan_type="censys-host",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for host in results:
+                    result.assets.append(
+                        Asset(
+                            type=AssetType.IP,
+                            value=host.ip,
+                            source="censys",
+                            metadata={
+                                "hostnames": host.hostnames,
+                                "autonomous_system": host.autonomous_system,
+                                "ports": host.ports,
+                                "labels": host.labels,
+                            },
+                        )
+                    )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        print_error(f"Censys search failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command("censys-domain")
+def discover_censys_domain_cmd(
+    ctx: typer.Context,
+    domain: Annotated[str, typer.Argument(help="Domain to search")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 50,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Search Censys for hosts related to a domain.
+
+    Searches both DNS names and TLS certificate names.
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Find all hosts for example.com[/dim]
+        domainraptor discover censys-domain example.com
+    """
+    from rich.table import Table
+
+    print_info(f"Searching Censys for domain: [bold]{domain}[/bold]")
+
+    # Check for PAT token or legacy credentials
+    has_token = os.environ.get("CENSYS_API_TOKEN") or (
+        os.environ.get("CENSYS_API_KEY", "").startswith("censys_")
+    )
+    has_legacy = os.environ.get("CENSYS_API_ID") and os.environ.get("CENSYS_API_SECRET")
+
+    if not has_token and not has_legacy:
+        print_error("Censys credentials not configured")
+        print_info("Run: domainraptor config set CENSYS_API_TOKEN <pat_token>")
+        print_info("  or for legacy API: set CENSYS_API_ID and CENSYS_API_SECRET")
+        raise typer.Exit(1)
+
+    try:
+        from domainraptor.discovery.censys_client import CensysClient
+
+        client = CensysClient()
+        results = client.search_by_domain(domain, limit=limit)
+
+        if not results:
+            print_warning(f"No hosts found for domain: {domain}")
+            raise typer.Exit(0)
+
+        table = Table(
+            title=f"Censys: {domain} ({len(results)} hosts)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("IP", style="bold yellow")
+        table.add_column("Hostnames")
+        table.add_column("Ports", style="green")
+        table.add_column("AS Name")
+        table.add_column("Country")
+
+        for host in results:
+            ports_str = ", ".join(map(str, host.ports[:5]))
+            hostnames_str = ", ".join(host.hostnames[:2]) if host.hostnames else "-"
+
+            table.add_row(
+                host.ip,
+                hostnames_str,
+                ports_str or "-",
+                host.autonomous_system[:30] if host.autonomous_system else "-",
+                host.country or "-",
+            )
+
+        console.print(table)
+        print_success(f"Found {len(results)} hosts for {domain}")
+
+        if save:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=domain,
+                    scan_type="censys-domain",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for host in results:
+                    result.assets.append(
+                        Asset(
+                            type=AssetType.IP,
+                            value=host.ip,
+                            source="censys",
+                            metadata={
+                                "hostnames": host.hostnames,
+                                "autonomous_system": host.autonomous_system,
+                                "ports": host.ports,
+                            },
+                        )
+                    )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        print_error(f"Censys domain search failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command("censys-certs")
+def discover_censys_certs_cmd(
+    ctx: typer.Context,
+    domain: Annotated[str, typer.Argument(help="Domain to search certificates for")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results to return"),
+    ] = 50,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Search Censys for SSL/TLS certificates.
+
+    Finds certificates containing the domain name - useful for subdomain enumeration.
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Find certificates for example.com[/dim]
+        domainraptor discover censys-certs example.com
+    """
+    from rich.table import Table
+
+    print_info(f"Searching Censys certificates for: [bold]{domain}[/bold]")
+
+    # Check for PAT token or legacy credentials
+    has_token = os.environ.get("CENSYS_API_TOKEN") or (
+        os.environ.get("CENSYS_API_KEY", "").startswith("censys_")
+    )
+    has_legacy = os.environ.get("CENSYS_API_ID") and os.environ.get("CENSYS_API_SECRET")
+
+    if not has_token and not has_legacy:
+        print_error("Censys credentials not configured")
+        print_info("Run: domainraptor config set CENSYS_API_TOKEN <pat_token>")
+        raise typer.Exit(1)
+
+    try:
+        from domainraptor.discovery.censys_client import CensysClient
+
+        client = CensysClient()
+        certs, _ = client.search_certificates(f'names: "{domain}"', per_page=min(limit, 100))
+
+        if not certs:
+            print_warning(f"No certificates found for: {domain}")
+            raise typer.Exit(0)
+
+        table = Table(
+            title=f"Censys Certificates ({len(certs)} found)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("Names", style="bold yellow")
+        table.add_column("Issuer")
+        table.add_column("Valid From")
+        table.add_column("Valid To")
+        table.add_column("Algorithm")
+
+        for cert in certs:
+            names_str = ", ".join(cert.names[:3]) if cert.names else "-"
+            valid_from = cert.validity_start.strftime("%Y-%m-%d") if cert.validity_start else "-"
+            valid_to = cert.validity_end.strftime("%Y-%m-%d") if cert.validity_end else "-"
+
+            table.add_row(
+                names_str[:50],
+                cert.issuer[:30] or "-",
+                valid_from,
+                valid_to,
+                cert.key_algorithm or "-",
+            )
+
+        console.print(table)
+        print_success(f"Found {len(certs)} certificates")
+
+        # Extract unique subdomains
+        subdomains = set()
+        for cert in certs:
+            for name in cert.names:
+                if name.endswith(domain) and not name.startswith("*"):
+                    subdomains.add(name)
+
+        if subdomains:
+            print_info(f"Discovered {len(subdomains)} unique subdomains from certificates")
+
+        if save and subdomains:
+            try:
+                from domainraptor.core.types import Asset, AssetType, ScanResult
+                from domainraptor.storage import ScanRepository
+
+                result = ScanResult(
+                    target=domain,
+                    scan_type="censys-certs",
+                    started_at=datetime.now(),
+                    completed_at=datetime.now(),
+                    status="completed",
+                )
+
+                for subdomain in subdomains:
+                    result.assets.append(
+                        Asset(
+                            type=AssetType.SUBDOMAIN,
+                            value=subdomain,
+                            parent=domain,
+                            source="censys",
+                        )
+                    )
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as e:
+                print_warning(f"Failed to save results: {e}")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        print_error(f"Censys certificate search failed: {e}")
+        raise typer.Exit(1) from None

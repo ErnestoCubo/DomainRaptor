@@ -733,3 +733,224 @@ class TestDiscoverSubdomainsExternal:
             # Should add error and continue
             assert len(result.errors) >= 1
             assert "Shodan failed" in result.errors[0]
+
+
+# ============================================================================
+# Shodan Advanced Search Command Tests
+# ============================================================================
+
+
+class TestDiscoverShodanOrgCommand:
+    """Tests for discover shodan-org command."""
+
+    def test_shodan_org_without_api_key(self) -> None:
+        """Test shodan-org without API key shows error."""
+        with patch.dict("os.environ", {}, clear=True):
+            result = runner.invoke(app, ["--no-banner", "discover", "shodan-org", "Google LLC"])
+
+            assert result.exit_code == 1
+            assert "SHODAN_API_KEY not configured" in result.output
+
+    def test_shodan_org_success(self) -> None:
+        """Test shodan-org command with results."""
+        mock_results = [
+            ShodanHostResult(
+                ip="8.8.8.8",
+                hostnames=["dns.google"],
+                ports=[53, 443],
+                country="US",
+                org="Google LLC",
+                asn="AS15169",
+                vulns=[],
+            ),
+            ShodanHostResult(
+                ip="8.8.4.4",
+                hostnames=["dns.google"],
+                ports=[53],
+                country="US",
+                org="Google LLC",
+                asn="AS15169",
+                vulns=["CVE-2021-12345"],
+            ),
+        ]
+
+        with (
+            patch.dict("os.environ", {"SHODAN_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("domainraptor.discovery.shodan_client.ShodanClient") as mock_shodan,
+            patch("domainraptor.storage.repository.ScanRepository") as mock_repo,
+        ):
+            mock_shodan_inst = MagicMock()
+            mock_shodan.return_value = mock_shodan_inst
+            mock_shodan_inst.search_by_org.return_value = mock_results
+
+            mock_repo_inst = MagicMock()
+            mock_repo.return_value = mock_repo_inst
+            mock_repo_inst.save.return_value = 1
+
+            result = runner.invoke(
+                app,
+                ["--no-banner", "discover", "shodan-org", "Google LLC", "--no-save"],
+            )
+
+            assert result.exit_code == 0
+            assert "8.8.8.8" in result.output
+            assert "Found 2 hosts" in result.output
+
+    def test_shodan_org_no_results(self) -> None:
+        """Test shodan-org command with no results."""
+        with (
+            patch.dict("os.environ", {"SHODAN_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("domainraptor.discovery.shodan_client.ShodanClient") as mock_shodan,
+        ):
+            mock_shodan_inst = MagicMock()
+            mock_shodan.return_value = mock_shodan_inst
+            mock_shodan_inst.search_by_org.return_value = []
+
+            result = runner.invoke(
+                app,
+                ["--no-banner", "discover", "shodan-org", "Unknown Corp XYZ"],
+            )
+
+            assert result.exit_code == 0
+            assert "No hosts found" in result.output
+
+
+class TestDiscoverShodanSslCommand:
+    """Tests for discover shodan-ssl command."""
+
+    def test_shodan_ssl_without_api_key(self) -> None:
+        """Test shodan-ssl without API key shows error."""
+        with patch.dict("os.environ", {}, clear=True):
+            result = runner.invoke(app, ["--no-banner", "discover", "shodan-ssl", "example.com"])
+
+            assert result.exit_code == 1
+            assert "SHODAN_API_KEY not configured" in result.output
+
+    def test_shodan_ssl_success(self) -> None:
+        """Test shodan-ssl command with results."""
+        mock_results = [
+            ShodanHostResult(
+                ip="93.184.216.34",
+                hostnames=["example.com"],
+                ports=[443],
+                country="US",
+                org="Example Inc",
+                asn="AS12345",
+                vulns=[],
+            ),
+        ]
+
+        with (
+            patch.dict("os.environ", {"SHODAN_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("domainraptor.discovery.shodan_client.ShodanClient") as mock_shodan,
+        ):
+            mock_shodan_inst = MagicMock()
+            mock_shodan.return_value = mock_shodan_inst
+            mock_shodan_inst.search_by_ssl.return_value = mock_results
+
+            result = runner.invoke(
+                app,
+                ["--no-banner", "discover", "shodan-ssl", "example.com", "--no-save"],
+            )
+
+            assert result.exit_code == 0
+            assert "93.184.216.34" in result.output
+            assert "Found 1 hosts" in result.output
+
+    def test_shodan_ssl_no_results(self) -> None:
+        """Test shodan-ssl command with no results."""
+        with (
+            patch.dict("os.environ", {"SHODAN_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("domainraptor.discovery.shodan_client.ShodanClient") as mock_shodan,
+        ):
+            mock_shodan_inst = MagicMock()
+            mock_shodan.return_value = mock_shodan_inst
+            mock_shodan_inst.search_by_ssl.return_value = []
+
+            result = runner.invoke(
+                app,
+                ["--no-banner", "discover", "shodan-ssl", "nonexistent-domain-xyz123.com"],
+            )
+
+            assert result.exit_code == 0
+            assert "No hosts found" in result.output
+
+
+class TestDiscoverShodanAsnCommand:
+    """Tests for discover shodan-asn command."""
+
+    def test_shodan_asn_without_api_key(self) -> None:
+        """Test shodan-asn without API key shows error."""
+        with patch.dict("os.environ", {}, clear=True):
+            result = runner.invoke(app, ["--no-banner", "discover", "shodan-asn", "AS15169"])
+
+            assert result.exit_code == 1
+            assert "SHODAN_API_KEY not configured" in result.output
+
+    def test_shodan_asn_success(self) -> None:
+        """Test shodan-asn command with results."""
+        mock_results = [
+            ShodanHostResult(
+                ip="8.8.8.8",
+                hostnames=["dns.google"],
+                ports=[53, 443],
+                country="US",
+                org="Google LLC",
+                asn="AS15169",
+                vulns=[],
+            ),
+        ]
+
+        with (
+            patch.dict("os.environ", {"SHODAN_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("domainraptor.discovery.shodan_client.ShodanClient") as mock_shodan,
+        ):
+            mock_shodan_inst = MagicMock()
+            mock_shodan.return_value = mock_shodan_inst
+            mock_shodan_inst.search_by_asn.return_value = mock_results
+
+            result = runner.invoke(
+                app,
+                ["--no-banner", "discover", "shodan-asn", "AS15169", "--no-save"],
+            )
+
+            assert result.exit_code == 0
+            assert "8.8.8.8" in result.output
+            assert "Found 1 hosts" in result.output
+
+    def test_shodan_asn_no_results(self) -> None:
+        """Test shodan-asn command with no results."""
+        with (
+            patch.dict("os.environ", {"SHODAN_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("domainraptor.discovery.shodan_client.ShodanClient") as mock_shodan,
+        ):
+            mock_shodan_inst = MagicMock()
+            mock_shodan.return_value = mock_shodan_inst
+            mock_shodan_inst.search_by_asn.return_value = []
+
+            result = runner.invoke(
+                app,
+                ["--no-banner", "discover", "shodan-asn", "AS99999999"],
+            )
+
+            assert result.exit_code == 0
+            assert "No hosts found" in result.output
+
+    def test_shodan_asn_normalizes_asn_format(self) -> None:
+        """Test shodan-asn command normalizes ASN format."""
+        with (
+            patch.dict("os.environ", {"SHODAN_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("domainraptor.discovery.shodan_client.ShodanClient") as mock_shodan,
+        ):
+            mock_shodan_inst = MagicMock()
+            mock_shodan.return_value = mock_shodan_inst
+            mock_shodan_inst.search_by_asn.return_value = []
+
+            # Test without AS prefix
+            result = runner.invoke(
+                app,
+                ["--no-banner", "discover", "shodan-asn", "15169"],
+            )
+
+            assert result.exit_code == 0
+            # Should still work (command should normalize)

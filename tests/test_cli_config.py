@@ -17,9 +17,10 @@ from domainraptor.cli.commands.config import (
     _save_env_file,
     _test_api_key,
     _test_censys,
-    _test_securitytrails,
+    _test_censys_pat,
     _test_shodan,
     _test_virustotal,
+    _test_zoomeye,
     app,
 )
 
@@ -416,13 +417,23 @@ class TestApiTestFunctions:
             mock.assert_called_once_with("test")
             assert result == (True, "OK")
 
-    def test_test_api_key_securitytrails(self) -> None:
-        """Test _test_api_key dispatches to SecurityTrails."""
+    def test_test_api_key_zoomeye(self) -> None:
+        """Test _test_api_key dispatches to ZoomEye."""
         with patch(
-            "domainraptor.cli.commands.config._test_securitytrails",
+            "domainraptor.cli.commands.config._test_zoomeye",
             return_value=(True, "OK"),
         ) as mock:
-            result = _test_api_key("SECURITYTRAILS_API_KEY", "test")
+            result = _test_api_key("ZOOMEYE_API_KEY", "test")
+            mock.assert_called_once_with("test")
+            assert result == (True, "OK")
+
+    def test_test_api_key_censys_pat(self) -> None:
+        """Test _test_api_key dispatches to Censys PAT."""
+        with patch(
+            "domainraptor.cli.commands.config._test_censys_pat",
+            return_value=(True, "OK"),
+        ) as mock:
+            result = _test_api_key("CENSYS_API_TOKEN", "test")
             mock.assert_called_once_with("test")
             assert result == (True, "OK")
 
@@ -506,32 +517,57 @@ class TestApiTestFunctions:
         assert result[0] is False
         assert "VT error" in result[1]
 
-    def test_test_securitytrails_success(self) -> None:
-        """Test _test_securitytrails with successful connection."""
+    def test_test_zoomeye_success(self) -> None:
+        """Test _test_zoomeye with successful connection."""
         mock_client = MagicMock()
-        mock_info = MagicMock()
-        mock_info.subdomain_count = 100
-        mock_client.get_domain.return_value = mock_info
+        mock_client.search_subdomains.return_value = [MagicMock()]
 
         with patch(
-            "domainraptor.enrichment.securitytrails.SecurityTrailsClient",
+            "domainraptor.discovery.zoomeye_client.ZoomEyeClient",
             return_value=mock_client,
         ):
-            result = _test_securitytrails("test_key")
+            result = _test_zoomeye("test_key")
 
         assert result[0] is True
-        assert "100" in result[1] or "Connected" in result[1]
+        assert "Connected" in result[1] or "success" in result[1].lower()
 
-    def test_test_securitytrails_exception(self) -> None:
-        """Test _test_securitytrails with exception."""
+    def test_test_zoomeye_exception(self) -> None:
+        """Test _test_zoomeye with exception."""
         with patch(
-            "domainraptor.enrichment.securitytrails.SecurityTrailsClient",
-            side_effect=Exception("ST error"),
+            "domainraptor.discovery.zoomeye_client.ZoomEyeClient",
+            side_effect=Exception("ZE error"),
         ):
-            result = _test_securitytrails("test_key")
+            result = _test_zoomeye("test_key")
 
         assert result[0] is False
-        assert "ST error" in result[1]
+        assert "ZE error" in result[1]
+
+    def test_test_censys_pat_success(self) -> None:
+        """Test _test_censys_pat with successful connection."""
+        mock_client = MagicMock()
+        mock_host = MagicMock()
+        mock_host.ip = "8.8.8.8"
+        mock_client.get_host.return_value = mock_host
+
+        with patch(
+            "domainraptor.discovery.censys_client.CensysClient",
+            return_value=mock_client,
+        ):
+            result = _test_censys_pat("test_token")
+
+        assert result[0] is True
+        assert "Connected" in result[1] or "8.8.8.8" in result[1]
+
+    def test_test_censys_pat_exception(self) -> None:
+        """Test _test_censys_pat with exception."""
+        with patch(
+            "domainraptor.discovery.censys_client.CensysClient",
+            side_effect=Exception("Censys error"),
+        ):
+            result = _test_censys_pat("test_token")
+
+        assert result[0] is False
+        assert "Censys error" in result[1]
 
     def test_test_censys_not_implemented(self) -> None:
         """Test _test_censys returns not implemented."""
@@ -586,7 +622,13 @@ class TestInitConfigCommand:
     @pytest.fixture(autouse=True)
     def clear_api_keys(self) -> None:
         """Clear all API keys before and after each test."""
-        keys = ["SHODAN_API_KEY", "VIRUSTOTAL_API_KEY", "SECURITYTRAILS_API_KEY", "CENSYS_API_KEY"]
+        keys = [
+            "SHODAN_API_KEY",
+            "VIRUSTOTAL_API_KEY",
+            "ZOOMEYE_API_KEY",
+            "CENSYS_API_KEY",
+            "CENSYS_API_TOKEN",
+        ]
         backups = {k: os.environ.get(k) for k in keys}
         for k in keys:
             os.environ.pop(k, None)
@@ -697,5 +739,6 @@ class TestApiKeysConstant:
         """Test that API_KEYS contains expected services."""
         assert "SHODAN_API_KEY" in API_KEYS
         assert "VIRUSTOTAL_API_KEY" in API_KEYS
-        assert "SECURITYTRAILS_API_KEY" in API_KEYS
+        assert "ZOOMEYE_API_KEY" in API_KEYS
         assert "CENSYS_API_KEY" in API_KEYS
+        assert "CENSYS_API_TOKEN" in API_KEYS

@@ -1,6 +1,6 @@
 [project]
 name = "domainraptor"
-version = "0.2.0"
+version = "0.3.0"
 description = "Cyber Intelligence tool for domain reconnaissance and vulnerability assessment"
 readme = "README.md"
 license = { text = "MIT" }

@@ -6,11 +6,11 @@ Configure API keys to unlock the full potential of DomainRaptor.
 
 ## Overview
 
-DomainRaptor integrates with multiple security services. While basic functionality works without API keys, configuring them enables:
+DomainRaptor integrates with multiple security services. While basic functionality works without API keys (using crt.sh and HackerTarget), configuring them enables:
 
 - More data sources
-- Higher rate limits
-- Additional features
+- Host/service enrichment
+- CVE correlation
 - Better accuracy
 
 ---
@@ -19,10 +19,10 @@ DomainRaptor integrates with multiple security services. While basic functionali
 
 | Service | Required | Free Tier | Features |
 |---------|----------|-----------|----------|
-| **Shodan** | Optional | ✓ | Port scanning, service detection, CVE lookup |
-| **VirusTotal** | Optional | ✓ | Malware analysis, URL reputation, subdomain enumeration |
-| **SecurityTrails** | Optional | ✓ | Historical DNS, subdomain enumeration |
-| **Censys** | Optional | ✓ | Certificate search, host discovery |
+| **Shodan** | Optional | ✓ 100/month | Port scanning, service detection, CVE lookup |
+| **ZoomEye** | Optional | ✓ Subdomain free | Subdomain enumeration (host search paid) |
+| **Censys (PAT)** | Optional | ✓ IP lookup free | Direct IP lookup (search paid) |
+| **VirusTotal** | Optional | ✓ 500/day | Malware analysis, URL reputation |
 | **NVD** | Optional | ✓ | CVE enrichment with descriptions, CVSS scores |
 
 ---
@@ -46,6 +46,45 @@ DomainRaptor integrates with multiple security services. While basic functionali
 domainraptor config set SHODAN_API_KEY AbCdEf123456789GhIjKlMnOpQrStUvWx
 ```
 
+### ZoomEye
+
+1. Go to [https://www.zoomeye.ai/](https://www.zoomeye.ai/)
+2. Create a free account
+3. Navigate to **Profile** → **API Key**
+4. Copy your API key
+
+**Free tier includes:**
+
+- Subdomain discovery (unlimited)
+- 3000 credits/month for general searches
+- Host search requires paid credits
+
+```bash
+domainraptor config set ZOOMEYE_API_KEY 366C744C-52F4-6AA41-f5CF-1cf8603ff45
+```
+
+> ⚠️ **Note:** ZoomEye uses `api.zoomeye.ai` (international endpoint). The `.org` endpoint returns 403 for international users.
+
+### Censys (Personal Access Token)
+
+DomainRaptor uses the **Censys Platform API v3** with Personal Access Tokens (PAT).
+
+1. Go to [https://platform.censys.io/settings/api](https://platform.censys.io/settings/api)
+2. Create a free account
+3. Generate a **Personal Access Token**
+4. Copy the token (format: `censys_<prefix>_<secret>`)
+
+**Free tier includes:**
+
+- Direct IP lookup (`censys-host <ip>`) - **FREE**
+- Host/certificate search - **Requires subscription**
+
+```bash
+domainraptor config set CENSYS_API_TOKEN censys_ffgeRyx8_BrN5ne8WzXvTKCpCMSVDAiyY
+```
+
+> 💡 **Tip:** Use `domainraptor discover censys-host 8.8.8.8` for free IP lookups.
+
 ### VirusTotal
 
 1. Go to [https://www.virustotal.com/gui/join-us](https://www.virustotal.com/gui/join-us)
@@ -61,40 +100,6 @@ domainraptor config set SHODAN_API_KEY AbCdEf123456789GhIjKlMnOpQrStUvWx
 
 ```bash
 domainraptor config set VIRUSTOTAL_API_KEY a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
-```
-
-### SecurityTrails
-
-1. Go to [https://securitytrails.com/](https://securitytrails.com/)
-2. Create a free account
-3. Navigate to **API** section
-4. Generate your API key
-
-**Free tier includes:**
-
-- 50 queries/month
-- Subdomain enumeration
-- Basic DNS history
-
-```bash
-domainraptor config set SECURITYTRAILS_API_KEY xyz987654321abcdefghijklmnopqrstuvwxyz
-```
-
-### Censys
-
-1. Go to [https://search.censys.io/register](https://search.censys.io/register)
-2. Create a free account
-3. Navigate to **Account** → **API**
-4. Copy your API ID and Secret
-
-**Free tier includes:**
-
-- 250 queries/month
-- Certificate search
-- Host search
-
-```bash
-domainraptor config set CENSYS_API_KEY your_api_id:your_api_secret
 ```
 
 ### NVD (National Vulnerability Database)
@@ -128,9 +133,9 @@ domainraptor config set NVD_API_KEY your_nvd_api_key_here
 ```bash
 # Set individual keys
 domainraptor config set SHODAN_API_KEY your_key_here
+domainraptor config set ZOOMEYE_API_KEY your_key_here
+domainraptor config set CENSYS_API_TOKEN your_pat_token_here
 domainraptor config set VIRUSTOTAL_API_KEY your_key_here
-domainraptor config set SECURITYTRAILS_API_KEY your_key_here
-domainraptor config set CENSYS_API_KEY your_key_here
 ```
 
 ### Method 2: Interactive Setup
@@ -145,9 +150,9 @@ Follow the prompts to enter your API keys.
 
 ```bash
 export SHODAN_API_KEY="your_key_here"
+export ZOOMEYE_API_KEY="your_key_here"
+export CENSYS_API_TOKEN="censys_xxx_yyy"
 export VIRUSTOTAL_API_KEY="your_key_here"
-export SECURITYTRAILS_API_KEY="your_key_here"
-export CENSYS_API_KEY="your_key_here"
 ```
 
 Add to shell profile for persistence:
@@ -155,7 +160,8 @@ Add to shell profile for persistence:
 ```bash
 # ~/.bashrc or ~/.zshrc
 export SHODAN_API_KEY="AbCdEf123456789GhIjKlMnOpQrStUvWx"
-export VIRUSTOTAL_API_KEY="a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
+export ZOOMEYE_API_KEY="366C744C-52F4-6AA41-f5CF-1cf8603ff45"
+export CENSYS_API_TOKEN="censys_ffgeRyx8_BrN5ne8WzXvTKCpCMSVDAiyY"
 ```
 
 ### Method 4: .env File
@@ -164,9 +170,9 @@ Edit `~/.domainraptor/.env`:
 
 ```env
 SHODAN_API_KEY=AbCdEf123456789GhIjKlMnOpQrStUvWx
+ZOOMEYE_API_KEY=366C744C-52F4-6AA41-f5CF-1cf8603ff45
+CENSYS_API_TOKEN=censys_ffgeRyx8_BrN5ne8WzXvTKCpCMSVDAiyY
 VIRUSTOTAL_API_KEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
-SECURITYTRAILS_API_KEY=xyz987654321abcdefghijklmnopqrstuvwxyz
-CENSYS_API_KEY=api_id:api_secret
 NVD_API_KEY=your_nvd_api_key_here
 ```
 
@@ -183,11 +189,15 @@ domainraptor config list
 Output:
 
 ```
-Configured API Keys:
-  SHODAN_API_KEY: AbCd****StUv ✓
-  VIRUSTOTAL_API_KEY: a1b2****s9t0 ✓
-  SECURITYTRAILS_API_KEY: Not configured
-  CENSYS_API_KEY: Not configured
+                         API Keys Configuration  
+┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Service       ┃ Key Name           ┃ Status       ┃ Free Tier                    ┃
+┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Shodan        │ SHODAN_API_KEY     │ ✓ Configured │ 100 queries/month            │
+│ ZoomEye       │ ZOOMEYE_API_KEY    │ ✓ Configured │ Subdomain discovery free     │
+│ Censys (PAT)  │ CENSYS_API_TOKEN   │ ✓ Configured │ IP lookup free               │
+│ VirusTotal    │ VIRUSTOTAL_API_KEY │ ✗ Not set    │ 4 req/min, 500/day           │
+└───────────────┴────────────────────┴──────────────┴──────────────────────────────┘
 ```
 
 ### Test API Keys

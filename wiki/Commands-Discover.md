@@ -363,10 +363,64 @@ domainraptor --free-only discover -T example.com
 | crt.sh | No | None | Certificates, Subdomains |
 | HackerTarget | No | 100/day | Subdomains, DNS |
 | DNS | No | None | DNS Records |
-| Shodan | Yes | Varies | Ports, Services, IPs |
+| Shodan | Yes | 100/month | Ports, Services, IPs, CVEs |
+| ZoomEye | Yes | Subdomain free | Subdomains (host search paid) |
+| Censys | Yes (PAT) | IP lookup free | IP info (search paid) |
 | VirusTotal | Yes | 500/day | Subdomains, URLs |
-| SecurityTrails | Yes | Varies | Subdomains, DNS history |
-| Censys | Yes | Varies | Certificates, IPs |
+
+---
+
+## ZoomEye Commands
+
+### `discover zoomeye-subdomains`
+
+Discover subdomains using ZoomEye's free domain search API:
+
+```bash
+domainraptor discover zoomeye-subdomains example.com
+```
+
+**Options:**
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--limit` | `-l` | Maximum results | 100 |
+
+> 💡 **Note:** This endpoint is **free** and doesn't consume your ZoomEye credits.
+
+---
+
+## Censys Commands
+
+### `discover censys-host`
+
+Look up host information using Censys Platform API v3:
+
+```bash
+domainraptor discover censys-host 8.8.8.8
+```
+
+**Example Output:**
+
+```
+╭────────────────────────────────────────────────────────────╮
+│                    Censys Host: 8.8.8.8                    │
+╰────────────────────────────────────────────────────────────╯
+  Name                dns.google  
+  ASN                 AS15169 (GOOGLE)  
+  Location            United States  
+  Last Seen           2024-01-15  
+
+                        Open Services  
+┏━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Port   ┃ Protocol  ┃ Service                              ┃
+┡━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ 53     │ UDP       │ DNS                                  │
+│ 443    │ TCP       │ HTTPS                                │
+└────────┴───────────┴──────────────────────────────────────┘
+```
+
+> 💡 **Note:** Direct IP lookups are **free**. Certificate/host search requires a paid subscription.
 
 ---
 

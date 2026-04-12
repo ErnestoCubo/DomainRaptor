@@ -2,106 +2,249 @@
 
 ![DomainRaptor](DomainRaptor.jpg)
 
-**DomainRaptor** is a cyber intelligence tool for extracting and enriching data from massive text files. It extracts IPs, domains, URLs using regex patterns and enriches them with Shodan intelligence.
+[![Version](https://img.shields.io/badge/version-0.3.0-blue)](https://github.com/ErnestoCubo/DomainRaptor/releases)
+[![Python](https://img.shields.io/badge/python-3.10%2B-green)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
 
-## 🚀 Features
+**DomainRaptor** is a comprehensive **Cyber Intelligence & Attack Surface Management (ASM)** tool designed for red team operations, security assessments, and continuous monitoring. It aggregates data from multiple sources to provide deep visibility into an organization's external attack surface.
 
-- **Pattern Extraction**: Extract IPv4, IPv6, domains, subdomains, and URLs from text files
-- **Multi-threading**: Process large files efficiently using parallel execution
-- **Shodan Integration**: Enrich extracted domains with public exposure data
-- **Colored Output**: Beautiful JSON output with syntax highlighting
+## 🎯 What is DomainRaptor?
+
+DomainRaptor is built for security professionals who need to:
+
+- **Discover** all external assets (subdomains, IPs, certificates, services)
+- **Assess** security configurations and vulnerabilities
+- **Monitor** changes in the attack surface over time
+- **Report** findings in multiple formats for different audiences
+
+## 🚀 Key Features
+
+### 🔍 Multi-Source Discovery
+
+| Source | Type | Free Tier |
+|--------|------|-----------|
+| **crt.sh** | Certificate Transparency | ✅ Unlimited |
+| **HackerTarget** | Subdomain enumeration | ✅ 100/day |
+| **Shodan** | Port/service/CVE data | ✅ 100/month |
+| **ZoomEye** | Subdomain discovery | ✅ Free |
+| **Censys** | IP lookup | ✅ Free |
+
+### 🛡️ Security Assessment
+
+- SSL/TLS certificate analysis and validation
+- DNS security checks (DNSSEC, SPF, DMARC, DKIM)
+- HTTP security header compliance
+- CVE correlation with CVSS scoring
+- Risk calculation based on exposure
+
+### 📊 Reporting
+
+- **HTML** - Interactive dashboard with charts
+- **JSON/YAML** - Machine-readable for automation
+- **Markdown** - Documentation-friendly
+- **PDF** - Executive summaries
+
+### 👁️ Continuous Monitoring
+
+- Track changes between scans
+- Alert on new assets or vulnerabilities
+- Historical comparison with diff reports
 
 ## 📦 Installation
 
+### Using pip (recommended)
+
 ```bash
-# Clone the repository
+pip install domainraptor
+```
+
+### From source
+
+```bash
 git clone https://github.com/ErnestoCubo/DomainRaptor.git
 cd DomainRaptor
-
-# Install dependencies
-pip install shodan colorama pygments
+pip install -e .
 ```
 
-## 🔧 Usage
+### Using uv (fastest)
 
 ```bash
-python DomainRaptor.py -e <EXPRESSION> -i <INPUT_FILE> [-t THREADS] [-a API_KEY]
+uv pip install domainraptor
 ```
 
-### Arguments
+## 🔧 Quick Start
 
-| Argument | Description | Required |
-|----------|-------------|----------|
-| `-e, --expression` | Pattern type to extract (see below) | ✅ |
-| `-i, --input_file` | Path to the input file | ✅ |
-| `-t, --threads` | Number of threads (default: 10) | ❌ |
-| `-a, --api_key` | Shodan API key (required for option 2) | ❌ |
-| `-f, --format` | Export format (coming soon) | ❌ |
-
-### Expression Options
-
-| Option | Description | Example Match |
-|--------|-------------|---------------|
-| `1` | IPv4 addresses | `192.168.1.1` |
-| `2` | Domains & Subdomains | `www.example.com` |
-| `3` | URLs (all protocols) | `https://example.com/path` |
-| `4` | IPv6 addresses | `2001:0db8:85a3::8a2e:0370:7334` |
-
-### Examples
+### 1. Configure API Keys (optional but recommended)
 
 ```bash
-# Extract IPv4 addresses
-python DomainRaptor.py -e 1 -i targets.txt
+# View available integrations
+domainraptor config list
 
-# Extract domains and enrich with Shodan
-python DomainRaptor.py -e 2 -i urls.txt -a YOUR_SHODAN_API_KEY
+# Set API keys
+domainraptor config set SHODAN_API_KEY your-shodan-key
+domainraptor config set ZOOMEYE_API_KEY your-zoomeye-key
+domainraptor config set CENSYS_API_TOKEN censys_xxx_yyy
 
-# Extract all URLs with 20 threads
-python DomainRaptor.py -e 3 -i logs.txt -t 20
+# Test configuration
+domainraptor config test
 ```
 
-## 📁 Project Structure
+### 2. Run Your First Scan
+
+```bash
+# Full reconnaissance scan
+domainraptor recon fullscan example.com
+
+# Quick subdomain discovery
+domainraptor discover subdomains example.com
+
+# Security assessment
+domainraptor assess config example.com
+```
+
+### 3. Generate Reports
+
+```bash
+# HTML dashboard
+domainraptor report generate example.com -f html -o report.html
+
+# JSON for automation
+domainraptor report generate example.com -f json -o data.json
+```
+
+## 📖 Command Reference
+
+### Discovery Commands
+
+```bash
+# Subdomain enumeration from multiple sources
+domainraptor discover subdomains example.com
+
+# Shodan host enrichment
+domainraptor discover shodan-host 1.2.3.4
+
+# ZoomEye subdomain search (free)
+domainraptor discover zoomeye-subdomains example.com
+
+# Censys IP lookup (free)
+domainraptor discover censys-host 1.2.3.4
+
+# Certificate search
+domainraptor discover certs example.com
+```
+
+### Reconnaissance Commands
+
+```bash
+# Full attack surface scan
+domainraptor recon fullscan example.com
+
+# With specific sources
+domainraptor recon fullscan example.com --no-shodan --no-censys
+
+# Limit results
+domainraptor recon fullscan example.com --max-results 50
+```
+
+### Assessment Commands
+
+```bash
+# Full security assessment
+domainraptor assess config example.com
+
+# SSL/TLS analysis
+domainraptor assess ssl example.com
+
+# DNS security check
+domainraptor assess dns example.com
+```
+
+### Report Commands
+
+```bash
+# Generate HTML report
+domainraptor report generate example.com -f html
+
+# List available scans
+domainraptor report list example.com
+
+# Compare two scans
+domainraptor compare scans 1 2
+```
+
+### Monitoring Commands
+
+```bash
+# Watch for changes (runs periodically)
+domainraptor watch start example.com --interval 24h
+
+# List active watchers
+domainraptor watch list
+```
+
+## 🗂️ Project Structure
 
 ```
 DomainRaptor/
-├── DomainRaptor.py          # Main entry point
-├── patterns.txt             # Sample input file
-└── modules/
-    ├── cli/                 # Command line interface
-    │   └── args_parser.py
-    ├── core/                # Core processing
-    │   ├── regex_engine.py  # Pattern matching
-    │   └── data_transformer.py
-    ├── enrichment/          # External API integrations
-    │   ├── shodan_client.py
-    │   └── whois_client.py  # (Coming soon)
-    ├── output/              # Output formatting
-    │   └── printer.py
-    └── utils/               # Utilities
-        └── logger.py
+├── src/domainraptor/
+│   ├── cli/                 # Typer CLI commands
+│   │   └── commands/        # discover, assess, report, recon, watch
+│   ├── core/                # Configuration and models
+│   ├── discovery/           # API clients (Shodan, ZoomEye, Censys, etc.)
+│   ├── assessment/          # Security checks (SSL, DNS, headers)
+│   ├── enrichment/          # VirusTotal, WHOIS, etc.
+│   ├── reporting/           # HTML, JSON, PDF generators
+│   ├── storage/             # SQLite database layer
+│   └── utils/               # Logging, output formatting
+├── tests/                   # Pytest test suite
+├── wiki/                    # Documentation (GitHub Wiki)
+└── docs/                    # Additional documentation
 ```
+
+## 🔐 API Keys & Free Tiers
+
+| Service | Free Tier | What You Get |
+|---------|-----------|--------------|
+| **Shodan** | 100/month | Port scanning, CVE lookup, banners |
+| **ZoomEye** | Subdomain free | Subdomain enumeration (host search paid) |
+| **Censys** | IP lookup free | Direct IP lookup (search paid) |
+| **VirusTotal** | 500/day | Malware analysis, URL reputation |
+
+> **Note**: Basic functionality works without API keys using crt.sh and HackerTarget.
 
 ## 🗺️ Roadmap
 
-- [x] IPv4 extraction
-- [x] Domain/Subdomain extraction
-- [x] URL extraction
-- [x] Shodan integration
-- [ ] IPv6 extraction (regex fix needed)
+- [x] Multi-source subdomain discovery
+- [x] Shodan integration with CVE enrichment
+- [x] ZoomEye international API support
+- [x] Censys Platform API v3 (PAT token)
+- [x] HTML/JSON/YAML reports
+- [x] SQLite scan history
+- [x] Risk scoring algorithm
 - [ ] WHOIS lookup integration
-- [ ] Export to JSON/CSV
-- [ ] Passive port scanning
-- [ ] Phishing domain detection
-- [ ] HoneyPot detection
+- [ ] Active port scanning
+- [ ] Nuclei template integration
+- [ ] Slack/Discord notifications
+- [ ] Docker container
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is open source under the [MIT License](LICENSE).
 
 ## ⚠️ Disclaimer
 
-This tool is intended for legal security research and authorized penetration testing only. Users are responsible for ensuring they have proper authorization before scanning any targets.
+This tool is intended for **legal security research** and **authorized penetration testing only**. Users are responsible for ensuring they have proper authorization before scanning any targets. Unauthorized scanning may violate laws and service terms.
+
+---
+
+📚 **Documentation**: [Wiki](https://github.com/ErnestoCubo/DomainRaptor/wiki) | 🐛 **Issues**: [GitHub Issues](https://github.com/ErnestoCubo/DomainRaptor/issues) | 💬 **Discussions**: [GitHub Discussions](https://github.com/ErnestoCubo/DomainRaptor/discussions)

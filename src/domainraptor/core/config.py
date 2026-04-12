@@ -36,6 +36,7 @@ class SourceConfig:
     name: str
     enabled: bool = True
     api_key: str | None = None
+    api_token: str | None = None  # For PAT-style tokens (e.g., Censys PAT)
     rate_limit: float = 1.0  # requests per second
     timeout: int = 30
     priority: int = 1  # lower = higher priority
@@ -106,8 +107,9 @@ class AppConfig:
             "DOMAINRAPTOR_DB_PATH": ("db_path", Path),
             "SHODAN_API_KEY": ("sources.shodan.api_key", str),
             "VIRUSTOTAL_API_KEY": ("sources.virustotal.api_key", str),
-            "SECURITYTRAILS_API_KEY": ("sources.securitytrails.api_key", str),
             "CENSYS_API_KEY": ("sources.censys.api_key", str),
+            "CENSYS_API_TOKEN": ("sources.censys.api_token", str),
+            "ZOOMEYE_API_KEY": ("sources.zoomeye.api_key", str),
         }
 
         for env_var, (key_path, converter) in env_mappings.items():

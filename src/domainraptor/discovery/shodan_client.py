@@ -448,6 +448,176 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         # For domains, use dns_domain() separately
         return []
 
+    def search_by_org(self, org: str, limit: int = 100) -> list[ShodanHostResult]:
+        """Search Shodan for hosts belonging to an organization.
+
+        Uses Shodan's search API with the org: filter to find all hosts
+        associated with a specific organization name.
+
+        Args:
+            org: Organization name to search for (e.g., "Google LLC")
+            limit: Maximum number of results to return (default: 100)
+
+        Returns:
+            List of ShodanHostResult objects for matching hosts
+        """
+        self._check_api_key()
+        logger.info(f"Shodan: Searching for hosts by org '{org}'")
+
+        url = f"{self.BASE_URL}/shodan/host/search"
+        params = {
+            "key": self.api_key,
+            "query": f'org:"{org}"',
+        }
+
+        results: list[ShodanHostResult] = []
+
+        try:
+            response = self.get(url, params=params)
+            self._handle_response_errors(response, f"org:{org}")
+            data = response.json()
+
+            for match in data.get("matches", [])[:limit]:
+                result = ShodanHostResult(
+                    ip=match.get("ip_str", ""),
+                    hostnames=match.get("hostnames", []),
+                    country=match.get("location", {}).get("country_name", ""),
+                    city=match.get("location", {}).get("city", "") or "",
+                    org=match.get("org", "") or "",
+                    asn=match.get("asn", "") or "",
+                    isp=match.get("isp", "") or "",
+                    os=match.get("os"),
+                    ports=[match.get("port", 0)],
+                    services=[],
+                    vulns=list(match.get("vulns", {}).keys())
+                    if isinstance(match.get("vulns"), dict)
+                    else match.get("vulns", []),
+                    tags=match.get("tags", []),
+                )
+                results.append(result)
+
+            logger.info(f"Shodan: Found {len(results)} hosts for org '{org}'")
+        except ShodanError:
+            raise
+        except Exception as e:
+            logger.error(f"Shodan: Org search failed for {org}: {e}")
+            raise ShodanError(f"Org search failed: {e}") from e
+
+        return results
+
+    def search_by_ssl(self, domain: str, limit: int = 100) -> list[ShodanHostResult]:
+        """Search Shodan for hosts with SSL certificates for a domain.
+
+        Uses Shodan's search API with ssl.cert.subject.cn filter to find
+        hosts serving SSL certificates for the specified domain.
+
+        Args:
+            domain: Domain to search for in SSL certificates
+            limit: Maximum number of results to return (default: 100)
+
+        Returns:
+            List of ShodanHostResult objects for matching hosts
+        """
+        self._check_api_key()
+        logger.info(f"Shodan: Searching for SSL certs containing '{domain}'")
+
+        url = f"{self.BASE_URL}/shodan/host/search"
+        params = {
+            "key": self.api_key,
+            "query": f'ssl.cert.subject.cn:"{domain}"',
+        }
+
+        results: list[ShodanHostResult] = []
+
+        try:
+            response = self.get(url, params=params)
+            self._handle_response_errors(response, f"ssl:{domain}")
+            data = response.json()
+
+            for match in data.get("matches", [])[:limit]:
+                result = ShodanHostResult(
+                    ip=match.get("ip_str", ""),
+                    hostnames=match.get("hostnames", []),
+                    country=match.get("location", {}).get("country_name", ""),
+                    city=match.get("location", {}).get("city", "") or "",
+                    org=match.get("org", "") or "",
+                    asn=match.get("asn", "") or "",
+                    isp=match.get("isp", "") or "",
+                    os=match.get("os"),
+                    ports=[match.get("port", 0)],
+                    services=[],
+                    vulns=list(match.get("vulns", {}).keys())
+                    if isinstance(match.get("vulns"), dict)
+                    else match.get("vulns", []),
+                    tags=match.get("tags", []),
+                )
+                results.append(result)
+
+            logger.info(f"Shodan: Found {len(results)} hosts with SSL certs for '{domain}'")
+        except ShodanError:
+            raise
+        except Exception as e:
+            logger.error(f"Shodan: SSL search failed for {domain}: {e}")
+            raise ShodanError(f"SSL search failed: {e}") from e
+
+        return results
+
+    def search_by_asn(self, asn: str, limit: int = 100) -> list[ShodanHostResult]:
+        """Search Shodan for hosts in a specific ASN.
+
+        Args:
+            asn: Autonomous System Number (e.g., "AS15169" or "15169")
+            limit: Maximum number of results to return (default: 100)
+
+        Returns:
+            List of ShodanHostResult objects for matching hosts
+        """
+        self._check_api_key()
+        # Normalize ASN format
+        asn_normalized = asn.upper() if asn.upper().startswith("AS") else f"AS{asn}"
+        logger.info(f"Shodan: Searching for hosts in {asn_normalized}")
+
+        url = f"{self.BASE_URL}/shodan/host/search"
+        params = {
+            "key": self.api_key,
+            "query": f"asn:{asn_normalized}",
+        }
+
+        results: list[ShodanHostResult] = []
+
+        try:
+            response = self.get(url, params=params)
+            self._handle_response_errors(response, f"asn:{asn_normalized}")
+            data = response.json()
+
+            for match in data.get("matches", [])[:limit]:
+                result = ShodanHostResult(
+                    ip=match.get("ip_str", ""),
+                    hostnames=match.get("hostnames", []),
+                    country=match.get("location", {}).get("country_name", ""),
+                    city=match.get("location", {}).get("city", "") or "",
+                    org=match.get("org", "") or "",
+                    asn=match.get("asn", "") or "",
+                    isp=match.get("isp", "") or "",
+                    os=match.get("os"),
+                    ports=[match.get("port", 0)],
+                    services=[],
+                    vulns=list(match.get("vulns", {}).keys())
+                    if isinstance(match.get("vulns"), dict)
+                    else match.get("vulns", []),
+                    tags=match.get("tags", []),
+                )
+                results.append(result)
+
+            logger.info(f"Shodan: Found {len(results)} hosts in {asn_normalized}")
+        except ShodanError:
+            raise
+        except Exception as e:
+            logger.error(f"Shodan: ASN search failed for {asn_normalized}: {e}")
+            raise ShodanError(f"ASN search failed: {e}") from e
+
+        return results
+
     @staticmethod
     def _is_ip(target: str) -> bool:
         """Check if target is a valid IP address.

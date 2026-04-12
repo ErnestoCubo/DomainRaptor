@@ -37,17 +37,23 @@ API_KEYS = {
         "url": "https://www.virustotal.com/gui/my-apikey",
         "free_tier": "4 req/min, 500/day",
     },
-    "SECURITYTRAILS_API_KEY": {
-        "service": "SecurityTrails",
-        "description": "DNS intelligence and historical data",
-        "url": "https://securitytrails.com/app/account",
-        "free_tier": "50 queries/month",
-    },
     "CENSYS_API_KEY": {
-        "service": "Censys",
-        "description": "Internet-wide scanning data",
+        "service": "Censys (Legacy)",
+        "description": "Internet-wide scanning data (API ID/Secret)",
         "url": "https://search.censys.io/account/api",
         "free_tier": "250 queries/month",
+    },
+    "CENSYS_API_TOKEN": {
+        "service": "Censys (PAT)",
+        "description": "Censys Platform API v3 Personal Access Token",
+        "url": "https://platform.censys.io/settings/api",
+        "free_tier": "IP lookup free, search requires subscription",
+    },
+    "ZOOMEYE_API_KEY": {
+        "service": "ZoomEye",
+        "description": "Chinese cyberspace search engine",
+        "url": "https://www.zoomeye.ai/profile",
+        "free_tier": "Subdomain discovery free, host search paid",
     },
 }
 
@@ -114,16 +120,20 @@ def set_key(
     [bold cyan]Supported keys:[/bold cyan]
         • SHODAN_API_KEY
         • VIRUSTOTAL_API_KEY
-        • SECURITYTRAILS_API_KEY
-        • CENSYS_API_KEY
+        • CENSYS_API_KEY (legacy API ID)
+        • CENSYS_API_TOKEN (PAT for v3 API)
+        • ZOOMEYE_API_KEY
 
     [bold cyan]Examples:[/bold cyan]
 
         [dim]# Set Shodan API key[/dim]
         domainraptor config set SHODAN_API_KEY abc123...
 
-        [dim]# Set VirusTotal API key[/dim]
-        domainraptor config set VIRUSTOTAL_API_KEY xyz789...
+        [dim]# Set ZoomEye API key[/dim]
+        domainraptor config set ZOOMEYE_API_KEY xyz789...
+
+        [dim]# Set Censys PAT token[/dim]
+        domainraptor config set CENSYS_API_TOKEN censys_xxx_yyy
     """
     key = key.upper()
 
@@ -317,10 +327,12 @@ def _test_api_key(key_name: str, value: str) -> tuple[bool, str]:
         return _test_shodan(value)
     if key_name == "VIRUSTOTAL_API_KEY":
         return _test_virustotal(value)
-    if key_name == "SECURITYTRAILS_API_KEY":
-        return _test_securitytrails(value)
     if key_name == "CENSYS_API_KEY":
         return _test_censys(value)
+    if key_name == "CENSYS_API_TOKEN":
+        return _test_censys_pat(value)
+    if key_name == "ZOOMEYE_API_KEY":
+        return _test_zoomeye(value)
     return False, "No test available"
 
 
@@ -352,23 +364,43 @@ def _test_virustotal(api_key: str) -> tuple[bool, str]:
         return False, str(e)
 
 
-def _test_securitytrails(api_key: str) -> tuple[bool, str]:
-    """Test SecurityTrails API key."""
-    try:
-        from domainraptor.enrichment.securitytrails import SecurityTrailsClient
-
-        client = SecurityTrailsClient(api_key=api_key)
-        # Try to get a well-known domain
-        info = client.get_domain("google.com")
-        return True, f"Connected (found {info.subdomain_count} subdomains)"
-    except Exception as e:
-        return False, str(e)
-
-
 def _test_censys(api_key: str) -> tuple[bool, str]:
     """Test Censys API key."""
     # Censys client not yet implemented
     return False, "Censys client not yet implemented"
+
+
+def _test_censys_pat(api_token: str) -> tuple[bool, str]:
+    """Test Censys PAT (Personal Access Token) for v3 API."""
+    try:
+        from domainraptor.discovery.censys_client import CensysClient
+
+        client = CensysClient(api_token=api_token)
+        # Use free endpoint: get host info for Google DNS
+        result = client.get_host("8.8.8.8")
+        if result:
+            name = result.get("name", result.get("ip", "unknown"))
+            return True, f"Connected (tested: {name})"
+        return True, "Key accepted"
+    except Exception as e:
+        return False, str(e)
+
+
+def _test_zoomeye(api_key: str) -> tuple[bool, str]:
+    """Test ZoomEye API key."""
+    try:
+        from domainraptor.discovery.zoomeye_client import ZoomEyeClient
+
+        client = ZoomEyeClient(api_key=api_key)
+        # Use resources-info endpoint to check account (always free)
+        result = client.get_resources_info()
+        if result:
+            plan = result.get("plan", "unknown")
+            credits = result.get("resources", {}).get("search", 0)
+            return True, f"Connected ({plan} plan, {credits} credits)"
+        return True, "Key accepted"
+    except Exception as e:
+        return False, str(e)
 
 
 @app.command("path")

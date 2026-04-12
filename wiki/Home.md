@@ -2,7 +2,7 @@
 
 Welcome to the official DomainRaptor documentation! DomainRaptor is a powerful **Cyber Intelligence Tool** for domain reconnaissance and security assessment.
 
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Python](https://img.shields.io/badge/python-3.10%2B-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -48,7 +48,7 @@ DomainRaptor is a comprehensive cyber intelligence tool designed for:
 
 | Feature | Description |
 |---------|-------------|
-| Multi-source Discovery | Integrates with crt.sh, HackerTarget, Shodan, and more |
+| Multi-source Discovery | Integrates with crt.sh, HackerTarget, Shodan, ZoomEye, Censys |
 | SSL/TLS Analysis | Deep certificate analysis and validation |
 | DNS Security Checks | DNSSEC, SPF, DMARC, DKIM verification |
 | HTTP Header Analysis | Security header compliance checking |
@@ -56,6 +56,7 @@ DomainRaptor is a comprehensive cyber intelligence tool designed for:
 | Multiple Output Formats | JSON, YAML, HTML, Markdown, PDF |
 | Persistent Storage | SQLite database for scan history |
 | Change Detection | Track modifications between scans |
+| Risk Scoring | Algorithmic risk calculation based on exposure |
 
 ## 🎯 Quick Example
 
