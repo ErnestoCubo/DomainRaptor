@@ -148,3 +148,7 @@ docs/_build/
 # ========================
 .docker/
 docker-compose.override.yml
+
+# Generated reports
+report.html
+*.report.html
