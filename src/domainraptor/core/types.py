@@ -18,6 +18,9 @@ class AssetType(str, Enum):
     SERVICE = "service"
     CERTIFICATE = "certificate"
     EMAIL = "email"
+    DNS = "dns"
+    VULNERABILITY = "vulnerability"
+    CONFIG = "config"
 
 
 class SeverityLevel(str, Enum):

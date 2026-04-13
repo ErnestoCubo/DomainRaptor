@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from domainraptor.assessment.base import AssessmentConfig, ConfigurationChecker
+from domainraptor.assessment.base import ConfigurationChecker
 from domainraptor.core.types import ConfigIssue, SeverityLevel
 
 logger = logging.getLogger(__name__)
@@ -258,21 +258,20 @@ class HeadersChecker(ConfigurationChecker):
         # Check X-Frame-Options value
         if headers.x_frame_options:
             xfo = headers.x_frame_options.upper()
-            if xfo not in ("DENY", "SAMEORIGIN"):
-                if xfo.startswith("ALLOW-FROM"):
-                    issues.append(
-                        ConfigIssue(
-                            id="HDR-022",
-                            title="X-Frame-Options uses deprecated ALLOW-FROM",
-                            severity=SeverityLevel.LOW,
-                            category=self.category,
-                            description="ALLOW-FROM is deprecated and not supported in modern browsers",
-                            affected_asset=headers.url,
-                            current_value=headers.x_frame_options,
-                            recommended_value="DENY or SAMEORIGIN (use CSP frame-ancestors for granular control)",
-                            remediation="Use CSP frame-ancestors directive instead of ALLOW-FROM",
-                        )
+            if xfo not in ("DENY", "SAMEORIGIN") and xfo.startswith("ALLOW-FROM"):
+                issues.append(
+                    ConfigIssue(
+                        id="HDR-022",
+                        title="X-Frame-Options uses deprecated ALLOW-FROM",
+                        severity=SeverityLevel.LOW,
+                        category=self.category,
+                        description="ALLOW-FROM is deprecated and not supported in modern browsers",
+                        affected_asset=headers.url,
+                        current_value=headers.x_frame_options,
+                        recommended_value="DENY or SAMEORIGIN (use CSP frame-ancestors for granular control)",
+                        remediation="Use CSP frame-ancestors directive instead of ALLOW-FROM",
                     )
+                )
 
         # Check CSP for unsafe directives
         if headers.content_security_policy:

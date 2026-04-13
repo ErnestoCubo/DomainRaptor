@@ -4,9 +4,9 @@ A comprehensive tool for domain intelligence gathering, vulnerability assessment
 and continuous monitoring using free-first data sources.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.5.0"
 __author__ = "DomainRaptor Team"
 
 from domainraptor.cli import main
 
-__all__ = ["main", "__version__"]
+__all__ = ["__version__", "main"]

@@ -4,322 +4,326 @@
 name: CI/CD Pipeline
 
 on:
-    push:
-        branches: [main, develop, release/*]
-        paths-ignore:
-            - "**.md"
-            - "docs/**"
-            - ".gitignore"
-    pull_request:
-        branches: [main, develop]
-        paths-ignore:
-            - "**.md"
-            - "docs/**"
-    workflow_dispatch:
-        inputs:
-            deploy_target:
-                description: "Deployment target"
-                required: false
-                default: "none"
-                type: choice
-                options:
-                    - none
-                    - staging
-                    - production
+  push:
+    branches: [main, develop, release/*]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".gitignore"
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: "Deployment target"
+        required: false
+        default: "none"
+        type: choice
+        options:
+          - none
+          - staging
+          - production
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-    PYTHON_VERSION: "3.12"
-    UV_CACHE_DIR: /tmp/.uv-cache
+  PYTHON_VERSION: "3.12"
+  UV_CACHE_DIR: /tmp/.uv-cache
 
 jobs:
-    # ============================================
-    # Stage 1: Lint & Format Check
-    # ============================================
-    lint:
-        name: 🔍 Lint & Format
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+  # ============================================
+  # Stage 1: Lint & Format Check
+  # ============================================
+  lint:
+    name: 🔍 Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-            - name: Install uv
-              uses: astral-sh/setup-uv@v3
-              with:
-                  enable-cache: true
-                  cache-dependency-glob: "pyproject.toml"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
 
-            - name: Install dependencies
-              run: uv sync --dev
+      - name: Install dependencies
+        run: uv sync --extra dev
 
-            - name: Run Ruff linter
-              run: uv run ruff check . --output-format=github
+      - name: Run Ruff linter
+        run: uv run ruff check . --output-format=github
 
-            - name: Run Ruff formatter check
-              run: uv run ruff format --check .
+      - name: Run Ruff formatter check
+        run: uv run ruff format --check .
 
-            - name: Check import sorting
-              run: uv run ruff check . --select I --output-format=github
+      - name: Check import sorting
+        run: uv run ruff check . --select I --output-format=github
 
-    # ============================================
-    # Stage 2: Tests
-    # ============================================
-    test:
-        name: 🧪 Test (Python ${{ matrix.python-version }})
-        needs: lint
-        runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: ["3.12", "3.13"]
+  # ============================================
+  # Stage 2: Tests
+  # ============================================
+  test:
+    name: 🧪 Test (Python ${{ matrix.python-version }})
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-            - name: Install uv
-              uses: astral-sh/setup-uv@v3
-              with:
-                  enable-cache: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
 
-            - name: Install dependencies
-              run: uv sync --dev
+      - name: Install dependencies
+        run: uv sync --extra dev
 
-            - name: Run unit tests
-              run: |
-                  uv run pytest tests/ \
-                    -v \
-                    --tb=short \
-                    --cov=src/domainraptor \
-                    --cov-report=xml \
-                    --cov-report=term-missing \
-                    -m "not integration and not slow"
-              env:
-                  PYTEST_ADDOPTS: "--color=yes"
+      - name: Run unit tests
+        run: |
+          uv run pytest tests/ \
+            -v \
+            --tb=short \
+            --cov=src/domainraptor \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            -m "not integration and not slow"
+        env:
+          PYTEST_ADDOPTS: "--color=yes"
 
-            - name: Upload coverage to Codecov
-              if: matrix.python-version == '3.12'
-              uses: codecov/codecov-action@v4
-              with:
-                  files: ./coverage.xml
-                  flags: unittests
-                  fail_ci_if_error: false
-              env:
-                  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-    # ============================================
-    # Stage 3: Security Scanning
-    # ============================================
-    security:
-        name: 🛡️ Security Scan
-        needs: lint
-        runs-on: ubuntu-latest
-        permissions:
-            security-events: write
-            contents: read
+  # ============================================
+  # Stage 3: Security Scanning
+  # ============================================
+  security:
+    name: 🛡️ Security Scan
+    needs: lint
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-            - name: Install uv
-              uses: astral-sh/setup-uv@v3
-              with:
-                  enable-cache: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
 
-            - name: Install dependencies
-              run: uv sync --dev
+      - name: Install dependencies
+        run: uv sync --extra dev
 
-            - name: Run Bandit security scan
-              run: |
-                  uv run bandit -r . \
-                    -c pyproject.toml \
-                    -f sarif \
-                    -o bandit-results.sarif \
-                    --exit-zero
-              continue-on-error: true
+      - name: Run Bandit security scan
+        run: |
+          uv run bandit -r . \
+            -c pyproject.toml \
+            -f sarif \
+            -o bandit-results.sarif \
+            --exit-zero
+        continue-on-error: true
 
-            - name: Upload Bandit SARIF
-              uses: github/codeql-action/upload-sarif@v3
-              if: always()
-              with:
-                  sarif_file: bandit-results.sarif
-                  category: bandit
+      - name: Upload Bandit SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('bandit-results.sarif') != ''
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit
 
-            - name: Run Ruff security rules
-              run: uv run ruff check . --select S --output-format=github
+      - name: Run Ruff security rules
+        run: uv run ruff check . --select S --output-format=github
 
-            - name: Check for known vulnerabilities
-              run: uv pip audit
-              continue-on-error: true
+      - name: Check for known vulnerabilities
+        run: uv pip audit
+        continue-on-error: true
 
-            - name: Run Trivy vulnerability scanner
-              uses: aquasecurity/trivy-action@master
-              with:
-                  scan-type: "fs"
-                  scan-ref: "."
-                  severity: "CRITICAL,HIGH"
-                  format: "sarif"
-                  output: "trivy-results.sarif"
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          severity: "CRITICAL,HIGH"
+          format: "sarif"
+          output: "trivy-results.sarif"
+        continue-on-error: true
 
-            - name: Upload Trivy SARIF
-              uses: github/codeql-action/upload-sarif@v3
-              if: always()
-              with:
-                  sarif_file: trivy-results.sarif
-                  category: trivy
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
 
-    # ============================================
-    # Stage 4: Build
-    # ============================================
-    build:
-        name: 📦 Build Package
-        needs: [test, security]
-        runs-on: ubuntu-latest
-        outputs:
-            version: ${{ steps.version.outputs.version }}
+  # ============================================
+  # Stage 4: Build
+  # ============================================
+  build:
+    name: 📦 Build Package
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-            - name: Install uv
-              uses: astral-sh/setup-uv@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
 
-            - name: Get version
-              id: version
-              run: |
-                  VERSION=$(grep '^version' pyproject.toml | head -1 | cut -d'"' -f2)
-                  echo "version=$VERSION" >> $GITHUB_OUTPUT
-                  echo "Building version: $VERSION"
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(grep '^version' pyproject.toml | head -1 | cut -d'"' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
 
-            - name: Build package
-              run: uv build
+      - name: Build package
+        run: uv build
 
-            - name: Verify package
-              run: |
-                  uv pip install dist/*.whl
-                  python -c "import domainraptor; print(f'Package version: {domainraptor.__version__}')"
+      - name: Verify package
+        run: |
+          uv pip install dist/*.whl
+          python -c "import domainraptor; print(f'Package version: {domainraptor.__version__}')"
 
-            - name: Upload build artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: dist-${{ steps.version.outputs.version }}
-                  path: dist/
-                  retention-days: 30
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ steps.version.outputs.version }}
+          path: dist/
+          retention-days: 30
 
-    # ============================================
-    # Stage 5: Deploy (Manual or on release tags)
-    # ============================================
-    deploy-staging:
-        name: 🚀 Deploy to Staging
-        needs: build
-        runs-on: ubuntu-latest
-        if: |
-            github.ref == 'refs/heads/develop' ||
-            (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'staging')
-        environment:
-            name: staging
-            url: https://staging.domainraptor.local
+  # ============================================
+  # Stage 5: Deploy (Manual or on release tags)
+  # ============================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/develop' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'staging')
+    environment:
+      name: staging
+      url: https://staging.domainraptor.local
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Download build artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: dist-${{ needs.build.outputs.version }}
-                  path: dist/
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ needs.build.outputs.version }}
+          path: dist/
 
-            - name: Deploy to staging server
-              run: |
-                  echo "🚀 Deploying version ${{ needs.build.outputs.version }} to staging..."
-                  # Add actual deployment steps here
-                  # Example: scp, rsync, or container deployment
+      - name: Deploy to staging server
+        run: |
+          echo "🚀 Deploying version ${{ needs.build.outputs.version }} to staging..."
+          # Add actual deployment steps here
+          # Example: scp, rsync, or container deployment
 
-    deploy-production:
-        name: 🌐 Deploy to Production
-        needs: build
-        runs-on: ubuntu-latest
-        if: |
-            startsWith(github.ref, 'refs/tags/v') ||
-            (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'production')
-        environment:
-            name: production
-            url: https://domainraptor.local
+  deploy-production:
+    name: 🌐 Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'production')
+    environment:
+      name: production
+      url: https://domainraptor.local
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Download build artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: dist-${{ needs.build.outputs.version }}
-                  path: dist/
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ needs.build.outputs.version }}
+          path: dist/
 
-            - name: Deploy to production server
-              run: |
-                  echo "🌐 Deploying version ${{ needs.build.outputs.version }} to production..."
-                  # Add actual production deployment steps
-                  # This could include:
-                  # - SSH to Pine64 server
-                  # - Docker container update
-                  # - Rolling restart
+      - name: Deploy to production server
+        run: |
+          echo "🌐 Deploying version ${{ needs.build.outputs.version }} to production..."
+          # Add actual production deployment steps
+          # This could include:
+          # - SSH to Pine64 server
+          # - Docker container update
+          # - Rolling restart
 
-            - name: Create GitHub Release
-              if: startsWith(github.ref, 'refs/tags/v')
-              uses: softprops/action-gh-release@v2
-              with:
-                  files: dist/*
-                  generate_release_notes: true
-                  draft: false
-                  prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') }}
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') }}
 
-    # ============================================
-    # Notifications
-    # ============================================
-    notify:
-        name: 📢 Notify
-        needs: [lint, test, security, build]
-        runs-on: ubuntu-latest
-        if: always()
+  # ============================================
+  # Notifications
+  # ============================================
+  notify:
+    name: 📢 Notify
+    needs: [lint, test, security, build]
+    runs-on: ubuntu-latest
+    if: always()
 
-        steps:
-            - name: Check pipeline status
-              run: |
-                  if [[ "${{ needs.lint.result }}" == "failure" ]] || \
-                     [[ "${{ needs.test.result }}" == "failure" ]] || \
-                     [[ "${{ needs.security.result }}" == "failure" ]] || \
-                     [[ "${{ needs.build.result }}" == "failure" ]]; then
-                    echo "❌ Pipeline failed"
-                    exit 1
-                  else
-                    echo "✅ Pipeline succeeded"
-                  fi
+    steps:
+      - name: Check pipeline status
+        run: |
+          if [[ "${{ needs.lint.result }}" == "failure" ]] || \
+             [[ "${{ needs.test.result }}" == "failure" ]] || \
+             [[ "${{ needs.security.result }}" == "failure" ]] || \
+             [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ Pipeline failed"
+            exit 1
+          else
+            echo "✅ Pipeline succeeded"
+          fi
