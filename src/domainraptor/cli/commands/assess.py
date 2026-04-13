@@ -17,6 +17,7 @@ from domainraptor.core.config import AppConfig
 from domainraptor.core.types import (
     ScanResult,
     SeverityLevel,
+    Vulnerability,
 )
 from domainraptor.utils.output import (
     console,
@@ -210,6 +211,12 @@ def assess_vulns_cmd(
     # Output
     console.print()
     print_scan_summary(result)
+
+    # Show errors if any
+    if result.errors:
+        console.print()
+        for error in result.errors:
+            print_warning(error)
 
     if result.vulnerabilities:
         console.print()
@@ -409,10 +416,248 @@ def _assess_outdated(target: str, result: ScanResult, config: AppConfig) -> None
 
 
 def _query_nvd(target: str, result: ScanResult, min_severity: SeverityLevel) -> None:
-    """Query NVD for vulnerabilities."""
-    # NVD API requires knowing specific software/versions
-    # This needs service detection first
-    pass
+    """Query Shodan for services and enrich with NVD CVE data.
+
+    Strategy:
+    1. Resolve target to IPs
+    2. Query Shodan for host info (services, ports, known CVEs)
+    3. Enrich CVEs with NVD data (description, CVSS score, severity)
+    """
+    import os
+    import socket
+
+    shodan_key = os.environ.get("SHODAN_API_KEY")
+    if not shodan_key:
+        result.errors.append(
+            "Shodan API key not configured. Run: domainraptor config set SHODAN_API_KEY <key>"
+        )
+        return
+
+    # Resolve target to IPs
+    ips_to_check: list[str] = []
+    try:
+        socket.inet_aton(target)
+        ips_to_check.append(target)
+    except OSError:
+        try:
+            _, _, ip_list = socket.gethostbyname_ex(target)
+            ips_to_check.extend(ip_list)
+        except socket.gaierror:
+            result.errors.append(f"Could not resolve domain: {target}")
+            return
+
+    if not ips_to_check:
+        result.errors.append(f"No IPs found for target: {target}")
+        return
+
+    try:
+        from domainraptor.discovery.shodan_client import ShodanClient
+
+        shodan = ShodanClient(api_key=shodan_key)
+
+        severity_order = {
+            SeverityLevel.CRITICAL: 4,
+            SeverityLevel.HIGH: 3,
+            SeverityLevel.MEDIUM: 2,
+            SeverityLevel.LOW: 1,
+            SeverityLevel.INFO: 0,
+        }
+        min_sev_value = severity_order.get(min_severity, 0)
+
+        # Collect all CVEs - use helper function to avoid try-except in loop
+        all_cves, errors = _collect_cves_from_ips(shodan, ips_to_check[:10])
+        result.errors.extend(errors)
+
+        if not all_cves:
+            return  # No CVEs found
+
+        # Enrich with NVD data (reusing pattern from recon.py)
+        nvd_info = _fetch_nvd_for_assess(list(all_cves.keys()))
+
+        for cve_id, context in all_cves.items():
+            nvd_data = nvd_info.get(cve_id)
+
+            if nvd_data:
+                desc = nvd_data.description
+                severity = SeverityLevel(nvd_data.severity.lower())
+                cvss_score = nvd_data.cvss_v3_score
+            else:
+                # Fallback description with context
+                desc = _build_cve_description(
+                    cve_id,
+                    context["ip"],
+                    context["services_summary"],
+                    context["host_result"],
+                )
+                severity = SeverityLevel.MEDIUM
+                cvss_score = None
+
+            # Filter by minimum severity
+            if severity_order.get(severity, 0) < min_sev_value:
+                continue
+
+            result.vulnerabilities.append(
+                Vulnerability(
+                    id=cve_id,
+                    title=f"CVE {cve_id}",
+                    severity=severity,
+                    description=desc,
+                    affected_asset=context["ip"],
+                    source="shodan+nvd" if nvd_data else "shodan",
+                    detected_at=datetime.now(),
+                    cvss_score=cvss_score,
+                )
+            )
+
+    except ImportError:
+        result.errors.append("Shodan client not available")
+
+
+def _collect_cves_from_ips(shodan, ips: list[str]) -> tuple[dict[str, dict], list[str]]:
+    """Collect CVEs from Shodan for a list of IPs.
+
+    Returns:
+        Tuple of (cves_dict, errors_list)
+    """
+    all_cves: dict[str, dict] = {}
+    errors: list[str] = []
+
+    for ip in ips:
+        cve_data, error = _fetch_shodan_host_cves(shodan, ip)
+        if error:
+            errors.append(error)
+        all_cves.update(cve_data)
+
+    return all_cves, errors
+
+
+def _fetch_shodan_host_cves(shodan, ip: str) -> tuple[dict[str, dict], str | None]:
+    """Fetch CVEs for a single IP from Shodan.
+
+    Returns:
+        Tuple of (cves_dict, error_message or None)
+    """
+    try:
+        host_result = shodan.host_info(ip)
+
+        # Build services summary for context
+        services_summary = ", ".join(
+            f"{svc.service_name or 'unknown'}:{svc.port}" for svc in host_result.services[:5]
+        )
+        if len(host_result.services) > 5:
+            services_summary += f" (+{len(host_result.services) - 5} more)"
+
+        cves = {}
+        for cve_id in host_result.vulns:
+            if cve_id not in cves:
+                cves[cve_id] = {
+                    "ip": ip,
+                    "services_summary": services_summary,
+                    "host_result": host_result,
+                }
+
+        return cves, None
+
+    except Exception as e:
+        return {}, f"Shodan lookup failed for {ip}: {e}"
+
+
+def _fetch_nvd_for_assess(cve_ids: list[str]) -> dict:
+    """Fetch CVE details from NVD API.
+
+    Reuses NVDClient from discovery module.
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    if not cve_ids:
+        return {}
+
+    try:
+        from domainraptor.discovery.nvd_client import NVDClient
+
+        client = NVDClient()
+        results = {}
+
+        try:
+            for cve_id in cve_ids:
+                cve_info, should_stop = _fetch_single_cve(client, cve_id, logger)
+                if cve_info:
+                    results[cve_id] = cve_info
+                if should_stop:
+                    break
+        finally:
+            client.close()
+
+        return results
+
+    except ImportError:
+        return {}
+    except Exception:
+        return {}
+
+
+def _fetch_single_cve(client, cve_id: str, logger) -> tuple[object | None, bool]:
+    """Fetch a single CVE from NVD.
+
+    Returns:
+        Tuple of (cve_info or None, should_stop_fetching)
+    """
+    from domainraptor.discovery.nvd_client import NVDRateLimitError
+
+    try:
+        info = client.get_cve(cve_id)
+        return info, False
+    except NVDRateLimitError:
+        return None, True  # Stop on rate limit
+    except Exception as e:
+        logger.debug("Failed to fetch CVE %s from NVD: %s", cve_id, e)
+        return None, False
+
+
+def _build_cve_description(cve_id: str, ip: str, services_summary: str, host_result) -> str:
+    """Build CVE description from context when NVD data unavailable."""
+    # CVE keyword mappings
+    cve_contexts = {
+        "openssl": ("OpenSSL cryptographic library", "SSL/TLS"),
+        "ssl": ("SSL/TLS protocol", "encrypted connections"),
+        "tls": ("TLS protocol", "encrypted communications"),
+        "nginx": ("NGINX web server", "HTTP/HTTPS"),
+        "apache": ("Apache HTTP Server", "web hosting"),
+        "ssh": ("SSH service", "remote access"),
+        "openssh": ("OpenSSH", "secure shell"),
+        "http": ("HTTP protocol", "web services"),
+    }
+
+    host_services = [
+        svc.service_name.lower() if svc.service_name else "" for svc in host_result.services
+    ]
+
+    affected_component = None
+    affected_type = None
+
+    for keyword, (component, vtype) in cve_contexts.items():
+        if any(keyword in svc for svc in host_services):
+            affected_component = component
+            affected_type = vtype
+            break
+
+    if affected_component:
+        desc = f"Affects {affected_component} ({affected_type}). "
+    else:
+        desc = "Security vulnerability detected. "
+
+    ports_str = ", ".join(str(p) for p in host_result.ports[:5])
+    desc += f"Host {ip} exposes ports [{ports_str}]"
+
+    if services_summary:
+        desc += f" running {services_summary}"
+
+    if host_result.org:
+        desc += f" ({host_result.org})"
+
+    return desc + "."
 
 
 def _check_ssl_config(target: str, result: ScanResult) -> None:

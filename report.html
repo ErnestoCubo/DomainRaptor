@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Security Report: example.com</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; background: #f9fafb; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #1f2937; }
+        h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background: #f3f4f6; font-weight: 600; }
+        .critical { color: #dc2626; font-weight: bold; }
+        .high { color: #ea580c; }
+        .medium { color: #ca8a04; }
+        .low { color: #2563eb; }
+        .risk-card { background: white; border-radius: 12px; padding: 24px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .risk-level { font-size: 32px; font-weight: bold; color: #6b7280; }
+        .risk-score { font-size: 24px; color: #6b7280; }
+        .breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px; }
+        .breakdown-item { text-align: center; padding: 12px; background: #f9fafb; border-radius: 8px; }
+        .breakdown-value { font-size: 24px; font-weight: bold; color: #1f2937; }
+        .breakdown-label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
+        .factors { margin-top: 16px; }
+        .factor { padding: 8px 12px; background: #fef3c7; border-left: 3px solid #f59e0b; margin: 4px 0; }
+        .chart-container { display: flex; gap: 24px; align-items: center; margin: 20px 0; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .chart-legend { display: flex; flex-direction: column; gap: 8px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-color { width: 16px; height: 16px; border-radius: 4px; }
+        .executive-summary { background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%); color: white; padding: 32px; border-radius: 12px; margin-bottom: 24px; }
+        .executive-summary h2 { color: white; border-bottom-color: rgba(255,255,255,0.3); }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin: 20px 0; }
+        .metric-card { background: rgba(255,255,255,0.1); padding: 16px; border-radius: 8px; text-align: center; }
+        .metric-value { font-size: 28px; font-weight: bold; }
+        .metric-label { font-size: 12px; opacity: 0.8; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="container">
+    <h1>Security Report: example.com</h1>
+    <p>Generated: 2026-04-10T12:02:04.903929</p>
+
+    <div class="executive-summary">
+        <h2 style="margin-top: 0;">Executive Summary</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-value" style="color: #6b7280;">INFO</div>
+                <div class="metric-label">Risk Level</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">0.0</div>
+                <div class="metric-label">Risk Score</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">0</div>
+                <div class="metric-label">Assets</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" style="color: #dc2626;">0</div>
+                <div class="metric-label">Critical Issues</div>
+            </div>
+        </div>
+        <p style="margin-top: 16px;"><strong>Business Impact:</strong> <span style="color: #22c55e;">LOW - Continue monitoring</span></p>
+    </div>
+
+    <div class="chart-container">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle cx="80" cy="80" r="60" fill="#f3f4f6" stroke="#e5e7eb" stroke-width="2"/>
+            <text x="80" y="85" text-anchor="middle" fill="#6b7280" font-size="14">No Vulns</text>
+        </svg>
+        <div class="chart-legend">
+            <div class="legend-item"><div class="legend-color" style="background: #dc2626;"></div> Critical: 0</div>
+            <div class="legend-item"><div class="legend-color" style="background: #ea580c;"></div> High: 0</div>
+            <div class="legend-item"><div class="legend-color" style="background: #ca8a04;"></div> Medium: 0</div>
+            <div class="legend-item"><div class="legend-color" style="background: #2563eb;"></div> Low: 0</div>
+        </div>
+    </div>
+
+    <h2>Key Recommendations</h2>
+    <ol>
+
+
+
+        <li>Schedule follow-up assessment in 30 days</li>
+    </ol>
+
+    </div>
+</body>
+</html>
