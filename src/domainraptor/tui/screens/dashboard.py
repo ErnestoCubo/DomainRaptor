@@ -53,12 +53,14 @@ class DashboardScreen(Widget):
             table = DataTable(id="recent-scans")
             table.add_columns("ID", "Target", "Type", "Status", "Started")
             for scan in self._recent_scans():
+                # list_scans returns summary dicts
+                started = scan.get("started_at") or ""
                 table.add_row(
-                    str(scan.id),
-                    scan.target,
-                    scan.scan_type,
-                    scan.status,
-                    str(scan.started_at)[:19] if scan.started_at else "-",
+                    str(scan.get("id", "?")),
+                    str(scan.get("target", "?")),
+                    str(scan.get("scan_type", "-")),
+                    str(scan.get("status", "-")),
+                    str(started)[:19] if started else "-",
                 )
             yield table
 
