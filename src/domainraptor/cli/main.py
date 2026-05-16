@@ -344,6 +344,14 @@ def export_cmd(
     print_info("Export complete")
 
 
+@app.command("tui")
+def tui_cmd(ctx: typer.Context) -> None:
+    """🖥️ Launch the interactive Terminal User Interface."""
+    from domainraptor.tui.app import run_tui
+
+    run_tui()
+
+
 def main() -> None:
     """Entry point for the CLI application."""
     app()

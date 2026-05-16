@@ -182,17 +182,17 @@ def summary_cmd(
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}
 
 ## Overview
-Target analyzed with {data.get('scan_type', 'standard')} scan mode.
-Scan Status: {data.get('scan_status', 'N/A')}
+Target analyzed with {data.get("scan_type", "standard")} scan mode.
+Scan Status: {data.get("scan_status", "N/A")}
 
 ## Key Findings
-- **Total Assets**: {data['summary']['total_assets']} discovered
-- **Subdomains**: {data['summary']['total_subdomains']}
-- **Services**: {data['summary']['total_services']}
-- **Critical Vulnerabilities**: {data['summary']['critical']}
-- **High Vulnerabilities**: {data['summary']['high']}
-- **Medium Vulnerabilities**: {data['summary']['medium']}
-- **Configuration Issues**: {data['summary']['config_issues']}
+- **Total Assets**: {data["summary"]["total_assets"]} discovered
+- **Subdomains**: {data["summary"]["total_subdomains"]}
+- **Services**: {data["summary"]["total_services"]}
+- **Critical Vulnerabilities**: {data["summary"]["critical"]}
+- **High Vulnerabilities**: {data["summary"]["high"]}
+- **Medium Vulnerabilities**: {data["summary"]["medium"]}
+- **Configuration Issues**: {data["summary"]["config_issues"]}
 
 ## Risk Level: {risk_level} ({risk_score}/100)
 
@@ -206,7 +206,7 @@ Scan Status: {data.get('scan_status', 'N/A')}
     summary += """
 
 ## Recommendations
-""" + "\n".join(f"{i+1}. {r}" for i, r in enumerate(recommendations))
+""" + "\n".join(f"{i + 1}. {r}" for i, r in enumerate(recommendations))
 
     summary += """
 
@@ -223,7 +223,7 @@ Scan Status: {data.get('scan_status', 'N/A')}
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}
 
 ## Status
-⚠️ {data['message']}
+⚠️ {data["message"]}
 
 Run a scan first:
   domainraptor discover --target {target}
@@ -1122,7 +1122,7 @@ def _format_html_technical(data: dict, risk: dict, risk_color: str, vuln_chart: 
         for svc in services_summary:
             versions = ", ".join(svc.get("versions", [])) or "-"
             hosts_count = svc.get("hosts", 0)
-            html += f'        <tr><td>{svc.get("port", "")}</td><td>{svc.get("service", "")}</td><td>{versions}</td><td>{hosts_count}</td></tr>\n'
+            html += f"        <tr><td>{svc.get('port', '')}</td><td>{svc.get('service', '')}</td><td>{versions}</td><td>{hosts_count}</td></tr>\n"
         html += "    </table>\n"
 
     # Original Assets section
@@ -1132,7 +1132,7 @@ def _format_html_technical(data: dict, risk: dict, risk_color: str, vuln_chart: 
         <tr><th>Type</th><th>Value</th><th>Source</th><th>First Seen</th></tr>
 """
     for asset in data.get("assets", [])[:50]:  # Limit to 50 for readability
-        html += f'        <tr><td>{asset["type"]}</td><td><code>{asset["value"]}</code></td><td>{asset.get("source", "")}</td><td>{asset.get("first_seen", "")[:10] if asset.get("first_seen") else ""}</td></tr>\n'
+        html += f"        <tr><td>{asset['type']}</td><td><code>{asset['value']}</code></td><td>{asset.get('source', '')}</td><td>{asset.get('first_seen', '')[:10] if asset.get('first_seen') else ''}</td></tr>\n"
     if len(data.get("assets", [])) > 50:
         html += f'        <tr><td colspan="4" style="text-align: center; color: #6b7280;">... and {len(data.get("assets", [])) - 50} more assets</td></tr>\n'
 
@@ -1145,7 +1145,7 @@ def _format_html_technical(data: dict, risk: dict, risk_color: str, vuln_chart: 
     # Add services from scan data if available
     if data.get("services"):
         for svc in data.get("services", []):
-            html += f'        <tr><td>{svc.get("port", "")}</td><td>{svc.get("protocol", "")}</td><td>{svc.get("service_name", "")}</td><td>{svc.get("version", "")}</td></tr>\n'
+            html += f"        <tr><td>{svc.get('port', '')}</td><td>{svc.get('protocol', '')}</td><td>{svc.get('service_name', '')}</td><td>{svc.get('version', '')}</td></tr>\n"
     else:
         html += '        <tr><td colspan="4" style="text-align: center; color: #6b7280;">No service data available</td></tr>\n'
 
@@ -1403,7 +1403,7 @@ def _format_html_full(data: dict, risk: dict, risk_color: str, vuln_chart: str) 
             <tr><th>Port</th><th>Protocol</th><th>Service</th><th>Version</th></tr>
 """
                 for svc in host_services:
-                    html += f'            <tr><td>{svc.get("port", "")}</td><td>{svc.get("protocol", "tcp")}</td><td>{svc.get("service", "")}</td><td>{svc.get("version", "")}</td></tr>\n'
+                    html += f"            <tr><td>{svc.get('port', '')}</td><td>{svc.get('protocol', 'tcp')}</td><td>{svc.get('service', '')}</td><td>{svc.get('version', '')}</td></tr>\n"
                 html += "        </table>\n"
 
             # Vulnerabilities for this host

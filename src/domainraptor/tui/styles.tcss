@@ -1,0 +1,127 @@
+/* DomainRaptor TUI Styles */
+
+Screen {
+    background: $surface;
+}
+
+#sidebar {
+    width: 25;
+    background: $boost;
+    border-right: solid $primary;
+    padding: 1;
+}
+
+#sidebar ListView {
+    background: $boost;
+    border: none;
+}
+
+#sidebar ListItem {
+    padding: 1 2;
+    height: 3;
+}
+
+#sidebar ListItem.--highlight {
+    background: $primary;
+    color: $text;
+}
+
+#main {
+    padding: 1 2;
+}
+
+.title {
+    color: $accent;
+    text-style: bold;
+    padding-bottom: 1;
+}
+
+.subtitle {
+    color: $text-muted;
+    padding-bottom: 1;
+}
+
+.field-label {
+    color: $accent;
+    text-style: bold;
+    margin-top: 1;
+}
+
+Input {
+    margin-bottom: 1;
+}
+
+Button {
+    margin: 1 1 0 0;
+}
+
+Button.primary {
+    background: $primary;
+}
+
+Button.danger {
+    background: $error;
+}
+
+DataTable {
+    height: auto;
+    max-height: 30;
+    margin-top: 1;
+}
+
+.log-panel {
+    height: 12;
+    border: solid $primary;
+    padding: 0 1;
+    margin-top: 1;
+}
+
+.stats-grid {
+    layout: grid;
+    grid-size: 2 2;
+    grid-gutter: 1 2;
+    grid-rows: auto;
+    height: auto;
+    margin-bottom: 1;
+}
+
+.stat-card {
+    border: solid $accent;
+    padding: 1 2;
+    height: 5;
+    content-align: center middle;
+}
+
+.stat-value {
+    color: $accent;
+    text-style: bold;
+}
+
+#status-bar {
+    dock: bottom;
+    height: 1;
+    background: $boost;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+.banner {
+    color: $accent;
+    text-style: bold;
+    text-align: center;
+    padding: 1;
+}
+
+Switch {
+    margin-right: 2;
+}
+
+.row {
+    layout: horizontal;
+    height: auto;
+}
+
+.col {
+    width: 1fr;
+    margin-right: 1;
+}
