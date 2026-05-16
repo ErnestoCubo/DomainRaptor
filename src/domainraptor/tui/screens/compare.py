@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
@@ -30,14 +32,29 @@ class CompareScreen(Widget):
                 id="subcmd",
                 allow_blank=False,
             )
-            with Horizontal(classes="arg-row"):
+            with Horizontal(classes="arg-row", id="row-arg1"):
                 yield Label("Arg 1:")
                 yield Input(placeholder="target or scan-id", id="arg1")
-            with Horizontal(classes="arg-row"):
+            with Horizontal(classes="arg-row", id="row-arg2"):
                 yield Label("Arg 2:")
                 yield Input(placeholder="(optional) scan-id or target", id="arg2")
             yield Button("Run", id="cmp-run", variant="primary")
             yield ScanRunner(id="runner")
+
+    def on_mount(self) -> None:
+        self._apply_subcmd_visibility("history")
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        if event.select.id == "subcmd":
+            self._apply_subcmd_visibility(str(event.value))
+
+    def _apply_subcmd_visibility(self, sub: str) -> None:
+        # 'history' takes no positional args, only target via the form. Hide arg rows.
+        # 'scans' takes two scan-ids. 'targets' takes two targets.
+        show_args = sub != "history"
+        for row_id in ("row-arg1", "row-arg2"):
+            with contextlib.suppress(Exception):
+                self.query_one(f"#{row_id}").display = show_args
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id in {"arg1", "arg2"}:
@@ -52,6 +69,9 @@ class CompareScreen(Widget):
     def on_scan_runner_run_requested(self, _: ScanRunner.RunRequested) -> None:
         runner = self.query_one("#runner", ScanRunner)
         sub = str(self.query_one("#subcmd", Select).value)
+        if sub == "history":
+            runner.run_command(["compare", "history"])
+            return
         a = self.query_one("#arg1", Input).value.strip()
         b = self.query_one("#arg2", Input).value.strip()
         if not a:

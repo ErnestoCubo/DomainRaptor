@@ -1,13 +1,19 @@
-"""Reports screen: generate and list reports."""
+"""Reports screen: generate, list and preview reports."""
 
 from __future__ import annotations
+
+import re
+from pathlib import Path
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select, Static
+from textual.widgets import Button, Input, Label, RichLog, Select, Static
 
 from domainraptor.tui.screens._common import ScanRunner
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_HTML_WS_RE = re.compile(r"\n\s*\n+")
 
 
 class ReportsScreen(Widget):
@@ -17,13 +23,14 @@ class ReportsScreen(Widget):
     ReportsScreen .field-row Label { padding: 1 1 0 0; }
     ReportsScreen .field-row Input { width: 1fr; }
     ReportsScreen .field-row Select { width: 1fr; }
-    ReportsScreen #rp-run { margin-top: 1; }
+    ReportsScreen #rp-run-row { height: auto; padding-top: 1; }
+    ReportsScreen #rp-preview { height: 14; border: solid $accent; margin-top: 1; }
     """
 
     def compose(self) -> ComposeResult:
         with Vertical():
             yield Label("Reports", classes="title")
-            yield Static("Generate, list and export reports.", classes="subtitle")
+            yield Static("Generate, list, export and preview reports.", classes="subtitle")
             yield Label("Subcommand", classes="field-label")
             yield Select(
                 [
@@ -50,7 +57,11 @@ class ReportsScreen(Widget):
             with Horizontal(classes="field-row"):
                 yield Label("Output file:")
                 yield Input(placeholder="report.html", id="output")
-            yield Button("Run", id="rp-run", variant="primary")
+            with Horizontal(id="rp-run-row"):
+                yield Button("Run", id="rp-run", variant="primary")
+                yield Button("Preview output", id="rp-preview-btn")
+            yield Label("Preview", classes="field-label")
+            yield RichLog(id="rp-preview", highlight=True, markup=False, wrap=True)
             yield ScanRunner(id="runner")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -62,6 +73,40 @@ class ReportsScreen(Widget):
         if event.button.id == "rp-run":
             self.post_message(ScanRunner.RunRequested())
             event.stop()
+        elif event.button.id == "rp-preview-btn":
+            self._preview_output()
+            event.stop()
+
+    def _preview_output(self) -> None:
+        preview = self.query_one("#rp-preview", RichLog)
+        preview.clear()
+        path_str = self.query_one("#output", Input).value.strip()
+        if not path_str:
+            preview.write("[no output path set]")
+            return
+        path = Path(path_str).expanduser()
+        if not path.exists():
+            preview.write(f"[file not found: {path}]")
+            return
+        if path.stat().st_size > 512 * 1024:
+            preview.write(f"[file too large to preview: {path.stat().st_size} bytes]")
+            return
+        suffix = path.suffix.lower()
+        if suffix == ".pdf":
+            preview.write("[PDF preview not supported in TUI]")
+            return
+        try:
+            raw = path.read_text(errors="replace")
+        except OSError as exc:
+            preview.write(f"[read error: {exc}]")
+            return
+        if suffix in {".html", ".htm"}:
+            text = _HTML_TAG_RE.sub("", raw)
+            text = _HTML_WS_RE.sub("\n\n", text).strip()
+        else:
+            text = raw
+        for line in text.splitlines()[:500]:
+            preview.write(line)
 
     def on_scan_runner_run_requested(self, _: ScanRunner.RunRequested) -> None:
         runner = self.query_one("#runner", ScanRunner)
