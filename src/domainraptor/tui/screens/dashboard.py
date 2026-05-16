@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.widget import Widget
@@ -32,6 +34,7 @@ class DashboardScreen(Widget):
     DEFAULT_CSS = """
     DashboardScreen .grid { layout: grid; grid-size: 4 1; grid-gutter: 1 2; height: auto; margin-bottom: 1; }
     DashboardScreen DataTable { height: 20; }
+    DashboardScreen #dash-hint { color: $text-muted; padding-top: 1; }
     """
 
     def compose(self) -> ComposeResult:
@@ -50,7 +53,7 @@ class DashboardScreen(Widget):
                 yield _StatCard("Watches", str(stats.get("watch_targets", 0)))
 
             yield Label("Recent scans", classes="field-label")
-            table = DataTable(id="recent-scans")
+            table = DataTable(id="recent-scans", cursor_type="row")
             table.add_columns("ID", "Target", "Type", "Status", "Started")
             for scan in self._recent_scans():
                 # list_scans returns summary dicts
@@ -63,6 +66,33 @@ class DashboardScreen(Widget):
                     str(started)[:19] if started else "-",
                 )
             yield table
+            yield Static(
+                "Tip: select a row and press Enter to open it in Reports.",
+                id="dash-hint",
+            )
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Open the selected scan's target in the Reports screen."""
+        try:
+            row = event.data_table.get_row(event.row_key)
+        except Exception:
+            return
+        if len(row) < 2:
+            return
+        target = str(row[1])
+        app = self.app
+        # Switch to reports screen then prefill target input
+        if hasattr(app, "action_switch"):
+            app.action_switch("reports")
+            # The new screen mounts asynchronously; defer the prefill.
+            from textual.widgets import Input
+
+            def _prefill() -> None:
+                with contextlib.suppress(Exception):
+                    target_input = app.query_one("#target", Input)
+                    target_input.value = target
+
+            app.call_after_refresh(_prefill)
 
     @staticmethod
     def _safe_stats() -> dict:

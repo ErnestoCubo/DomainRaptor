@@ -13,7 +13,13 @@ from domainraptor.tui.screens._common import ScanRunner
 
 
 class WatchScreen(Widget):
-    DEFAULT_CSS = """WatchScreen { height: 1fr; }"""
+    DEFAULT_CSS = """
+    WatchScreen { height: 1fr; }
+    WatchScreen .field-row { height: auto; }
+    WatchScreen .field-row Label { padding: 1 1 0 0; }
+    WatchScreen .field-row Input { width: 1fr; }
+    WatchScreen #w-run { margin-top: 1; }
+    """
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -34,12 +40,14 @@ class WatchScreen(Widget):
                 id="action",
                 allow_blank=False,
             )
-            with Horizontal():
+            with Horizontal(classes="field-row"):
                 yield Label("Target:")
                 yield Input(placeholder="example.com", id="target")
+            with Horizontal(classes="field-row"):
                 yield Label("Interval (add):")
                 yield Input(placeholder="24h", id="interval", value="24h")
             with Horizontal():
+                yield Button("Run", id="w-run", variant="primary")
                 yield Button("Refresh DB view", id="refresh")
             yield DataTable(id="watch-table")
             yield ScanRunner(id="runner")
@@ -68,6 +76,9 @@ class WatchScreen(Widget):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "refresh":
             self._refresh_table()
+        elif event.button.id == "w-run":
+            self.post_message(ScanRunner.RunRequested())
+            event.stop()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         # Pressing Enter in any input triggers the same flow as Run.

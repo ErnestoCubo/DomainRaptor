@@ -87,11 +87,13 @@ class ScanRunner(Vertical):
 
 
 class TargetForm(Container):
-    """A labeled target Input."""
+    """A labeled target Input with an inline Run button."""
 
     DEFAULT_CSS = """
     TargetForm { height: auto; padding: 1 0; }
-    TargetForm Label { padding-right: 1; }
+    TargetForm Label { padding: 1 1 0 0; }
+    TargetForm Input { width: 1fr; }
+    TargetForm Button#tf-run { margin-left: 1; }
     """
 
     def __init__(self, placeholder: str = "example.com", input_id: str = "target") -> None:
@@ -103,10 +105,16 @@ class TargetForm(Container):
         with Horizontal():
             yield Label("Target:")
             yield Input(placeholder=self._placeholder, id=self._input_id)
+            yield Button("Run", id="tf-run", variant="primary")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         # Pressing Enter in the target input triggers the same flow as Run.
         if event.input.id == self._input_id:
+            self.post_message(ScanRunner.RunRequested())
+            event.stop()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "tf-run":
             self.post_message(ScanRunner.RunRequested())
             event.stop()
 

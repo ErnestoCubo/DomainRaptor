@@ -5,13 +5,20 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
-from textual.widgets import Input, Label, Select, Static
+from textual.widgets import Button, Input, Label, Select, Static
 
 from domainraptor.tui.screens._common import ScanRunner
 
 
 class ReportsScreen(Widget):
-    DEFAULT_CSS = """ReportsScreen { height: 1fr; }"""
+    DEFAULT_CSS = """
+    ReportsScreen { height: 1fr; }
+    ReportsScreen .field-row { height: auto; }
+    ReportsScreen .field-row Label { padding: 1 1 0 0; }
+    ReportsScreen .field-row Input { width: 1fr; }
+    ReportsScreen .field-row Select { width: 1fr; }
+    ReportsScreen #rp-run { margin-top: 1; }
+    """
 
     def compose(self) -> ComposeResult:
         with Vertical():
@@ -29,10 +36,10 @@ class ReportsScreen(Widget):
                 id="subcmd",
                 allow_blank=False,
             )
-            with Horizontal():
+            with Horizontal(classes="field-row"):
                 yield Label("Target:")
                 yield Input(placeholder="example.com", id="target")
-            with Horizontal():
+            with Horizontal(classes="field-row"):
                 yield Label("Format:")
                 yield Select(
                     [(f, f) for f in ("html", "json", "yaml", "md", "pdf", "csv")],
@@ -40,12 +47,19 @@ class ReportsScreen(Widget):
                     id="fmt",
                     allow_blank=False,
                 )
+            with Horizontal(classes="field-row"):
                 yield Label("Output file:")
                 yield Input(placeholder="report.html", id="output")
+            yield Button("Run", id="rp-run", variant="primary")
             yield ScanRunner(id="runner")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id in {"target", "output"}:
+            self.post_message(ScanRunner.RunRequested())
+            event.stop()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "rp-run":
             self.post_message(ScanRunner.RunRequested())
             event.stop()
 
