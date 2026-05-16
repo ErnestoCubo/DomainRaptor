@@ -69,6 +69,12 @@ class WatchScreen(Widget):
         if event.button.id == "refresh":
             self._refresh_table()
 
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        # Pressing Enter in any input triggers the same flow as Run.
+        if event.input.id in {"target", "interval"}:
+            self.post_message(ScanRunner.RunRequested())
+            event.stop()
+
     def on_scan_runner_run_requested(self, _: ScanRunner.RunRequested) -> None:
         runner = self.query_one("#runner", ScanRunner)
         action = str(self.query_one("#action", Select).value)

@@ -31,6 +31,11 @@ class CompareScreen(Widget):
                 yield Input(placeholder="(optional) scan-id or target", id="arg2")
             yield ScanRunner(id="runner")
 
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id in {"arg1", "arg2"}:
+            self.post_message(ScanRunner.RunRequested())
+            event.stop()
+
     def on_scan_runner_run_requested(self, _: ScanRunner.RunRequested) -> None:
         runner = self.query_one("#runner", ScanRunner)
         sub = str(self.query_one("#subcmd", Select).value)

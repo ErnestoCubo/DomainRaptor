@@ -71,21 +71,31 @@ class ConfigScreen(Widget):
         with contextlib.suppress(OSError):
             ENV_FILE.chmod(0o600)
 
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        # Pressing Enter on any key field triggers Save.
+        if event.input.id and event.input.id.startswith("key-"):
+            self._do_save()
+            event.stop()
+
+    def _do_save(self) -> None:
+        status = self.query_one("#cfg-status", Static)
+        values: dict[str, str] = {}
+        for key in KNOWN_KEYS:
+            values[key] = self.query_one(f"#key-{key}", Input).value.strip()
+            if values[key]:
+                os.environ[key] = values[key]
+        try:
+            self._write_env(values)
+            status.update(
+                f"[green]Saved {sum(1 for v in values.values() if v)} keys to {ENV_FILE}[/green]"
+            )
+        except OSError as exc:
+            status.update(f"[red]Failed to save: {exc}[/red]")
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         status = self.query_one("#cfg-status", Static)
         if event.button.id == "save":
-            values: dict[str, str] = {}
-            for key in KNOWN_KEYS:
-                values[key] = self.query_one(f"#key-{key}", Input).value.strip()
-                if values[key]:
-                    os.environ[key] = values[key]
-            try:
-                self._write_env(values)
-                status.update(
-                    f"[green]Saved {sum(1 for v in values.values() if v)} keys to {ENV_FILE}[/green]"
-                )
-            except OSError as exc:
-                status.update(f"[red]Failed to save: {exc}[/red]")
+            self._do_save()
         elif event.button.id == "reload":
             current = self._read_env()
             for key in KNOWN_KEYS:

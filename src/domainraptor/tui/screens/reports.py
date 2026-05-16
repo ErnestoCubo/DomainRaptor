@@ -44,6 +44,11 @@ class ReportsScreen(Widget):
                 yield Input(placeholder="report.html", id="output")
             yield ScanRunner(id="runner")
 
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id in {"target", "output"}:
+            self.post_message(ScanRunner.RunRequested())
+            event.stop()
+
     def on_scan_runner_run_requested(self, _: ScanRunner.RunRequested) -> None:
         runner = self.query_one("#runner", ScanRunner)
         sub = str(self.query_one("#subcmd", Select).value)

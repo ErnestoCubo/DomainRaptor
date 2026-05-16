@@ -104,6 +104,12 @@ class TargetForm(Container):
             yield Label("Target:")
             yield Input(placeholder=self._placeholder, id=self._input_id)
 
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        # Pressing Enter in the target input triggers the same flow as Run.
+        if event.input.id == self._input_id:
+            self.post_message(ScanRunner.RunRequested())
+            event.stop()
+
     @property
     def target(self) -> str:
         return self.query_one(f"#{self._input_id}", Input).value.strip()
