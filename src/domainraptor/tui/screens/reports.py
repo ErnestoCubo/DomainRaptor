@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from textual.app import ComposeResult
@@ -11,9 +10,7 @@ from textual.widget import Widget
 from textual.widgets import Button, Input, Label, RichLog, Select, Static
 
 from domainraptor.tui.screens._common import ScanRunner
-
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
-_HTML_WS_RE = re.compile(r"\n\s*\n+")
+from domainraptor.tui.screens._preview import render_preview
 
 
 class ReportsScreen(Widget):
@@ -24,7 +21,7 @@ class ReportsScreen(Widget):
     ReportsScreen .field-row Input { width: 1fr; }
     ReportsScreen .field-row Select { width: 1fr; }
     ReportsScreen #rp-run-row { height: auto; padding-top: 1; }
-    ReportsScreen #rp-preview { height: 14; border: solid $accent; margin-top: 1; }
+    ReportsScreen #rp-preview { height: 22; border: solid $accent; margin-top: 1; }
     """
 
     def compose(self) -> ComposeResult:
@@ -61,7 +58,7 @@ class ReportsScreen(Widget):
                 yield Button("Run", id="rp-run", variant="primary")
                 yield Button("Preview output", id="rp-preview-btn")
             yield Label("Preview", classes="field-label")
-            yield RichLog(id="rp-preview", highlight=True, markup=False, wrap=True)
+            yield RichLog(id="rp-preview", highlight=False, markup=False, wrap=True)
             yield ScanRunner(id="runner")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -88,25 +85,15 @@ class ReportsScreen(Widget):
         if not path.exists():
             preview.write(f"[file not found: {path}]")
             return
-        if path.stat().st_size > 512 * 1024:
+        if path.stat().st_size > 2 * 1024 * 1024:
             preview.write(f"[file too large to preview: {path.stat().st_size} bytes]")
             return
-        suffix = path.suffix.lower()
-        if suffix == ".pdf":
-            preview.write("[PDF preview not supported in TUI]")
-            return
         try:
-            raw = path.read_text(errors="replace")
-        except OSError as exc:
-            preview.write(f"[read error: {exc}]")
+            renderable = render_preview(path)
+        except Exception as exc:  # pragma: no cover - defensive
+            preview.write(f"[preview error: {exc}]")
             return
-        if suffix in {".html", ".htm"}:
-            text = _HTML_TAG_RE.sub("", raw)
-            text = _HTML_WS_RE.sub("\n\n", text).strip()
-        else:
-            text = raw
-        for line in text.splitlines()[:500]:
-            preview.write(line)
+        preview.write(renderable)
 
     def on_scan_runner_run_requested(self, _: ScanRunner.RunRequested) -> None:
         runner = self.query_one("#runner", ScanRunner)
