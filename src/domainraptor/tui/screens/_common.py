@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import random
+import re
 import shlex
 
 from textual import work
@@ -142,7 +143,11 @@ class ScanRunner(Vertical):
         self.app.call_from_thread(self._start_loading_ui)
 
         # Force unbuffered child output so we can stream lines live.
-        env = {**os.environ, "PYTHONUNBUFFERED": "1", "FORCE_COLOR": "1"}
+        # NO_COLOR / no FORCE_COLOR: the subprocess stdout is a pipe, not a TTY,
+        # so Rich/Click will skip ANSI codes automatically. Belt-and-suspenders:
+        # we also strip any residual escape sequences before writing to RichLog.
+        _ANSI_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-9;]*[ -/]*[@-~])")
+        env = {**os.environ, "PYTHONUNBUFFERED": "1", "NO_COLOR": "1"}
 
         try:
             proc = subprocess.Popen(
@@ -163,7 +168,7 @@ class ScanRunner(Vertical):
 
         assert proc.stdout is not None
         for line in proc.stdout:
-            self.app.call_from_thread(self.append, line)
+            self.app.call_from_thread(self.append, _ANSI_RE.sub("", line))
         rc = proc.wait()
         success = rc == 0
         self.app.call_from_thread(self._stop_loading_ui, success=success)
