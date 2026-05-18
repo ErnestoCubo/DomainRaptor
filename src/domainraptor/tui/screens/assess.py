@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Checkbox, Label, Select, Static
 
@@ -14,7 +14,7 @@ class AssessScreen(Widget):
     DEFAULT_CSS = """AssessScreen { height: 1fr; }"""
 
     def compose(self) -> ComposeResult:
-        with Vertical():
+        with VerticalScroll():
             yield Label("Assess", classes="title")
             yield Static(
                 "Assess vulnerabilities, configuration and outdated software.", classes="subtitle"

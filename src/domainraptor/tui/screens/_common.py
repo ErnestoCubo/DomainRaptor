@@ -41,12 +41,12 @@ class ScanRunner(Vertical):
     """Self-contained subprocess runner with action bar + status + log."""
 
     DEFAULT_CSS = """
-    ScanRunner { height: 1fr; }
+    ScanRunner { height: auto; }
     ScanRunner Horizontal#sr-actions { height: auto; padding-top: 1; }
     ScanRunner #sr-progress-row { height: auto; padding: 0 1; }
     ScanRunner #sr-progress-row ProgressBar { width: 1fr; }
     ScanRunner #sr-lore { color: $accent; padding: 0 1; height: 1; text-style: italic; }
-    ScanRunner RichLog { height: 1fr; border: solid $primary; margin-top: 1; }
+    ScanRunner RichLog { height: 20; border: solid $primary; margin-top: 1; }
     ScanRunner #sr-status { color: $text-muted; padding: 0 1; }
     """
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Button, Input, Label, RichLog, Select, Static
 
@@ -21,11 +21,11 @@ class ReportsScreen(Widget):
     ReportsScreen .field-row Input { width: 1fr; }
     ReportsScreen .field-row Select { width: 1fr; }
     ReportsScreen #rp-run-row { height: auto; padding-top: 1; }
-    ReportsScreen #rp-preview { height: 22; border: solid $accent; margin-top: 1; }
+    ReportsScreen #rp-preview { height: 15; border: solid $accent; margin-top: 1; }
     """
 
     def compose(self) -> ComposeResult:
-        with Vertical():
+        with VerticalScroll():
             yield Label("Reports", classes="title")
             yield Static("Generate, list, export and preview reports.", classes="subtitle")
             yield Label("Subcommand", classes="field-label")

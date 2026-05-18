@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Checkbox, Label, Select, Static
 
@@ -14,7 +14,7 @@ class DiscoverScreen(Widget):
     DEFAULT_CSS = """DiscoverScreen { height: 1fr; }"""
 
     def compose(self) -> ComposeResult:
-        with Vertical():
+        with VerticalScroll():
             yield Label("Discover", classes="title")
             yield Static(
                 "Discover subdomains, DNS records, certificates, ports and WHOIS info.",

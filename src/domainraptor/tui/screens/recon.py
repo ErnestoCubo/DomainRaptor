@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Checkbox, Label, Select, Static
 
@@ -14,7 +14,7 @@ class ReconScreen(Widget):
     DEFAULT_CSS = """ReconScreen { height: 1fr; }"""
 
     def compose(self) -> ComposeResult:
-        with Vertical():
+        with VerticalScroll():
             yield Label("Recon", classes="title")
             yield Static("Full reconnaissance workflow (discover + enrich).", classes="subtitle")
             yield TargetForm(placeholder="example.com")
