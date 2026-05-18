@@ -175,8 +175,9 @@ class TargetForm(Container):
     """A labeled target Input (Enter to run)."""
 
     DEFAULT_CSS = """
-    TargetForm { height: auto; padding: 1 0; margin-bottom: 1; }
-    TargetForm Label { padding: 1 1 0 0; }
+    TargetForm { height: auto; margin-bottom: 1; }
+    TargetForm Horizontal { height: auto; }
+    TargetForm Label { width: auto; padding: 0 1 0 0; }
     TargetForm Input { width: 1fr; }
     """
 
