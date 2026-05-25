@@ -5,13 +5,13 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop, release/*]
+    branches: [main, develop, release, release/*]
     paths-ignore:
       - "**.md"
       - "docs/**"
       - ".gitignore"
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, release]
     paths-ignore:
       - "**.md"
       - "docs/**"
@@ -196,6 +196,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/release' ||
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     outputs:
