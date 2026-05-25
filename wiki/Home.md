@@ -19,17 +19,24 @@ Welcome to the official DomainRaptor documentation! DomainRaptor is a powerful *
 ### Commands Reference
 
 - [Discover Commands](Commands-Discover)
-- [Assess Commands](Commands-Assess)
+- [Recon Commands](Commands-Recon) — full ASM workflow (`recon fullscan`)
+- [Assess Commands](Commands-Assess) — includes `assess exploits` (KEV / EPSS / Exploit-DB)
+- [Enrich Commands](Commands-Enrich) — URLScan & 3rd-party intelligence
 - [Report Commands](Commands-Report)
 - [Watch Commands](Commands-Watch)
 - [Compare Commands](Commands-Compare)
 - [Database Commands](Commands-Database)
+
+### Interfaces
+
+- [Terminal UI (TUI)](TUI) — full-screen Textual app (`domainraptor tui`)
 
 ### Advanced
 
 - [API Keys Setup](API-Keys)
 - [Output Formats](Output-Formats)
 - [Scan Modes](Scan-Modes)
+- [Risk Algorithm](Risk-Algorithm) — how the 0-100 risk score is calculated
 - [Examples & Use Cases](Examples)
 
 ---
@@ -49,26 +56,33 @@ DomainRaptor is a comprehensive cyber intelligence tool designed for:
 | Feature | Description |
 |---------|-------------|
 | Multi-source Discovery | Integrates with crt.sh, HackerTarget, Shodan, ZoomEye, Censys |
+| Full ASM workflow | `recon fullscan` aggregates every source into one report |
 | SSL/TLS Analysis | Deep certificate analysis and validation |
 | DNS Security Checks | DNSSEC, SPF, DMARC, DKIM verification |
 | HTTP Header Analysis | Security header compliance checking |
-| Vulnerability Scanning | CVE database correlation |
+| Vulnerability Scanning | CVE database correlation (Shodan + NVD) |
+| **Exploit Intelligence** | **CISA KEV, EPSS scores and Exploit-DB references** (no API key required) |
+| 3rd-party enrichment | URLScan.io history and metadata |
 | Multiple Output Formats | JSON, YAML, HTML, Markdown, PDF |
 | Persistent Storage | SQLite database for scan history |
 | Change Detection | Track modifications between scans |
-| Risk Scoring | Algorithmic risk calculation based on exposure |
+| Risk Scoring | Weighted 0-100 score with KEV / EPSS bonuses ([details](Risk-Algorithm)) |
+| Terminal UI | Full-screen interactive interface — `domainraptor tui` |
 
 ## 🎯 Quick Example
 
 ```bash
-# Discover all assets for a domain
-domainraptor discover -T example.com --subdomains --dns --ports
+# 1. Build the attack surface (subdomains → IPs → services → CVEs)
+domainraptor recon fullscan example.com
 
-# Assess security configuration
-domainraptor assess config example.com
+# 2. Enrich every CVE with CISA KEV / EPSS / Exploit-DB
+domainraptor assess exploits example.com --save
 
-# Generate an HTML report
+# 3. Render a polished HTML report with KEV badges and exploit links
 domainraptor report generate example.com -f html -o report.html
+
+# Or launch the interactive TUI
+domainraptor tui
 ```
 
 ## 📖 Getting Help

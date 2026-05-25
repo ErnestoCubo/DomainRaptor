@@ -24,6 +24,12 @@ DomainRaptor integrates with multiple security services. While basic functionali
 | **Censys (PAT)** | Optional | ✓ IP lookup free | Direct IP lookup (search paid) |
 | **VirusTotal** | Optional | ✓ 500/day | Malware analysis, URL reputation |
 | **NVD** | Optional | ✓ | CVE enrichment with descriptions, CVSS scores |
+| **CISA KEV** | ❌ Not needed | ✓ Public catalogue | Known Exploited Vulnerabilities flag |
+| **EPSS (FIRST.org)** | ❌ Not needed | ✓ Public API | Exploit probability score + percentile |
+| **Exploit-DB** | ❌ Not needed | ✓ Public mirror | Public proof-of-concept references |
+| **URLScan.io** | ❌ Optional | ✓ Public scans | Historical scan metadata for a domain |
+
+> 💡 The exploit intelligence sources (CISA KEV, EPSS, Exploit-DB) used by [`assess exploits`](Commands-Assess#assess-exploits) and `assess vulns --exploits` are **all free and require no API key**. They work out of the box.
 
 ---
 

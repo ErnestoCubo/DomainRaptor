@@ -10,17 +10,24 @@
 ### Commands
 
 - [Discover](Commands-Discover)
+- [Recon (fullscan)](Commands-Recon)
 - [Assess](Commands-Assess)
+- [Enrich](Commands-Enrich)
 - [Report](Commands-Report)
 - [Watch](Commands-Watch)
 - [Compare](Commands-Compare)
 - [Database](Commands-Database)
+
+### Interfaces
+
+- [Terminal UI (TUI)](TUI)
 
 ### Reference
 
 - [API Keys](API-Keys)
 - [Output Formats](Output-Formats)
 - [Scan Modes](Scan-Modes)
+- [Risk Algorithm](Risk-Algorithm)
 - [Examples](Examples)
 
 ### Resources

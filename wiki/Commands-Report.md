@@ -82,6 +82,37 @@ Reports include comprehensive vulnerability information when available:
 | **Description** | Full vulnerability description | NVD API |
 | **Remediation** | Recommended fix steps | Knowledge base |
 | **Source** | Detection source (shodan, nmap, etc.) | Scan metadata |
+| **CISA KEV** | Active-exploitation flag + 🚨 KEV badge | [`assess exploits`](Commands-Assess#assess-exploits) |
+| **EPSS Score / %ile** | Probability of exploitation (next 30 days) | FIRST.org EPSS API |
+| **Public Exploits** | Exploit-DB references with clickable links | Exploit-DB |
+
+### Risk Assessment block
+
+Every report contains a **Risk Assessment** section with a 0-100 score, weighted breakdown and top contributing factors. KEV-listed CVEs surface at the top of `top_factors`. See [Risk Algorithm](Risk-Algorithm) for the full formula.
+
+### JSON / YAML fields for exploit intelligence
+
+When CVEs have been enriched (via `assess vulns` with `--exploits`, the default, or via the standalone `assess exploits`), every vulnerability in the report payload includes:
+
+```json
+{
+  "id": "CVE-2021-44228",
+  "in_cisa_kev": true,
+  "epss_score": 0.9436,
+  "epss_percentile": 1.0,
+  "has_known_exploit": true,
+  "exploit_refs": [
+    {"source": "Exploit-DB", "url": "https://www.exploit-db.com/exploits/51183"}
+  ]
+}
+```
+
+### HTML / Markdown rendering
+
+- **HTML** renders a red `CISA KEV` badge next to the CVE id, an inline `EPSS: 0.9436` annotation, and a yellow-bordered **Public Exploits** box with clickable Exploit-DB links.
+- **Markdown** prefixes KEV CVEs with `🚨 **CISA KEV**`, lists EPSS in the metadata block, and renders Exploit-DB links as a bullet list.
+
+---
 
 **Example HTML Report (Vulnerability Section):**
 

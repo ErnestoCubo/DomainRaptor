@@ -38,21 +38,28 @@ domainraptor assess vulns example.com
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--min-severity` | `-s` | Minimum severity (low, medium, high, critical) | `low` |
-| `--cve-check` | | Check CVE databases | `True` |
-| `--exploit-check` | | Check for public exploits | `False` |
+| `--cve/--no-cve` | | Check CVE databases | `True` |
+| `--services/--no-services` | | Scan service versions for vulns | `True` |
+| `--exploits/--no-exploits` | `-e` | Enrich with CISA KEV, EPSS and Exploit-DB | `True` |
+| `--save/--no-save` | | Persist results to the database | `False` |
 
 **Examples:**
 
 ```bash
-# Basic vulnerability check
+# Basic vulnerability check (exploit enrichment ON by default)
 domainraptor assess vulns example.com
 
 # Only high and critical vulnerabilities
 domainraptor assess vulns example.com --min-severity high
 
-# Include exploit availability check
-domainraptor assess vulns example.com --exploit-check
+# Skip exploit enrichment (faster, offline-safe)
+domainraptor assess vulns example.com --no-exploits
+
+# Save the run to the database for later reporting
+domainraptor assess vulns example.com --save
 ```
+
+> 💡 When `--exploits` is enabled, every CVE is enriched with CISA KEV membership, EPSS score/percentile and Exploit-DB references. See [`assess exploits`](#assess-exploits) below for the standalone command and [Risk Algorithm](Risk-Algorithm) for how these signals affect the Risk Score.
 
 **Example Output (No Vulnerabilities):**
 
@@ -390,6 +397,77 @@ Common remediations:
 | DMARC missing | Add DMARC TXT record to DNS |
 | Missing security headers | Configure web server to add headers |
 | Outdated software | Update to latest stable versions |
+
+---
+
+## `assess exploits`
+
+Enrich stored CVEs (or a single CVE id) with **CISA KEV**, **EPSS** and **Exploit-DB** intelligence. None of these sources require an API key.
+
+```bash
+domainraptor assess exploits example.com
+domainraptor assess exploits CVE-2021-44228
+```
+
+**What it does:**
+
+- **CISA KEV** — flags CVEs in the Known Exploited Vulnerabilities catalogue (actively exploited in the wild).
+- **EPSS** — fetches the FIRST.org probability score (0.0-1.0) and percentile of exploitation in the next 30 days.
+- **Exploit-DB** — finds public proof-of-concept entries and records source URLs.
+
+The CVEs in the most recent stored scan for the target are enriched in place. Passing a CVE id (e.g. `CVE-2021-44228`) enriches that single id without needing a prior scan.
+
+**Options:**
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--kev-only` | | Only show vulns in the CISA KEV catalogue | `False` |
+| `--min-epss` | | Minimum EPSS score (0.0-1.0) to display | `0.0` |
+| `--save/--no-save` | | Save enriched results back to the database | `False` |
+
+**Examples:**
+
+```bash
+# Enrich every CVE in the latest scan of example.com
+domainraptor assess exploits example.com
+
+# Only CVEs CISA has flagged as actively exploited
+domainraptor assess exploits example.com --kev-only
+
+# Only high-probability EPSS entries (≥0.5 = 50%)
+domainraptor assess exploits example.com --min-epss 0.5
+
+# Persist the enriched data back for reporting
+domainraptor assess exploits example.com --save
+
+# Inspect a single CVE without a stored scan
+domainraptor assess exploits CVE-2021-44228
+```
+
+**Example output:**
+
+```
+ℹ Enriching 5 CVE(s)...
+
+                   Exploit enrichment for example.com
+┏━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━━━━━━┓
+┃ CVE           ┃ Severity ┃ KEV ┃ EPSS  ┃ %ile ┃ Exploit-DB┃
+┡━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━━━━━━┩
+│ CVE-2021-44228│ critical │ YES │ 0.975 │ 1.00 │ 3         │
+│ CVE-2023-2650 │ medium   │ -   │ 0.054 │ 0.93 │ 0         │
+│ CVE-2022-3358 │ high     │ -   │ 0.018 │ 0.85 │ 1         │
+└───────────────┴──────────┴─────┴───────┴──────┴───────────┘
+
+✓ KEV: 1 | EPSS: 5 (≥0.5: 1) | Exploits: 2 of 5
+```
+
+**Risk-score impact:** KEV adds +30, EPSS ≥ 0.5 adds +10, each public exploit adds +15 (capped at 30). See [Risk Algorithm](Risk-Algorithm) for the full breakdown.
+
+**Report integration:** Enriched data also surfaces in HTML / Markdown / JSON reports:
+
+- `in_cisa_kev` (boolean) and a 🚨 KEV badge in HTML
+- `epss_score` and `epss_percentile`
+- `has_known_exploit` and `exploit_refs[]` with source + download URLs
 
 ---
 

@@ -424,4 +424,50 @@ domainraptor discover censys-host 8.8.8.8
 
 ---
 
-**← [Configuration](Configuration)** | **Next: [Assess Commands](Commands-Assess) →**
+## Additional Subcommands
+
+The `discover` group also exposes single-source helpers for targeted lookups. Run any of them with `--help` for full flag listings.
+
+### Shodan helpers
+
+| Command | Purpose |
+|---------|---------|
+| `discover shodan-org <org>` | Search Shodan by `org:` filter (assets owned by an organisation) |
+| `discover shodan-ssl <domain>` | Pivot through Shodan SSL certificate data for a domain |
+| `discover shodan-asn <ASN>` | Enumerate hosts inside an ASN (e.g. `AS15169`) |
+
+### ZoomEye helpers
+
+| Command | Purpose |
+|---------|---------|
+| `discover zoomeye-host <ip\|domain>` | Detailed ZoomEye host record |
+| `discover zoomeye-org <org>` | Search ZoomEye by organisation |
+| `discover zoomeye-subdomains <domain>` | Subdomain enumeration via ZoomEye (free tier) |
+
+### Censys helpers
+
+| Command | Purpose |
+|---------|---------|
+| `discover censys-host <ip>` | Free direct IP lookup (PAT required) |
+| `discover censys-domain <domain>` | Domain-centric Censys query (paid tier) |
+| `discover censys-certs <domain>` | Censys certificate transparency search (paid tier) |
+
+### Misc free sources
+
+| Command | Purpose |
+|---------|---------|
+| `discover wayback <domain>` | Pull historical URLs from the Wayback Machine — no key required |
+| `discover asn <ASN\|IP>` | Resolve ASN metadata (BGPView / Team Cymru) — no key required |
+
+```bash
+# Examples
+domainraptor discover shodan-org "Example Inc"
+domainraptor discover shodan-asn AS15169 --limit 50
+domainraptor discover zoomeye-host 8.8.8.8
+domainraptor discover wayback example.com --limit 100
+domainraptor discover asn 8.8.8.8
+```
+
+---
+
+**← [Configuration](Configuration)** | **Next: [Recon Commands](Commands-Recon) →**
