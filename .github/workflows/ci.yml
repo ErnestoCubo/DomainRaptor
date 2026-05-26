@@ -228,8 +228,9 @@ jobs:
 
       - name: Verify package
         run: |
+          uv venv
           uv pip install dist/*.whl
-          python -c "import domainraptor; print(f'Package version: {domainraptor.__version__}')"
+          uv run python -c "import domainraptor; print(f'Package version: {domainraptor.__version__}')"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
