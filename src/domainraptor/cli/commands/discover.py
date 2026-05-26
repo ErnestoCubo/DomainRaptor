@@ -1801,3 +1801,110 @@ def discover_censys_certs_cmd(
     except Exception as e:
         print_error(f"Censys certificate search failed: {e}")
         raise typer.Exit(1) from None
+
+
+# ============================================
+# Wayback Machine + ASN/BGP commands
+# ============================================
+
+
+@app.command("wayback")
+def discover_wayback_cmd(
+    ctx: typer.Context,
+    target: Annotated[str, typer.Argument(help="Target domain")],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum hosts to display"),
+    ] = 200,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Discover historical subdomains via the Wayback Machine CDX API."""
+    from domainraptor.discovery.wayback_client import WaybackClient
+
+    print_info(f"Wayback Machine lookup for: {target}")
+    client = WaybackClient()
+    assets = client.query_safe(target)
+
+    if not assets:
+        print_warning("No historical hosts found")
+        return
+
+    print_success(f"Found {len(assets)} historical hosts")
+    print_assets_table(assets[:limit])
+
+    if save:
+        result = ScanResult(target=target, scan_type="discover_wayback")
+        result.assets = assets
+        try:
+            from domainraptor.storage.repository import ScanRepository
+
+            repo = ScanRepository()
+            scan_id = repo.save(result)
+            print_info(f"Results saved (scan ID: {scan_id})")
+        except Exception as exc:
+            print_warning(f"Failed to save results: {exc}")
+
+
+@app.command("asn")
+def discover_asn_cmd(
+    ctx: typer.Context,
+    query: Annotated[
+        str,
+        typer.Argument(help="ASN (e.g. AS15169) or organization name"),
+    ],
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
+) -> None:
+    """Lookup ASN(s) and their announced IP prefixes (BGPView + RIPEstat)."""
+    from rich.table import Table
+
+    from domainraptor.discovery.asn_client import AsnClient
+
+    print_info(f"ASN lookup for: {query}")
+    client = AsnClient()
+    info_list = client.lookup(query)
+
+    if not info_list:
+        print_warning("No ASN information found")
+        return
+
+    table = Table(title=f"ASN lookup for {query}")
+    table.add_column("ASN", style="cyan")
+    table.add_column("Name", style="green")
+    table.add_column("Description", style="white")
+    table.add_column("Country", style="magenta")
+    table.add_column("IPv4 prefixes", style="yellow", justify="right")
+    table.add_column("IPv6 prefixes", style="yellow", justify="right")
+
+    total_prefixes = 0
+    for info in info_list:
+        table.add_row(
+            f"AS{info.asn}",
+            info.name or "-",
+            (info.description or "-")[:60],
+            info.country or "-",
+            str(len(info.prefixes_v4)),
+            str(len(info.prefixes_v6)),
+        )
+        total_prefixes += len(info.prefixes_v4) + len(info.prefixes_v6)
+    console.print(table)
+    print_success(f"{total_prefixes} announced prefixes across {len(info_list)} ASN(s)")
+
+    if save:
+        assets = client.query(query)
+        if assets:
+            result = ScanResult(target=query, scan_type="discover_asn")
+            result.assets = assets
+            try:
+                from domainraptor.storage.repository import ScanRepository
+
+                repo = ScanRepository()
+                scan_id = repo.save(result)
+                print_info(f"Results saved (scan ID: {scan_id})")
+            except Exception as exc:
+                print_warning(f"Failed to save results: {exc}")

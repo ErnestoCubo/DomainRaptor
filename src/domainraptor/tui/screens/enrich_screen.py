@@ -1,43 +1,36 @@
-"""Discover screen."""
+"""Enrich screen: third-party intelligence sources (URLScan, ...)."""
 
 from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import Checkbox, Label, Select, Static
+from textual.widgets import Checkbox, Input, Label, Select, Static
 
 from domainraptor.tui.screens._common import ScanRunner, TargetForm
 
 
-class DiscoverScreen(Widget):
-    DEFAULT_CSS = """DiscoverScreen { height: 1fr; }"""
+class EnrichScreen(Widget):
+    DEFAULT_CSS = """EnrichScreen { height: 1fr; }"""
 
     def compose(self) -> ComposeResult:
         with VerticalScroll():
-            yield Label("Discover", classes="title")
+            yield Label("Enrich", classes="title")
             yield Static(
-                "Discover subdomains, DNS records, certificates, ports and WHOIS info.",
+                "Enrich a target with third-party intelligence sources.",
                 classes="subtitle",
             )
             yield TargetForm(placeholder="example.com")
-            yield Label("Subcommand", classes="field-label")
+            yield Label("Source", classes="field-label")
             yield Select(
-                [
-                    ("subdomains", "subdomains"),
-                    ("dns", "dns"),
-                    ("certs", "certs"),
-                    ("ports", "ports"),
-                    ("whois", "whois"),
-                    ("wayback", "wayback"),
-                    ("asn", "asn"),
-                ],
-                value="subdomains",
+                [("urlscan", "urlscan"), ("all", "all")],
+                value="urlscan",
                 id="subcmd",
                 allow_blank=False,
             )
+            yield Label("Result limit (urlscan only)", classes="field-label")
+            yield Input(value="25", id="limit")
             with Horizontal():
-                yield Checkbox("Free only", id="free-only")
                 yield Checkbox("Verbose", id="verbose")
             yield ScanRunner(id="runner")
 
@@ -49,9 +42,11 @@ class DiscoverScreen(Widget):
             return
         subcmd = str(self.query_one("#subcmd", Select).value)
         args: list[str] = []
-        if self.query_one("#free-only", Checkbox).value:
-            args.append("--free-only")
         if self.query_one("#verbose", Checkbox).value:
             args.append("--verbose")
-        args += ["discover", subcmd, target]
+        args += ["enrich", subcmd, target]
+        if subcmd == "urlscan":
+            limit = self.query_one("#limit", Input).value.strip()
+            if limit:
+                args += ["--limit", limit]
         runner.run_command(args)

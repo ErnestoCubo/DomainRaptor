@@ -392,6 +392,22 @@ def schedule_cmd(
 # ============================================
 
 
+def _exploit_source_label(url: str) -> str:
+    """Derive a human-readable source label from an exploit reference URL."""
+    lowered = url.lower()
+    if "exploit-db.com" in lowered:
+        return "Exploit-DB"
+    if "github.com" in lowered:
+        return "GitHub"
+    if "metasploit" in lowered or "rapid7.com" in lowered:
+        return "Metasploit"
+    if "packetstormsecurity" in lowered:
+        return "Packet Storm"
+    if "0day.today" in lowered:
+        return "0day.today"
+    return "Exploit"
+
+
 def _build_report_data(
     target: str,
     include_history: bool,
@@ -615,6 +631,14 @@ def _build_report_data(
                 "cvss_score": v.cvss_score,
                 "remediation": v.remediation if include_remediation else None,
                 "source": v.source,
+                "in_cisa_kev": getattr(v, "in_cisa_kev", False),
+                "epss_score": getattr(v, "epss_score", None),
+                "epss_percentile": getattr(v, "epss_percentile", None),
+                "has_known_exploit": getattr(v, "has_known_exploit", False),
+                "exploit_refs": [
+                    {"source": _exploit_source_label(url), "url": url}
+                    for url in (getattr(v, "exploit_refs", None) or [])
+                ],
             }
             for v in scan.vulnerabilities
         ],
@@ -762,16 +786,30 @@ Generated: {data["generated_at"]}
     for vuln in data.get("vulnerabilities", []):
         cvss = vuln.get("cvss_score")
         cvss_str = f"{cvss:.1f}" if cvss else "N/A"
-        md += f"""#### {vuln["id"]}
+        kev_badge = " 🚨 **CISA KEV**" if vuln.get("in_cisa_kev") else ""
+        md += f"""#### {vuln["id"]}{kev_badge}
 
 - **Severity**: {vuln["severity"]}
 - **CVSS Score**: {cvss_str}
 - **Affected Asset**: {vuln.get("affected_asset", "N/A")}
 - **Source**: {vuln.get("source", "N/A")}
-
-{vuln.get("description", "No description available.")}
-
 """
+        epss = vuln.get("epss_score")
+        if epss is not None:
+            pct = vuln.get("epss_percentile")
+            pct_str = f" (percentile {pct:.2f})" if pct is not None else ""
+            md += f"- **EPSS**: {epss:.4f}{pct_str}\n"
+        if vuln.get("in_cisa_kev"):
+            md += "- **CISA KEV**: Listed as a Known Exploited Vulnerability\n"
+
+        refs = vuln.get("exploit_refs") or []
+        if refs:
+            md += f"- **Public Exploits** ({len(refs)}):\n"
+            for ref in refs:
+                md += f"  - [{ref['source']}]({ref['url']})\n"
+
+        md += f"\n{vuln.get('description', 'No description available.')}\n\n"
+
         if vuln.get("remediation"):
             md += f"**Remediation**: {vuln['remediation']}\n\n"
 
@@ -1274,17 +1312,44 @@ def _format_html_vulns_detail(data: dict) -> str:
             if vuln.get("remediation")
             else ""
         )
+        kev_badge_html = (
+            '<span style="margin-left: 8px; padding: 2px 8px; background: #dc2626; color: #fff; border-radius: 4px; font-size: 11px;">CISA KEV</span>'
+            if vuln.get("in_cisa_kev")
+            else ""
+        )
+        epss = vuln.get("epss_score")
+        epss_html = ""
+        if epss is not None:
+            pct = vuln.get("epss_percentile")
+            pct_str = f" (pct {pct:.2f})" if pct is not None else ""
+            epss_html = (
+                f'<span style="margin-left: 12px; color: #6b7280;">EPSS: {epss:.4f}{pct_str}</span>'
+            )
+        refs = vuln.get("exploit_refs") or []
+        refs_html = ""
+        if refs:
+            items = "".join(
+                f'<li><a href="{ref["url"]}" target="_blank" rel="noopener noreferrer">{ref["source"]}: {ref["url"]}</a></li>'
+                for ref in refs
+            )
+            refs_html = (
+                '<p style="margin-top: 8px; padding: 8px; background: #fffbeb; '
+                'border-left: 3px solid #f59e0b; border-radius: 4px;">'
+                f"<strong>Public Exploits ({len(refs)}):</strong>"
+                f'<ul style="margin: 4px 0 0 16px; padding: 0;">{items}</ul></p>'
+            )
         html += f"""
     <div style="background: white; border-left: 4px solid {border_color}; padding: 16px; margin: 12px 0; border-radius: 4px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 16px;">{vuln["id"]}</strong>
-            <span class="{sev_class}" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">{vuln["severity"]} {cvss_badge}</span>
+            <strong style="font-size: 16px;">{vuln["id"]}{kev_badge_html}</strong>
+            <span class="{sev_class}" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">{vuln["severity"]} {cvss_badge}{epss_html}</span>
         </div>
         <p style="margin: 8px 0; color: #374151;">{vuln.get("description", "No description available.")}</p>
         <div style="font-size: 12px; color: #6b7280;">
             <span>Affected: {vuln.get("affected_asset", "N/A")}</span> |
             <span>Source: {vuln.get("source", "N/A")}</span>
         </div>
+        {refs_html}
         {remediation_html}
     </div>
 """

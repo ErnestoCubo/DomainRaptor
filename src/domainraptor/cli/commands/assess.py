@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import re
 from datetime import datetime
 from typing import Annotated
 
@@ -23,6 +24,7 @@ from domainraptor.utils.output import (
     console,
     create_progress,
     print_config_issues_table,
+    print_error,
     print_info,
     print_scan_summary,
     print_success,
@@ -153,7 +155,15 @@ def assess_vulns_cmd(
     ] = SeverityLevel.LOW,
     exploit_check: Annotated[
         bool,
-        typer.Option("--exploits", "-e", help="Check for known exploits"),
+        typer.Option(
+            "--exploits/--no-exploits",
+            "-e",
+            help="Enrich vulnerabilities with CISA KEV, EPSS and Exploit-DB data",
+        ),
+    ] = True,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
     ] = False,
 ) -> None:
     """
@@ -198,9 +208,20 @@ def assess_vulns_cmd(
             _query_nvd(target, result, min_severity)
             progress.update(task, advance=40)
 
-        # Exploit-db check
-        if exploit_check:
-            progress.update(task, description="Checking exploit databases...")
+        # Exploit enrichment (KEV / EPSS / Exploit-DB)
+        enrichment_summary = None
+        if exploit_check and result.vulnerabilities:
+            progress.update(task, description="Enriching with KEV / EPSS / Exploit-DB...")
+            try:
+                from domainraptor.exploitation import ExploitEnricher
+
+                enricher = ExploitEnricher()
+                enrichment_summary = enricher.enrich(result.vulnerabilities)
+            except Exception as exc:  # enrichment must never abort scan
+                print_warning(f"Exploit enrichment failed: {exc}")
+                result.errors.append(f"exploit_enrichment: {exc}")
+            progress.update(task, advance=20)
+        else:
             progress.update(task, advance=20)
 
         progress.update(task, advance=10)
@@ -230,8 +251,40 @@ def assess_vulns_cmd(
         console.print("\n[bold]Summary by Severity:[/bold]")
         for sev, count in sorted(by_severity.items()):
             console.print(f"  {sev.upper()}: {count}")
+
+        if enrichment_summary is not None:
+            console.print("\n[bold]Exploit Enrichment:[/bold]")
+            console.print(
+                f"  CISA KEV: {enrichment_summary.in_kev}/{enrichment_summary.total}"
+                f"  |  EPSS≥0.5: {enrichment_summary.high_epss}"
+                f"  |  With public exploit: {enrichment_summary.with_exploits}"
+            )
+            # Surface exploit references inline so the user sees source + URL
+            refs_shown = False
+            for vuln in result.vulnerabilities:
+                refs = getattr(vuln, "exploit_refs", None) or []
+                if not refs:
+                    continue
+                if not refs_shown:
+                    console.print("\n[bold]Exploit References:[/bold]")
+                    refs_shown = True
+                console.print(f"  [cyan]{vuln.id}[/cyan]")
+                for url in refs:
+                    source = _exploit_source_label(url)
+                    console.print(f"    - {source}: {url}")
     else:
         print_success("No vulnerabilities found!")
+
+    # Persist to database so reports / risk recalc can use the enriched data
+    if save:
+        try:
+            from domainraptor.storage import ScanRepository
+
+            repo = ScanRepository()
+            scan_id = repo.save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as exc:
+            print_warning(f"Failed to save results: {exc}")
 
 
 @app.command("config")
@@ -413,6 +466,22 @@ def _assess_outdated(target: str, result: ScanResult, config: AppConfig) -> None
     # This requires service fingerprinting which we haven't implemented yet
     # Placeholder for future implementation
     pass
+
+
+def _exploit_source_label(url: str) -> str:
+    """Derive a human-readable source label from an exploit reference URL."""
+    lowered = url.lower()
+    if "exploit-db.com" in lowered:
+        return "Exploit-DB"
+    if "github.com" in lowered:
+        return "GitHub"
+    if "metasploit" in lowered or "rapid7.com" in lowered:
+        return "Metasploit"
+    if "packetstormsecurity" in lowered:
+        return "Packet Storm"
+    if "0day.today" in lowered:
+        return "0day.today"
+    return "Exploit"
 
 
 def _query_nvd(target: str, result: ScanResult, min_severity: SeverityLevel) -> None:
@@ -875,3 +944,130 @@ def list_vulns_cmd(
             )
         )
         console.print(Panel(summary, title="Summary by Severity"))
+
+
+# ============================================
+# Exploit enrichment (CISA KEV + EPSS + Exploit-DB)
+# ============================================
+
+
+_CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
+
+
+@app.command("exploits")
+def assess_exploits_cmd(
+    ctx: typer.Context,
+    target: Annotated[
+        str,
+        typer.Argument(help="Domain or CVE id (e.g. example.com or CVE-2023-1234)"),
+    ],
+    kev_only: Annotated[
+        bool,
+        typer.Option("--kev-only", help="Only show vulnerabilities present in CISA KEV"),
+    ] = False,
+    min_epss: Annotated[
+        float,
+        typer.Option(
+            "--min-epss",
+            help="Filter by minimum EPSS score (0.0 - 1.0)",
+            min=0.0,
+            max=1.0,
+        ),
+    ] = 0.0,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Persist enriched vulnerabilities back to DB"),
+    ] = False,
+) -> None:
+    """🧨 Enrich CVEs with CISA KEV, EPSS scores and Exploit-DB references.
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Enrich every CVE found in the latest scan for a domain[/dim]
+        domainraptor assess exploits example.com
+
+        [dim]# Inspect a single CVE[/dim]
+        domainraptor assess exploits CVE-2021-44228
+
+        [dim]# Only KEV entries[/dim]
+        domainraptor assess exploits example.com --kev-only
+    """
+    from rich.table import Table
+
+    from domainraptor.core.types import Vulnerability
+    from domainraptor.exploitation import ExploitEnricher
+
+    vulnerabilities: list[Vulnerability] = []
+
+    if _CVE_PATTERN.match(target):
+        cve = target.upper()
+        vulnerabilities.append(
+            Vulnerability(
+                id=cve,
+                title=cve,
+                severity=SeverityLevel.INFO,
+            )
+        )
+    else:
+        try:
+            from domainraptor.storage.repository import ScanRepository
+
+            repo = ScanRepository()
+            latest = repo.get_latest_for_target(target)
+        except Exception as exc:
+            print_error(f"Failed to load latest scan for {target}: {exc}")
+            raise typer.Exit(1) from None
+
+        if latest is None or not latest.vulnerabilities:
+            print_warning(f"No stored vulnerabilities for {target}. Run 'assess vulns' first.")
+            raise typer.Exit(0)
+        vulnerabilities = list(latest.vulnerabilities)
+
+    print_info(f"Enriching {len(vulnerabilities)} CVE(s)...")
+    enricher = ExploitEnricher()
+    summary = enricher.enrich(vulnerabilities)
+
+    filtered = vulnerabilities
+    if kev_only:
+        filtered = [v for v in filtered if v.in_cisa_kev]
+    if min_epss > 0:
+        filtered = [v for v in filtered if (v.epss_score or 0.0) >= min_epss]
+
+    if not filtered:
+        print_warning("No vulnerabilities match the requested filters")
+    else:
+        table = Table(title=f"Exploit enrichment for {target}")
+        table.add_column("CVE", style="cyan")
+        table.add_column("Severity", style="magenta")
+        table.add_column("KEV", style="red", justify="center")
+        table.add_column("EPSS", style="yellow", justify="right")
+        table.add_column("%ile", style="yellow", justify="right")
+        table.add_column("Exploit-DB", style="green", justify="right")
+        for vuln in filtered:
+            table.add_row(
+                vuln.id or "-",
+                str(vuln.severity.value),
+                "YES" if vuln.in_cisa_kev else "-",
+                f"{vuln.epss_score:.3f}" if vuln.epss_score is not None else "-",
+                f"{vuln.epss_percentile:.2f}" if vuln.epss_percentile is not None else "-",
+                str(len(vuln.exploit_refs)),
+            )
+        console.print(table)
+
+    print_success(
+        f"KEV: {summary.in_kev} | EPSS: {summary.with_epss} (≥0.5: {summary.high_epss}) | "
+        f"Exploits: {summary.with_exploits} of {summary.total}"
+    )
+
+    if save and not _CVE_PATTERN.match(target):
+        with contextlib.suppress(Exception):
+            from domainraptor.storage.repository import ScanRepository
+
+            result = ScanResult(
+                target=target,
+                scan_type="assess_exploits",
+                started_at=datetime.now(),
+            )
+            result.vulnerabilities = vulnerabilities
+            scan_id = ScanRepository().save(result)
+            print_info(f"Enriched results saved (scan ID: {scan_id})")

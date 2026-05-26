@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import sqlite3
 from collections.abc import Generator
@@ -12,7 +13,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Current schema version for migrations
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Default database location
 DEFAULT_DB_PATH = Path.home() / ".domainraptor" / "domainraptor.db"
@@ -196,6 +197,9 @@ class DatabaseManager:
                 remediation TEXT,
                 detected_at TEXT NOT NULL,
                 source TEXT,
+                epss_score REAL,
+                in_cisa_kev INTEGER DEFAULT 0,
+                exploit_refs TEXT DEFAULT '[]',
                 FOREIGN KEY (scan_id) REFERENCES scans(id) ON DELETE CASCADE
             );
 
@@ -249,6 +253,8 @@ class DatabaseManager:
         for version in range(from_version + 1, to_version + 1):
             if version == 2:
                 self._migrate_to_v2(conn)
+            if version == 3:
+                self._migrate_to_v3(conn)
 
     def _migrate_to_v2(self, conn: sqlite3.Connection) -> None:
         """Migrate from v1 to v2: Add services table."""
@@ -278,6 +284,20 @@ class DatabaseManager:
             """
         )
         logger.info("Migrated to schema v2: Added services table")
+
+    def _migrate_to_v3(self, conn: sqlite3.Connection) -> None:
+        """Migrate from v2 to v3: Add exploit enrichment columns to vulnerabilities."""
+        migrations = [
+            "ALTER TABLE vulnerabilities ADD COLUMN epss_score REAL",
+            "ALTER TABLE vulnerabilities ADD COLUMN in_cisa_kev INTEGER DEFAULT 0",
+            "ALTER TABLE vulnerabilities ADD COLUMN exploit_refs TEXT DEFAULT '[]'",
+        ]
+        for sql in migrations:
+            # OperationalError is raised when the column already exists; this is
+            # safe to ignore so the migration is idempotent.
+            with contextlib.suppress(sqlite3.OperationalError):
+                conn.execute(sql)
+        logger.info("Migrated to schema v3: Added exploit enrichment columns")
 
     def get_stats(self) -> dict[str, Any]:
         """Get database statistics."""

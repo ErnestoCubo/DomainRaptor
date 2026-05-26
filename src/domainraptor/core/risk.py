@@ -50,7 +50,9 @@ VULN_HIGH_POINTS = 15
 VULN_MEDIUM_POINTS = 5
 VULN_LOW_POINTS = 1
 VULN_CVSS_HIGH_BONUS = 10  # For CVSS >= 9.0
-VULN_EXPLOIT_BONUS = 15  # Max 30 for known exploits
+VULN_EXPLOIT_BONUS = 15  # Per known public exploit (max 30 total)
+VULN_KEV_BONUS = 30  # CISA Known Exploited Vulnerability — actively exploited in the wild
+VULN_EPSS_HIGH_BONUS = 10  # EPSS score >= 0.5 (50%+ probability of exploitation in 30 days)
 
 # Configuration scoring points
 CONFIG_CRITICAL_POINTS = 20
@@ -255,14 +257,34 @@ def _calc_vuln_score(vulnerabilities: list[Vulnerability]) -> tuple[float, list[
                 )
             )
 
-        # Known exploit bonus
-        metadata = getattr(vuln, "metadata", {})
-        has_exploit = (
-            metadata.get("exploit_available")
-            or metadata.get("has_exploit")
-            or "exploit" in str(metadata.get("tags", "")).lower()
+        # CISA KEV bonus — highest priority, indicates active exploitation
+        if getattr(vuln, "in_cisa_kev", False):
+            score += VULN_KEV_BONUS
+            factors.append(
+                RiskFactor(
+                    name=f"CISA KEV (actively exploited): {vuln.id}",
+                    points=VULN_KEV_BONUS,
+                    category="vulnerability",
+                )
+            )
+
+        # EPSS bonus — high probability of near-term exploitation
+        epss = getattr(vuln, "epss_score", None)
+        if epss is not None and epss >= 0.5:
+            score += VULN_EPSS_HIGH_BONUS
+            factors.append(
+                RiskFactor(
+                    name=f"High EPSS score ({epss:.0%}): {vuln.id}",
+                    points=VULN_EPSS_HIGH_BONUS,
+                    category="vulnerability",
+                )
+            )
+
+        # Known public exploit bonus (deduplicated against KEV to avoid double-counting)
+        has_exploit = getattr(vuln, "has_known_exploit", False) or (
+            getattr(vuln, "exploit_refs", []).__len__() > 0
         )
-        if has_exploit and exploit_bonus_used < 30:
+        if not getattr(vuln, "in_cisa_kev", False) and has_exploit and exploit_bonus_used < 30:
             bonus = min(VULN_EXPLOIT_BONUS, 30 - exploit_bonus_used)
             score += bonus
             exploit_bonus_used += bonus

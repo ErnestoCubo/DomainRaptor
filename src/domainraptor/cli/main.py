@@ -10,7 +10,17 @@ import typer
 from rich.console import Console
 
 from domainraptor import __version__
-from domainraptor.cli.commands import assess, compare, config, db, discover, recon, report, watch
+from domainraptor.cli.commands import (
+    assess,
+    compare,
+    config,
+    db,
+    discover,
+    enrich,
+    recon,
+    report,
+    watch,
+)
 from domainraptor.core.config import AppConfig, OutputFormat, ScanMode
 from domainraptor.utils.output import print_banner, print_error, print_info
 
@@ -49,6 +59,7 @@ app = typer.Typer(
 app.add_typer(discover.app, name="discover", help="🔍 Discover domains, subdomains, and assets")
 app.add_typer(recon.app, name="recon", help="🎯 Full reconnaissance workflow")
 app.add_typer(assess.app, name="assess", help="🛡️ Assess vulnerabilities and configurations")
+app.add_typer(enrich.app, name="enrich", help="🔬 Enrich assets with third-party intelligence")
 app.add_typer(watch.app, name="watch", help="👁️ Monitor targets for changes")
 app.add_typer(compare.app, name="compare", help="📊 Compare scan results")
 app.add_typer(report.app, name="report", help="📄 Generate reports")

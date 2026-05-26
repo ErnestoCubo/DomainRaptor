@@ -197,8 +197,12 @@ DEFAULT_SOURCES = {
     "whois": SourceConfig(name="whois", priority=1),
     "sslyze": SourceConfig(name="sslyze", priority=2),
     "nvd": SourceConfig(name="nvd", priority=2),
-    # Tier 2: Freemium (limited free tier)
-    "alienvault_otx": SourceConfig(name="alienvault_otx", priority=3),
+    # Tier 2: Freemium / free with registration
+    "wayback": SourceConfig(name="wayback", priority=2),
+    "asn": SourceConfig(name="asn", priority=2),
+    "cisa_kev": SourceConfig(name="cisa_kev", priority=2),
+    "epss": SourceConfig(name="epss", priority=2),
+    "exploitdb": SourceConfig(name="exploitdb", priority=2),
     "urlscan": SourceConfig(name="urlscan", priority=3),
     # Tier 3: Paid (user must provide key)
     "shodan": SourceConfig(name="shodan", priority=4, enabled=False),

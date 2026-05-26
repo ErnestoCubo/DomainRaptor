@@ -304,6 +304,79 @@ class TestVulnScore:
         assert score == 0
         assert len(factors) == 0
 
+    def test_kev_bonus_added(self) -> None:
+        """A vulnerability listed in CISA KEV must receive the KEV bonus."""
+        base = Vulnerability(
+            id="CVE-2024-1000",
+            title="Test",
+            severity=SeverityLevel.MEDIUM,
+            description="Test",
+            affected_asset="test.com",
+            source="test",
+        )
+        kev_vuln = Vulnerability(
+            id="CVE-2024-1001",
+            title="Test",
+            severity=SeverityLevel.MEDIUM,
+            description="Test",
+            affected_asset="test.com",
+            source="test",
+            in_cisa_kev=True,
+        )
+        base_score, _ = _calc_vuln_score([base])
+        kev_score, factors = _calc_vuln_score([kev_vuln])
+        assert kev_score > base_score
+        assert any("CISA KEV" in f.name for f in factors)
+
+    def test_high_epss_bonus_added(self) -> None:
+        """EPSS >= 0.5 must contribute extra points."""
+        vuln = Vulnerability(
+            id="CVE-2024-2000",
+            title="Test",
+            severity=SeverityLevel.LOW,
+            description="Test",
+            affected_asset="test.com",
+            source="test",
+            epss_score=0.85,
+        )
+        score, factors = _calc_vuln_score([vuln])
+        assert any("EPSS" in f.name for f in factors)
+        assert score > 0
+
+    def test_known_exploit_bonus_when_not_in_kev(self) -> None:
+        """Public exploit refs must add a bonus when the CVE is not already in KEV."""
+        vuln = Vulnerability(
+            id="CVE-2024-3000",
+            title="Test",
+            severity=SeverityLevel.MEDIUM,
+            description="Test",
+            affected_asset="test.com",
+            source="test",
+            has_known_exploit=True,
+            exploit_refs=["https://www.exploit-db.com/exploits/12345"],
+        )
+        score, factors = _calc_vuln_score([vuln])
+        assert any("Known exploit" in f.name for f in factors)
+        assert score > 0
+
+    def test_kev_and_exploit_do_not_double_count(self) -> None:
+        """KEV vulnerabilities should not also receive the exploit bonus."""
+        vuln = Vulnerability(
+            id="CVE-2024-4000",
+            title="Test",
+            severity=SeverityLevel.MEDIUM,
+            description="Test",
+            affected_asset="test.com",
+            source="test",
+            in_cisa_kev=True,
+            has_known_exploit=True,
+            exploit_refs=["https://www.exploit-db.com/exploits/99999"],
+        )
+        _score, factors = _calc_vuln_score([vuln])
+        names = [f.name for f in factors]
+        assert any("CISA KEV" in n for n in names)
+        assert not any("Known exploit" in n for n in names)
+
 
 class TestConfigScore:
     """Tests for configuration score calculation."""

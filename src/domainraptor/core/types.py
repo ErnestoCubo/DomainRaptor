@@ -115,6 +115,12 @@ class Vulnerability:
     remediation: str = ""
     detected_at: datetime = field(default_factory=datetime.now)
     source: str = ""
+    # Exploit enrichment fields (populated by ExploitEnricher)
+    in_cisa_kev: bool = False
+    epss_score: float | None = None  # 0.0 - 1.0 probability of exploitation
+    epss_percentile: float | None = None  # 0.0 - 1.0
+    has_known_exploit: bool = False
+    exploit_refs: list[str] = field(default_factory=list)
 
 
 @dataclass

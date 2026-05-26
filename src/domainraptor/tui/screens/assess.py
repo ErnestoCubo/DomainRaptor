@@ -22,7 +22,12 @@ class AssessScreen(Widget):
             yield TargetForm(placeholder="example.com")
             yield Label("Subcommand", classes="field-label")
             yield Select(
-                [("vulns", "vulns"), ("config", "config"), ("outdated", "outdated")],
+                [
+                    ("vulns", "vulns"),
+                    ("config", "config"),
+                    ("outdated", "outdated"),
+                    ("exploits", "exploits"),
+                ],
                 value="vulns",
                 id="subcmd",
                 allow_blank=False,

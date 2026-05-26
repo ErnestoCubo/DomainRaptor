@@ -17,6 +17,8 @@ from domainraptor.tui.screens.config import ConfigScreen
 from domainraptor.tui.screens.dashboard import DashboardScreen
 from domainraptor.tui.screens.database import DatabaseScreen
 from domainraptor.tui.screens.discover import DiscoverScreen
+from domainraptor.tui.screens.enrich_screen import EnrichScreen
+from domainraptor.tui.screens.exploit_screen import ExploitScreen
 from domainraptor.tui.screens.recon import ReconScreen
 from domainraptor.tui.screens.reports import ReportsScreen
 from domainraptor.tui.screens.watch import WatchScreen
@@ -26,6 +28,8 @@ SCREENS = [
     ("discover", "🔍 Discover", DiscoverScreen),
     ("recon", "🎯 Recon", ReconScreen),
     ("assess", "🛡️  Assess", AssessScreen),
+    ("exploits", "🧨 Exploits", ExploitScreen),
+    ("enrich", "🔬 Enrich", EnrichScreen),
     ("compare", "📊 Compare", CompareScreen),
     ("watch", "👁️  Watch", WatchScreen),
     ("reports", "📄 Reports", ReportsScreen),
@@ -48,6 +52,8 @@ class DomainRaptorApp(App):
         Binding("s", "switch('discover')", "Discover"),
         Binding("r", "switch('recon')", "Recon"),
         Binding("a", "switch('assess')", "Assess"),
+        Binding("e", "switch('exploits')", "Exploits"),
+        Binding("n", "switch('enrich')", "Enrich"),
         Binding("w", "switch('watch')", "Watch"),
         Binding("b", "switch('database')", "DB"),
         Binding("c", "switch('config')", "Config"),

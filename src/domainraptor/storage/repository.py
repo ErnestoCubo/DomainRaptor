@@ -155,8 +155,9 @@ class ScanRepository:
                     """
                     INSERT INTO vulnerabilities
                     (scan_id, vuln_id, title, severity, description, affected_asset,
-                     cvss_score, cvss_vector, vuln_references, remediation, detected_at, source)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     cvss_score, cvss_vector, vuln_references, remediation, detected_at, source,
+                     epss_score, in_cisa_kev, exploit_refs)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         scan_id,
@@ -171,6 +172,9 @@ class ScanRepository:
                         vuln.remediation,
                         _datetime_to_str(vuln.detected_at),
                         vuln.source,
+                        vuln.epss_score,
+                        1 if vuln.in_cisa_kev else 0,
+                        json.dumps(vuln.exploit_refs),
                     ),
                 )
 
@@ -298,6 +302,9 @@ class ScanRepository:
                         remediation=vuln_row["remediation"] or "",
                         detected_at=_str_to_datetime(vuln_row["detected_at"]) or datetime.now(),
                         source=vuln_row["source"] or "",
+                        epss_score=vuln_row["epss_score"],
+                        in_cisa_kev=bool(vuln_row["in_cisa_kev"]),
+                        exploit_refs=json.loads(vuln_row["exploit_refs"] or "[]"),
                     )
                 )
 
