@@ -536,8 +536,15 @@ class TestDiscoverWhoisCommand:
 class TestDiscoverPortsCommand:
     """Tests for discover ports command."""
 
-    def test_discover_ports_shows_info(self) -> None:
-        """Test discover ports command shows info."""
+    def test_discover_ports_shows_info(self, monkeypatch) -> None:
+        """Test discover ports command shows info.
+
+        Ensure SHODAN_API_KEY is not present so the command takes the
+        no-API-key branch (info message) instead of hitting the real
+        Shodan API, which would 404 in CI / dev shells where a key is set.
+        """
+        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
+
         result = runner.invoke(app, ["--no-banner", "discover", "ports", "example.com"])
 
         assert result.exit_code == 0
