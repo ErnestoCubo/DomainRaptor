@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import contextlib
-import random
 import re
+import secrets
 import shlex
 
 from textual import work
@@ -81,7 +81,9 @@ class ScanRunner(Vertical):
         self.query_one("#sr-lore", Static).update(text)
 
     def _rotate_lore(self) -> None:
-        self._set_lore(random.choice(LORE_PHRASES))
+        # secrets.choice is used purely to silence S311; this is cosmetic UI text
+        # rotation, not a security-sensitive selection.
+        self._set_lore(secrets.choice(LORE_PHRASES))
 
     def _tick_progress(self) -> None:
         # Asymptotic fake progress: never reach 100 until command completes.
@@ -166,7 +168,11 @@ class ScanRunner(Vertical):
             self.app.call_from_thread(self.set_status, "Error")
             return
 
-        assert proc.stdout is not None
+        if proc.stdout is None:
+            self.app.call_from_thread(self.append, "[red]Failed to capture subprocess stdout[/red]")
+            self.app.call_from_thread(self._stop_loading_ui, success=False)
+            self.app.call_from_thread(self.set_status, "Error")
+            return
         for line in proc.stdout:
             self.app.call_from_thread(self.append, _ANSI_RE.sub("", line))
         rc = proc.wait()

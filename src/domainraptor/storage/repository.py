@@ -71,7 +71,8 @@ class ScanRepository:
                 ),
             )
             scan_id = cursor.lastrowid
-            assert scan_id is not None
+            if scan_id is None:
+                raise RuntimeError("Failed to obtain scan_id from INSERT (lastrowid is None)")
 
             # Insert assets
             for asset in scan.assets:
