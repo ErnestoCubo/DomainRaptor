@@ -228,7 +228,7 @@ class TestDefaultSources:
         assert DEFAULT_SOURCES["sslyze"].priority == 2
 
         # Tier 3: Freemium
-        assert DEFAULT_SOURCES["alienvault_otx"].priority == 3
+        assert DEFAULT_SOURCES["urlscan"].priority == 3
 
         # Tier 4: Paid
         assert DEFAULT_SOURCES["shodan"].priority == 4
