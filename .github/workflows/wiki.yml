@@ -1,26 +1,26 @@
 name: Publish Wiki
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "wiki/**"
-      - ".github/workflows/wiki.yml"
-  workflow_dispatch:
+    push:
+        branches: [main]
+        paths:
+            - "wiki/**"
+            - ".github/workflows/wiki.yml"
+    workflow_dispatch:
 
 permissions:
-  contents: write
+    contents: write
 
 jobs:
-  publish:
-    name: 📚 Sync wiki/ → GitHub Wiki
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout main repo
-        uses: actions/checkout@v4
+    publish:
+        name: 📚 Sync wiki/ → GitHub Wiki
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout main repo
+              uses: actions/checkout@v4
 
-      - name: Push wiki/ to GitHub Wiki
-        uses: Andrew-Chen-Wang/github-wiki-action@v4
-        with:
-          path: wiki/
-          token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Push wiki/ to GitHub Wiki
+              uses: Andrew-Chen-Wang/github-wiki-action@v4
+              with:
+                  path: wiki/
+                  token: ${{ secrets.GITHUB_TOKEN }}
