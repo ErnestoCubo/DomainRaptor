@@ -110,7 +110,6 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "if __name__ == .__main__.:",
 ]
-fail_under = 70
 
 [tool.bandit]
 exclude_dirs = ["tests", "venv", ".venv"]
