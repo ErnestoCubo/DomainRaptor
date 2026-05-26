@@ -6,10 +6,10 @@ import logging
 import re
 from dataclasses import dataclass, field
 
-import dns.resolver
 import dns.dnssec
 import dns.exception
 import dns.rdatatype
+import dns.resolver
 
 from domainraptor.assessment.base import AssessmentConfig, ConfigurationChecker
 from domainraptor.core.types import ConfigIssue, SeverityLevel
@@ -116,7 +116,7 @@ class DnsSecurityChecker(ConfigurationChecker):
             ns_records = self.resolver.resolve(domain, "NS")
             info.ns_records = [str(rr.target).rstrip(".") for rr in ns_records]
         except dns.exception.DNSException:
-            pass
+            logger.debug(f"No NS records found for {domain}")
 
         # Check DNSSEC
         info.has_dnssec, info.dnssec_valid, info.dnssec_error = self._check_domain_dnssec(domain)
@@ -129,7 +129,7 @@ class DnsSecurityChecker(ConfigurationChecker):
         info.dmarc_record = self._get_txt_record(dmarc_domain, "v=DMARC1")
         if info.dmarc_record:
             # Extract policy
-            match = re.search(r'p=(\w+)', info.dmarc_record, re.IGNORECASE)
+            match = re.search(r"p=(\w+)", info.dmarc_record, re.IGNORECASE)
             if match:
                 info.dmarc_policy = match.group(1).lower()
 
@@ -144,7 +144,7 @@ class DnsSecurityChecker(ConfigurationChecker):
             caa_records = self.resolver.resolve(domain, "CAA")
             info.caa_records = [str(rr) for rr in caa_records]
         except dns.exception.DNSException:
-            pass
+            logger.debug(f"No CAA records found for {domain}")
 
         return info
 
@@ -164,7 +164,7 @@ class DnsSecurityChecker(ConfigurationChecker):
                 dnssec_valid = True
         except dns.resolver.NoAnswer:
             # No DNSKEY but might have DS in parent
-            pass
+            logger.debug(f"No DNSKEY records for {domain}")
         except dns.resolver.NXDOMAIN:
             error = "Domain does not exist"
         except dns.exception.DNSException as e:
@@ -178,9 +178,9 @@ class DnsSecurityChecker(ConfigurationChecker):
                 if len(parts) > 1:
                     # Can't directly query DS from child resolver
                     # This is a simplified check
-                    pass
+                    logger.debug(f"Cannot directly query DS for {domain}")
             except dns.exception.DNSException:
-                pass
+                logger.debug(f"Failed to check DS record for {domain}")
 
         return has_dnssec, dnssec_valid, error
 
@@ -193,7 +193,7 @@ class DnsSecurityChecker(ConfigurationChecker):
                 if txt.lower().startswith(prefix.lower()):
                     return txt
         except dns.exception.DNSException:
-            pass
+            logger.debug(f"No TXT record with prefix {prefix} for {domain}")
         return None
 
     def _has_dkim_record(self, dkim_domain: str) -> bool:
@@ -205,7 +205,7 @@ class DnsSecurityChecker(ConfigurationChecker):
                 if "v=dkim1" in txt.lower() or "p=" in txt:
                     return True
         except dns.exception.DNSException:
-            pass
+            logger.debug(f"No DKIM record for {dkim_domain}")
         return False
 
     def _check_dnssec(self, info: DnsSecurityInfo) -> list[ConfigIssue]:
@@ -443,7 +443,7 @@ class DnsSecurityChecker(ConfigurationChecker):
                         category=self.category,
                         description="Using multiple DNS providers increases resilience",
                         affected_asset=info.domain,
-                        current_value=f"All NS from {list(providers)[0]}",
+                        current_value=f"All NS from {next(iter(providers))}",
                         recommended_value="NS records from multiple providers",
                         remediation="Consider using a secondary DNS provider for redundancy",
                     )

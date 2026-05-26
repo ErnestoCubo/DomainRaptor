@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable
 
 from domainraptor.assessment.base import (
     AssessmentConfig,
@@ -137,8 +137,7 @@ class AssessmentOrchestrator:
 
         with ThreadPoolExecutor(max_workers=self.options.max_workers) as executor:
             future_to_name = {
-                executor.submit(check_func): name
-                for name, check_func in checks.items()
+                executor.submit(check_func): name for name, check_func in checks.items()
             }
 
             for future in as_completed(future_to_name):

@@ -62,14 +62,19 @@ unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.per-file-ignores]
-# Tests can use assert, magic values, and prints for debugging
-"tests/**/*.py" = ["S101", "PLR2004", "T20"]
+# Tests can use assert, magic values, prints, and hardcoded IP literals
+# (e.g. "0.0.0.0" used as parser input — no actual socket bind).
+"tests/**/*.py" = ["S101", "S104", "PLR2004", "T20"]
 # Init files often have unused imports for re-export
 "__init__.py" = ["F401"]
 # CLI entry points may have prints
 "**/cli.py" = ["T20"]
 # Migration scripts may have hardcoded credentials for local dev
 "**/migrations/*.py" = ["S105", "S106"]
+# TUI ScanRunner spawns the local `domainraptor` CLI via sys.executable -m
+# with arguments built from validated UI widgets; S603 always fires for any
+# subprocess.Popen call and reviewing it here is intentional.
+"src/domainraptor/tui/screens/_common.py" = ["S603"]
 
 [lint.isort]
 # Force single-line imports for clarity in security tools

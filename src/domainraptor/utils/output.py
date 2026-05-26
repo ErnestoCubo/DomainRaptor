@@ -17,6 +17,8 @@ from rich.progress import (
 )
 from rich.table import Table
 
+from domainraptor import __version__
+
 if TYPE_CHECKING:
     from domainraptor.core.types import (
         Asset,
@@ -34,23 +36,23 @@ error_console = Console(stderr=True)
 
 def print_banner() -> None:
     """Print the DomainRaptor ASCII banner."""
-    banner = """
+    banner = f"""
 [bold cyan]╔═══════════════════════════════════════════════════════════════╗
-║                                                                 ║
-║   ██████╗  ██████╗ ███╗   ███╗ █████╗ ██╗███╗   ██╗            ║
-║   ██╔══██╗██╔═══██╗████╗ ████║██╔══██╗██║████╗  ██║            ║
-║   ██║  ██║██║   ██║██╔████╔██║███████║██║██╔██╗ ██║            ║
-║   ██║  ██║██║   ██║██║╚██╔╝██║██╔══██║██║██║╚██╗██║            ║
-║   ██████╔╝╚██████╔╝██║ ╚═╝ ██║██║  ██║██║██║ ╚████║            ║
-║   ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝            ║
-║   ██████╗  █████╗ ██████╗ ████████╗ ██████╗ ██████╗            ║
-║   ██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗██╔══██╗           ║
-║   ██████╔╝███████║██████╔╝   ██║   ██║   ██║██████╔╝           ║
-║   ██╔══██╗██╔══██║██╔═══╝    ██║   ██║   ██║██╔══██╗           ║
-║   ██║  ██║██║  ██║██║        ██║   ╚██████╔╝██║  ██║           ║
-║   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝        ╚═╝    ╚═════╝ ╚═╝  ╚═╝           ║
-║                                                                 ║
-║            [white]Cyber Intelligence Tool v0.2.0[/white]                     ║
+║                                                               ║
+║   ██████╗  ██████╗ ███╗   ███╗ █████╗ ██╗███╗   ██╗           ║
+║   ██╔══██╗██╔═══██╗████╗ ████║██╔══██╗██║████╗  ██║           ║
+║   ██║  ██║██║   ██║██╔████╔██║███████║██║██╔██╗ ██║           ║
+║   ██║  ██║██║   ██║██║╚██╔╝██║██╔══██║██║██║╚██╗██║           ║
+║   ██████╔╝╚██████╔╝██║ ╚═╝ ██║██║  ██║██║██║ ╚████║           ║
+║   ╚═════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝           ║
+║   ██████╗  █████╗ ██████╗ ████████╗ ██████╗ ██████╗           ║
+║   ██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔═══██╗██╔══██╗          ║
+║   ██████╔╝███████║██████╔╝   ██║   ██║   ██║██████╔╝          ║
+║   ██╔══██╗██╔══██║██╔═══╝    ██║   ██║   ██║██╔══██╗          ║
+║   ██║  ██║██║  ██║██║        ██║   ╚██████╔╝██║  ██║          ║
+║   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝        ╚═╝    ╚═════╝ ╚═╝  ╚═╝          ║
+║                                                               ║
+║            [white]Cyber Intelligence Tool v{__version__}[/white]                     ║
 ╚═══════════════════════════════════════════════════════════════╝[/bold cyan]
 """
     console.print(banner)
@@ -85,30 +87,49 @@ def print_warning(message: str) -> None:
 
 def print_info(message: str) -> None:
     """Print an info message."""
-    console.print(f"[bold blue]ℹ[/bold blue] {message}")
+    console.print(f"[bold blue]i[/bold blue] {message}")
 
 
-def print_assets_table(assets: list[Asset]) -> None:
-    """Print discovered assets in a table format."""
+def print_assets_table(assets: list[Asset], show_ip: bool = True) -> None:
+    """Print discovered assets in a table format.
+
+    Args:
+        assets: List of discovered assets
+        show_ip: Whether to show IP column for subdomains (default: True)
+    """
     if not assets:
         print_warning("No assets found")
         return
 
+    # Check if any subdomain has IP metadata
+    has_ip_data = show_ip and any(
+        asset.type.value == "subdomain" and asset.metadata.get("ip") for asset in assets
+    )
+
     table = Table(title="Discovered Assets", show_header=True, header_style="bold cyan")
     table.add_column("Type", style="dim")
     table.add_column("Value", style="bold")
+    if has_ip_data:
+        table.add_column("IP", style="cyan")
     table.add_column("Parent")
     table.add_column("Source")
     table.add_column("First Seen")
 
     for asset in assets:
-        table.add_row(
+        row = [
             asset.type.value,
             asset.value,
-            asset.parent or "-",
-            asset.source,
-            asset.first_seen.strftime("%Y-%m-%d %H:%M"),
+        ]
+        if has_ip_data:
+            row.append(asset.metadata.get("ip", "-") if asset.type.value == "subdomain" else "-")
+        row.extend(
+            [
+                asset.parent or "-",
+                asset.source,
+                asset.first_seen.strftime("%Y-%m-%d %H:%M"),
+            ]
         )
+        table.add_row(*row)
 
     console.print(table)
 
@@ -186,24 +207,46 @@ def print_vulnerabilities_table(vulnerabilities: list[Vulnerability]) -> None:
     if not vulnerabilities:
         return
 
+    # Detect whether any vulnerability carries exploit-enrichment data; only
+    # render the extra columns when at least one entry has them to keep the
+    # output compact for pre-enrichment scans.
+    show_exploit_cols = any(
+        getattr(v, "in_cisa_kev", False)
+        or getattr(v, "epss_score", None) is not None
+        or getattr(v, "has_known_exploit", False)
+        for v in vulnerabilities
+    )
+
     table = Table(title="Vulnerabilities", show_header=True, header_style="bold cyan")
     table.add_column("ID", style="dim")
     table.add_column("Severity")
     table.add_column("Title", style="bold")
     table.add_column("Asset")
     table.add_column("CVSS")
+    if show_exploit_cols:
+        table.add_column("KEV")
+        table.add_column("EPSS")
+        table.add_column("Exploits")
     table.add_column("Source")
 
     for vuln in vulnerabilities:
         color = severity_color(vuln.severity.value)
-        table.add_row(
+        row = [
             vuln.id,
             f"[{color}]{vuln.severity.value.upper()}[/{color}]",
             vuln.title[:40] + "..." if len(vuln.title) > 40 else vuln.title,
             vuln.affected_asset,
             str(vuln.cvss_score) if vuln.cvss_score else "-",
-            vuln.source,
-        )
+        ]
+        if show_exploit_cols:
+            in_kev = getattr(vuln, "in_cisa_kev", False)
+            epss = getattr(vuln, "epss_score", None)
+            refs = getattr(vuln, "exploit_refs", None) or []
+            row.append("[red]YES[/red]" if in_kev else "-")
+            row.append(f"{epss:.2f}" if epss is not None else "-")
+            row.append(f"[yellow]{len(refs)}[/yellow]" if refs else "-")
+        row.append(vuln.source)
+        table.add_row(*row)
 
     console.print(table)
 

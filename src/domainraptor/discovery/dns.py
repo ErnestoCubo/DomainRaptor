@@ -6,6 +6,7 @@ NS, CNAME, SOA, and other record types.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass
 from typing import Any, ClassVar
@@ -27,6 +28,14 @@ class DnsConfig:
     timeout: float = 5.0
     lifetime: float = 10.0  # Total time for all retries
     retry_servfail: bool = True
+
+
+@dataclass
+class DnsQueryResult:
+    """Result of a DNS query for a single record type."""
+
+    records: list[DnsRecord]
+    should_break: bool = False
 
 
 class DnsClient:
@@ -97,29 +106,44 @@ class DnsClient:
         records: list[DnsRecord] = []
 
         for rtype in record_types:
-            try:
-                answers = self.resolver.resolve(target, rtype)
-
-                for rdata in answers:
-                    record = self._parse_record(rtype, rdata, answers.rrset.ttl)
-                    if record:
-                        records.append(record)
-
-            except dns.resolver.NoAnswer:
-                logger.debug(f"DNS: No {rtype} records for {target}")
-            except dns.resolver.NXDOMAIN:
-                logger.warning(f"DNS: Domain {target} does not exist")
-                break  # No point querying more record types
-            except dns.resolver.NoNameservers:
-                logger.error(f"DNS: No nameservers available for {target}")
+            result = self._query_record_type(target, rtype)
+            if result.records:
+                records.extend(result.records)
+            if result.should_break:
                 break
-            except dns.exception.Timeout:
-                logger.warning(f"DNS: Timeout querying {rtype} for {target}")
-            except Exception as e:
-                logger.debug(f"DNS: Error querying {rtype} for {target}: {e}")
 
         logger.info(f"DNS: Found {len(records)} records for {target}")
         return records
+
+    def _query_record_type(self, target: str, rtype: str) -> DnsQueryResult:
+        """Query a single DNS record type.
+
+        Returns:
+            DnsQueryResult with records and whether to stop querying.
+        """
+        try:
+            answers = self.resolver.resolve(target, rtype)
+            records = []
+            for rdata in answers:
+                record = self._parse_record(rtype, rdata, answers.rrset.ttl)
+                if record:
+                    records.append(record)
+            return DnsQueryResult(records=records, should_break=False)
+        except dns.resolver.NoAnswer:
+            logger.debug(f"DNS: No {rtype} records for {target}")
+            return DnsQueryResult(records=[], should_break=False)
+        except dns.resolver.NXDOMAIN:
+            logger.warning(f"DNS: Domain {target} does not exist")
+            return DnsQueryResult(records=[], should_break=True)
+        except dns.resolver.NoNameservers:
+            logger.error(f"DNS: No nameservers available for {target}")
+            return DnsQueryResult(records=[], should_break=True)
+        except dns.exception.Timeout:
+            logger.warning(f"DNS: Timeout querying {rtype} for {target}")
+            return DnsQueryResult(records=[], should_break=False)
+        except Exception as e:
+            logger.debug(f"DNS: Error querying {rtype} for {target}: {e}")
+            return DnsQueryResult(records=[], should_break=False)
 
     def resolve_ip(self, target: str) -> list[Asset]:
         """Resolve a domain to IP addresses.
@@ -135,32 +159,32 @@ class DnsClient:
         # IPv4
         try:
             answers = self.resolver.resolve(target, "A")
-            for rdata in answers:
-                assets.append(
-                    Asset(
-                        type=AssetType.IP,
-                        value=str(rdata),
-                        parent=target,
-                        source=self.name,
-                        metadata={"ip_version": 4},
-                    )
+            assets.extend(
+                Asset(
+                    type=AssetType.IP,
+                    value=str(rdata),
+                    parent=target,
+                    source=self.name,
+                    metadata={"ip_version": 4},
                 )
+                for rdata in answers
+            )
         except Exception as e:
             logger.debug(f"DNS: No A records for {target}: {e}")
 
         # IPv6
         try:
             answers = self.resolver.resolve(target, "AAAA")
-            for rdata in answers:
-                assets.append(
-                    Asset(
-                        type=AssetType.IP,
-                        value=str(rdata),
-                        parent=target,
-                        source=self.name,
-                        metadata={"ip_version": 6},
-                    )
+            assets.extend(
+                Asset(
+                    type=AssetType.IP,
+                    value=str(rdata),
+                    parent=target,
+                    source=self.name,
+                    metadata={"ip_version": 6},
                 )
+                for rdata in answers
+            )
         except Exception as e:
             logger.debug(f"DNS: No AAAA records for {target}: {e}")
 
@@ -204,21 +228,17 @@ class DnsClient:
         }
 
         # Check for DNSKEY records
-        try:
+        with contextlib.suppress(Exception):
             answers = self.resolver.resolve(target, "DNSKEY")
             if answers:
                 result["dnskey"] = True
                 result["enabled"] = True
-        except Exception:
-            pass
 
         # Check for DS records (delegation signer)
-        try:
+        with contextlib.suppress(Exception):
             answers = self.resolver.resolve(target, "DS")
             if answers:
                 result["ds"] = True
-        except Exception:
-            pass
 
         return result
 
@@ -238,7 +258,7 @@ class DnsClient:
         }
 
         # Check SPF (in TXT records)
-        try:
+        with contextlib.suppress(Exception):
             answers = self.resolver.resolve(target, "TXT")
             for rdata in answers:
                 txt_value = str(rdata).strip('"')
@@ -246,11 +266,9 @@ class DnsClient:
                     result["spf"]["configured"] = True
                     result["spf"]["record"] = txt_value
                     break
-        except Exception:
-            pass
 
         # Check DMARC
-        try:
+        with contextlib.suppress(Exception):
             answers = self.resolver.resolve(f"_dmarc.{target}", "TXT")
             for rdata in answers:
                 txt_value = str(rdata).strip('"')
@@ -258,8 +276,6 @@ class DnsClient:
                     result["dmarc"]["configured"] = True
                     result["dmarc"]["record"] = txt_value
                     break
-        except Exception:
-            pass
 
         return result
 

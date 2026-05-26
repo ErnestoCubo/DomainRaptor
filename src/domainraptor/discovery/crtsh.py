@@ -85,18 +85,17 @@ class CrtShClient(SubdomainClient):
                     self._extract_domains(name.strip(), target, subdomains)
 
         # Convert to Asset objects
-        assets: list[Asset] = []
-        for subdomain in sorted(subdomains):
-            assets.append(
-                Asset(
-                    type=AssetType.SUBDOMAIN,
-                    value=subdomain,
-                    parent=target,
-                    source=self.name,
-                    first_seen=datetime.now(),
-                    last_seen=datetime.now(),
-                )
+        assets = [
+            Asset(
+                type=AssetType.SUBDOMAIN,
+                value=subdomain,
+                parent=target,
+                source=self.name,
+                first_seen=datetime.now(),
+                last_seen=datetime.now(),
             )
+            for subdomain in sorted(subdomains)
+        ]
 
         logger.info(f"crt.sh: Found {len(assets)} unique subdomains for {target}")
         return assets
@@ -215,6 +214,14 @@ class CrtShClient(SubdomainClient):
         return True
 
     @staticmethod
+    def _try_parse_date_format(date_str: str, fmt: str) -> datetime | None:
+        """Try to parse a date string with a specific format."""
+        try:
+            return datetime.strptime(date_str.split("+")[0].split("Z")[0], fmt)
+        except ValueError:
+            return None
+
+    @staticmethod
     def _parse_date(date_str: str) -> datetime | None:
         """Parse date string from crt.sh API."""
         if not date_str:
@@ -227,9 +234,9 @@ class CrtShClient(SubdomainClient):
         ]
 
         for fmt in formats:
-            try:
-                return datetime.strptime(date_str.split("+")[0].split("Z")[0], fmt)
-            except ValueError:
-                continue
+            result = CrtShClient._try_parse_date_format(date_str, fmt)
+            if result is not None:
+                return result
 
+        logger.debug(f"Could not parse date: {date_str}")
         return None
