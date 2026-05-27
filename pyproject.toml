@@ -113,7 +113,13 @@ exclude_lines = [
 
 [tool.bandit]
 exclude_dirs = ["tests", "venv", ".venv"]
-skips = ["B101", "B311"]                  # B101: assert, B311: pseudo-random (ok for non-crypto)
+# B101: assert (used intentionally), B311: pseudo-random (non-crypto cosmetic
+# UI rotation in the TUI; crypto-sensitive paths use the `secrets` module).
+# B404: subprocess import — the TUI deliberately spawns the `domainraptor`
+# CLI as a child process with a fixed argv (sys.executable + module path),
+# shell=False, and no untrusted input concatenation; the call site is
+# audited.
+skips = ["B101", "B311", "B404"]
 targets = ["."]
 
 [tool.bandit.assert_used]
