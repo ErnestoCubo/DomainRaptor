@@ -1013,12 +1013,18 @@ def assess_exploits_cmd(
             from domainraptor.storage.repository import ScanRepository
 
             repo = ScanRepository()
-            latest = repo.get_latest_for_target(target)
+            # `assess vulns`, `assess config` and `assess exploits` each save
+            # a separate scan record with their own scan_type. Picking only the
+            # most recent scan misses the prior `assess_vulns` results when the
+            # user has since run `assess config`. Walk the recent history and
+            # pick the newest scan that actually carries vulnerabilities.
+            recent = repo.list_by_target(target, limit=20)
         except Exception as exc:
             print_error(f"Failed to load latest scan for {target}: {exc}")
             raise typer.Exit(1) from None
 
-        if latest is None or not latest.vulnerabilities:
+        latest = next((s for s in recent if s.vulnerabilities), None)
+        if latest is None:
             print_warning(f"No stored vulnerabilities for {target}. Run 'assess vulns' first.")
             raise typer.Exit(0)
         vulnerabilities = list(latest.vulnerabilities)

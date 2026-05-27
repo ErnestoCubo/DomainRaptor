@@ -26,7 +26,6 @@ class ReconScreen(Widget):
                 allow_blank=False,
             )
             with Horizontal():
-                yield Checkbox("Free only", id="free-only")
                 yield Checkbox("Verbose", id="verbose")
             yield ScanRunner(id="runner")
 
@@ -37,10 +36,10 @@ class ReconScreen(Widget):
             runner.append("[yellow]Please enter a target.[/yellow]")
             return
         mode = str(self.query_one("#mode", Select).value)
+        # Global flags must precede the subcommand; the recon subcommand
+        # itself takes the target via --target/-T, not positionally.
         args: list[str] = ["--mode", mode]
-        if self.query_one("#free-only", Checkbox).value:
-            args.append("--free-only")
         if self.query_one("#verbose", Checkbox).value:
             args.append("--verbose")
-        args += ["recon", target]
+        args += ["recon", "--target", target]
         runner.run_command(args)

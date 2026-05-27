@@ -7,7 +7,7 @@ import contextlib
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select, Static
+from textual.widgets import Input, Label, Select, Static
 
 from domainraptor.tui.screens._common import ScanRunner
 
@@ -18,7 +18,6 @@ class CompareScreen(Widget):
     CompareScreen .arg-row { height: auto; }
     CompareScreen .arg-row Label { padding: 1 1 0 0; width: 8; }
     CompareScreen .arg-row Input { width: 1fr; }
-    CompareScreen #cmp-run { margin-top: 1; }
     """
 
     def compose(self) -> ComposeResult:
@@ -38,7 +37,7 @@ class CompareScreen(Widget):
             with Horizontal(classes="arg-row", id="row-arg2"):
                 yield Label("Arg 2:")
                 yield Input(placeholder="(optional) scan-id or target", id="arg2")
-            yield Button("Run", id="cmp-run", variant="primary")
+            # Run button is provided by ScanRunner; no separate one here.
             yield ScanRunner(id="runner")
 
     def on_mount(self) -> None:
@@ -58,11 +57,6 @@ class CompareScreen(Widget):
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id in {"arg1", "arg2"}:
-            self.post_message(ScanRunner.RunRequested())
-            event.stop()
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "cmp-run":
             self.post_message(ScanRunner.RunRequested())
             event.stop()
 

@@ -55,7 +55,7 @@ class ReportsScreen(Widget):
                 yield Label("Output file:")
                 yield Input(placeholder="report.html", id="output")
             with Horizontal(id="rp-run-row"):
-                yield Button("Run", id="rp-run", variant="primary")
+                # Run button is provided by ScanRunner; only keep Preview here.
                 yield Button("Preview output", id="rp-preview-btn")
             yield Label("Preview", classes="field-label")
             yield RichLog(id="rp-preview", highlight=False, markup=False, wrap=True)
@@ -67,10 +67,7 @@ class ReportsScreen(Widget):
             event.stop()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "rp-run":
-            self.post_message(ScanRunner.RunRequested())
-            event.stop()
-        elif event.button.id == "rp-preview-btn":
+        if event.button.id == "rp-preview-btn":
             self._preview_output()
             event.stop()
 
