@@ -969,6 +969,27 @@ def _format_html(data: dict, template: str | None = None) -> str:
         .metric-card {{ background: rgba(255,255,255,0.1); padding: 16px; border-radius: 8px; text-align: center; }}
         .metric-value {{ font-size: 28px; font-weight: bold; }}
         .metric-label {{ font-size: 12px; opacity: 0.8; text-transform: uppercase; }}
+
+        /* Tabbed navigation (used by the default/full report). */
+        .tabs {{ background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin: 20px 0; position: sticky; top: 0; z-index: 50; }}
+        .tabs-bar {{ display: flex; align-items: center; padding: 0 8px; }}
+        .hamburger {{ display: none; background: none; border: none; font-size: 24px; cursor: pointer; padding: 12px; color: #374151; }}
+        .tab-list {{ list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }}
+        .tab-list li {{ margin: 0; }}
+        .tab-link {{ display: block; padding: 14px 18px; cursor: pointer; color: #6b7280; font-weight: 500; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; user-select: none; }}
+        .tab-link:hover {{ color: #1f2937; }}
+        .tab-link.active {{ color: #1e40af; border-bottom-color: #1e40af; }}
+        .tab-pane {{ display: none; }}
+        .tab-pane.active {{ display: block; }}
+        @media (max-width: 720px) {{
+            body {{ margin: 16px; }}
+            .hamburger {{ display: block; }}
+            .tab-list {{ display: none; flex-direction: column; width: 100%; padding: 8px 0; border-top: 1px solid #e5e7eb; }}
+            .tab-list.show {{ display: flex; }}
+            .tabs-bar {{ flex-wrap: wrap; }}
+            .tab-link {{ padding: 12px 16px; border-bottom: none; border-left: 3px solid transparent; }}
+            .tab-link.active {{ border-left-color: #1e40af; border-bottom: none; background: #eff6ff; }}
+        }}
     </style>
 </head>
 <body>
@@ -1053,6 +1074,45 @@ def _generate_vuln_chart_svg(summary: dict) -> str:
     return svg
 
 
+# Maximum weighted contribution per risk category (mirrors the caps in
+# `core.risk.calculate_risk_level`). Used in the HTML report to show each
+# breakdown value as `value/max` and to colour-grade the cards.
+RISK_CATEGORY_MAX = {
+    "vulnerabilities": 40,
+    "configuration": 25,
+    "exposure": 25,
+    "reputation": 10,
+}
+RISK_TOTAL_MAX = 100
+
+
+def _score_color(value: float, max_value: float) -> str:
+    """Return a CSS color graded from green (low) to red (high) for a score.
+
+    Uses fixed percentage thresholds against ``max_value`` so the same scale
+    works for the total risk score (out of 100) and each weighted category.
+    """
+    if max_value <= 0:
+        return "#6b7280"  # grey: unknown / disabled
+    pct = max(0.0, min(1.0, value / max_value))
+    if pct <= 0.25:
+        return "#22c55e"  # green
+    if pct <= 0.50:
+        return "#ca8a04"  # yellow
+    if pct <= 0.75:
+        return "#ea580c"  # orange
+    return "#dc2626"  # red
+
+
+def _breakdown_card(label: str, value: float, max_value: float) -> str:
+    """Render a single colour-graded breakdown card with ``value/max`` text."""
+    color = _score_color(value, max_value)
+    return f"""            <div class="breakdown-item" style="border-top: 4px solid {color};">
+                <div class="breakdown-value" style="color: {color};">{value}<span style="font-size: 14px; color: #6b7280; font-weight: normal;">/{max_value:g}</span></div>
+                <div class="breakdown-label">{label}</div>
+            </div>"""
+
+
 def _format_html_executive(data: dict, risk: dict, risk_color: str, vuln_chart: str) -> str:
     """Executive template: high-level summary focused on business impact."""
     summary = data.get("summary", {})
@@ -1073,6 +1133,8 @@ def _format_html_executive(data: dict, risk: dict, risk_color: str, vuln_chart: 
         impact = "LOW - Continue monitoring"
         impact_color = "#22c55e"
 
+    risk_score = risk.get("score", 0)
+    score_color = _score_color(risk_score, RISK_TOTAL_MAX)
     return f"""
     <div class="executive-summary">
         <h2 style="margin-top: 0;">Executive Summary</h2>
@@ -1081,8 +1143,8 @@ def _format_html_executive(data: dict, risk: dict, risk_color: str, vuln_chart: 
                 <div class="metric-value" style="color: {risk_color};">{risk.get("level", "N/A")}</div>
                 <div class="metric-label">Risk Level</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-value">{risk.get("score", 0)}</div>
+            <div class="metric-card" style="border-top: 4px solid {score_color};">
+                <div class="metric-value" style="color: {score_color};">{risk_score}<span style="font-size: 14px; opacity: 0.7; font-weight: normal;">/{RISK_TOTAL_MAX}</span></div>
                 <div class="metric-label">Risk Score</div>
             </div>
             <div class="metric-card">
@@ -1121,32 +1183,23 @@ def _format_html_executive(data: dict, risk: dict, risk_color: str, vuln_chart: 
 def _format_html_technical(data: dict, risk: dict, risk_color: str, vuln_chart: str) -> str:
     """Technical template: detailed findings with full data."""
     summary = data.get("summary", {})
+    breakdown = risk.get("breakdown", {})
+    risk_score = risk.get("score", 0)
+    score_color = _score_color(risk_score, RISK_TOTAL_MAX)
     html = f"""
     <div class="risk-card">
         <h2 style="border: none; margin-top: 0;">Risk Assessment</h2>
         <div style="display: flex; align-items: center; gap: 24px;">
             <div class="risk-level">{risk.get("level", "N/A")}</div>
-            <div class="risk-score">{risk.get("score", 0)}/100</div>
+            <div class="risk-score" style="color: {score_color}; font-weight: 600;">{risk_score}/{RISK_TOTAL_MAX}</div>
         </div>
         <p style="color: #6b7280;">{risk.get("level_description", "")}</p>
 
         <div class="breakdown">
-            <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get("breakdown", {}).get("vulnerabilities", 0)}</div>
-                <div class="breakdown-label">Vulnerabilities</div>
-            </div>
-            <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get("breakdown", {}).get("configuration", 0)}</div>
-                <div class="breakdown-label">Configuration</div>
-            </div>
-            <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get("breakdown", {}).get("exposure", 0)}</div>
-                <div class="breakdown-label">Exposure</div>
-            </div>
-            <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get("breakdown", {}).get("reputation", 0)}</div>
-                <div class="breakdown-label">Reputation</div>
-            </div>
+{_breakdown_card("Vulnerabilities", breakdown.get("vulnerabilities", 0), RISK_CATEGORY_MAX["vulnerabilities"])}
+{_breakdown_card("Configuration", breakdown.get("configuration", 0), RISK_CATEGORY_MAX["configuration"])}
+{_breakdown_card("Exposure", breakdown.get("exposure", 0), RISK_CATEGORY_MAX["exposure"])}
+{_breakdown_card("Reputation", breakdown.get("reputation", 0), RISK_CATEGORY_MAX["reputation"])}
         </div>
     </div>
 
@@ -1367,8 +1420,8 @@ def _format_html_compliance(data: dict, risk: dict, risk_color: str) -> str:
     return html
 
 
-def _format_html_vulns_detail(data: dict) -> str:
-    """Generate HTML for detailed vulnerability listings."""
+def _format_html_vulns_section(data: dict) -> str:
+    """Render the standalone Vulnerabilities section (table + detail cards)."""
     severity_colors = {
         "CRITICAL": "#dc2626",
         "HIGH": "#ea580c",
@@ -1447,8 +1500,12 @@ def _format_html_vulns_detail(data: dict) -> str:
         {remediation_html}
     </div>
 """
+    return html
 
-    html += """
+
+def _format_html_config_section(data: dict) -> str:
+    """Render the standalone Configuration Issues section."""
+    html = """
     <h2>Configuration Issues</h2>
     <table>
         <tr><th>ID</th><th>Severity</th><th>Category</th><th>Title</th></tr>
@@ -1456,49 +1513,55 @@ def _format_html_vulns_detail(data: dict) -> str:
     for issue in data.get("config_issues", []):
         html += f'        <tr><td>{issue["id"]}</td><td class="{issue["severity"].lower()}">{issue["severity"]}</td><td>{issue.get("category", "")}</td><td>{issue["title"]}</td></tr>\n'
 
-    html += """    </table>
-"""
+    html += "    </table>\n"
     return html
 
 
+def _format_html_vulns_detail(data: dict) -> str:
+    """Render Vulnerabilities + Configuration Issues sections together.
+
+    Kept for the technical template which renders both inline.
+    """
+    return _format_html_vulns_section(data) + _format_html_config_section(data)
+
+
 def _format_html_full(data: dict, risk: dict, risk_color: str, vuln_chart: str) -> str:
-    """Full report template (default): all sections included."""
-    html = f"""
+    """Full report template (default): all sections inside a tabbed layout.
+
+    Renders a sticky tab bar with a hamburger menu for narrow screens. Each
+    section becomes its own ``<section class="tab-pane">`` so the user can
+    jump straight to Summary, Vulnerabilities, Configuration, Infrastructure
+    or Subdomains without scrolling through everything.
+    """
+    summary = data.get("summary", {})
+    breakdown = risk.get("breakdown", {})
+    risk_score = risk.get("score", 0)
+    score_color = _score_color(risk_score, RISK_TOTAL_MAX)
+
+    # ---- Summary tab ---------------------------------------------------
+    summary_html = f"""
     <div class="risk-card">
         <h2 style="border: none; margin-top: 0;">Risk Assessment</h2>
         <div style="display: flex; align-items: center; gap: 24px;">
             <div class="risk-level">{risk.get("level", "N/A")}</div>
-            <div class="risk-score">{risk.get("score", 0)}/100</div>
+            <div class="risk-score" style="color: {score_color}; font-weight: 600;">{risk_score}/{RISK_TOTAL_MAX}</div>
         </div>
         <p style="color: #6b7280;">{risk.get("level_description", "")}</p>
 
         <div class="breakdown">
-            <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get("breakdown", {}).get("vulnerabilities", 0)}</div>
-                <div class="breakdown-label">Vulnerabilities</div>
-            </div>
-            <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get("breakdown", {}).get("configuration", 0)}</div>
-                <div class="breakdown-label">Configuration</div>
-            </div>
-            <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get("breakdown", {}).get("exposure", 0)}</div>
-                <div class="breakdown-label">Exposure</div>
-            </div>
-            <div class="breakdown-item">
-                <div class="breakdown-value">{risk.get("breakdown", {}).get("reputation", 0)}</div>
-                <div class="breakdown-label">Reputation</div>
-            </div>
+{_breakdown_card("Vulnerabilities", breakdown.get("vulnerabilities", 0), RISK_CATEGORY_MAX["vulnerabilities"])}
+{_breakdown_card("Configuration", breakdown.get("configuration", 0), RISK_CATEGORY_MAX["configuration"])}
+{_breakdown_card("Exposure", breakdown.get("exposure", 0), RISK_CATEGORY_MAX["exposure"])}
+{_breakdown_card("Reputation", breakdown.get("reputation", 0), RISK_CATEGORY_MAX["reputation"])}
         </div>
 
         <div class="factors">
             <strong>Top Risk Factors:</strong>
 """
     for factor in risk.get("top_factors", []):
-        html += f'            <div class="factor">{factor}</div>\n'
+        summary_html += f'            <div class="factor">{factor}</div>\n'
 
-    summary = data.get("summary", {})
-    html += f"""        </div>
+    summary_html += f"""        </div>
     </div>
 
     <div class="chart-container">
@@ -1523,8 +1586,9 @@ def _format_html_full(data: dict, risk: dict, risk_color: str, vuln_chart: str) 
     </table>
 """
 
-    # Add Infrastructure Section for full template
+    # ---- Infrastructure tab --------------------------------------------
     infrastructure = data.get("infrastructure", [])
+    infra_html = ""
     if infrastructure:
         severity_colors = {
             "CRITICAL": "#dc2626",
@@ -1532,9 +1596,7 @@ def _format_html_full(data: dict, risk: dict, risk_color: str, vuln_chart: str) 
             "MEDIUM": "#ca8a04",
             "LOW": "#2563eb",
         }
-        html += f"""
-    <h2>Infrastructure ({len(infrastructure)} hosts)</h2>
-"""
+        infra_html += f"<h2>Infrastructure ({len(infrastructure)} hosts)</h2>\n"
         for host in infrastructure:
             host_ip = host.get("ip", "Unknown")
             org = host.get("org") or "Unknown"
@@ -1545,7 +1607,7 @@ def _format_html_full(data: dict, risk: dict, risk_color: str, vuln_chart: str) 
             host_services = host.get("services", [])
             host_vulns = host.get("vulns", [])
 
-            html += f"""
+            infra_html += f"""
     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 12px 0;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h3 style="margin: 0; border: none; color: #1e40af;">{host_ip}</h3>
@@ -1555,33 +1617,100 @@ def _format_html_full(data: dict, risk: dict, risk_color: str, vuln_chart: str) 
             <span>📍 {location}</span> | <span>🌐 {hostnames}</span>
         </div>
 """
-            # Services table for this host
             if host_services:
-                html += f"""
+                infra_html += f"""
         <h4 style="margin: 12px 0 8px 0; font-size: 14px; color: #374151;">Services ({len(host_services)})</h4>
         <table style="font-size: 13px;">
             <tr><th>Port</th><th>Protocol</th><th>Service</th><th>Version</th></tr>
 """
                 for svc in host_services:
-                    html += f"            <tr><td>{svc.get('port', '')}</td><td>{svc.get('protocol', 'tcp')}</td><td>{svc.get('service', '')}</td><td>{svc.get('version', '')}</td></tr>\n"
-                html += "        </table>\n"
+                    infra_html += f"            <tr><td>{svc.get('port', '')}</td><td>{svc.get('protocol', 'tcp')}</td><td>{svc.get('service', '')}</td><td>{svc.get('version', '')}</td></tr>\n"
+                infra_html += "        </table>\n"
 
-            # Vulnerabilities for this host
             if host_vulns:
-                html += f"""
+                infra_html += f"""
         <h4 style="margin: 16px 0 8px 0; font-size: 14px; color: #dc2626;">Vulnerabilities ({len(host_vulns)})</h4>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
 """
-                for vuln in host_vulns[:20]:  # Limit to 20 per host in full view
+                for vuln in host_vulns[:20]:
                     sev = vuln.get("severity", "MEDIUM")
                     color = severity_colors.get(sev, "#6b7280")
-                    html += f'            <span style="background: {color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">{vuln.get("id", "CVE-?")}</span>\n'
+                    infra_html += f'            <span style="background: {color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">{vuln.get("id", "CVE-?")}</span>\n'
                 if len(host_vulns) > 20:
-                    html += f'            <span style="color: #6b7280; font-size: 12px;">... and {len(host_vulns) - 20} more</span>\n'
-                html += "        </div>\n"
+                    infra_html += f'            <span style="color: #6b7280; font-size: 12px;">... and {len(host_vulns) - 20} more</span>\n'
+                infra_html += "        </div>\n"
 
-            html += "    </div>\n"
+            infra_html += "    </div>\n"
+    else:
+        infra_html = (
+            "<h2>Infrastructure</h2>\n"
+            '<p style="color: #6b7280;">No infrastructure data available for this target.</p>\n'
+        )
 
-    # Add vulnerability details
-    html += _format_html_vulns_detail(data)
-    return html
+    # ---- Subdomains tab ------------------------------------------------
+    subdomains = data.get("subdomains", [])
+    subs_html = ""
+    if subdomains:
+        enriched_count = sum(1 for s in subdomains if s.get("enriched"))
+        subs_html += f"""
+    <h2>Subdomains ({len(subdomains)} found, {enriched_count} enriched)</h2>
+    <table>
+        <tr><th>#</th><th>Subdomain</th><th>IP Address</th><th>Source</th><th>Enriched</th></tr>
+"""
+        for i, sub in enumerate(subdomains, 1):
+            enriched_badge = (
+                '<span style="color: #22c55e;">✓</span>'
+                if sub.get("enriched")
+                else '<span style="color: #9ca3af;">-</span>'
+            )
+            ip_val = sub.get("ip") or "-"
+            subs_html += f'        <tr><td>{i}</td><td><code>{sub["subdomain"]}</code></td><td>{ip_val}</td><td>{sub.get("source", "")}</td><td style="text-align: center;">{enriched_badge}</td></tr>\n'
+        subs_html += "    </table>\n"
+
+    # ---- Tab assembly --------------------------------------------------
+    panes: list[tuple[str, str, str]] = [("summary", "Summary", summary_html)]
+    if data.get("vulnerabilities"):
+        panes.append(("vulnerabilities", "Vulnerabilities", _format_html_vulns_section(data)))
+    if data.get("config_issues"):
+        panes.append(("config", "Configuration", _format_html_config_section(data)))
+    if infrastructure:
+        panes.append(("infrastructure", "Infrastructure", infra_html))
+    if subdomains:
+        panes.append(("subdomains", "Subdomains", subs_html))
+
+    nav_links = "".join(
+        f'<li><a class="tab-link{" active" if i == 0 else ""}" '
+        f'data-tab="{slug}" onclick="drShowTab(event, \'{slug}\')">{label}</a></li>'
+        for i, (slug, label, _body) in enumerate(panes)
+    )
+    sections = "".join(
+        f'<section id="tab-{slug}" class="tab-pane{" active" if i == 0 else ""}">{body}</section>'
+        for i, (slug, _label, body) in enumerate(panes)
+    )
+
+    return f"""
+    <nav class="tabs" aria-label="Report sections">
+        <div class="tabs-bar">
+            <button class="hamburger" type="button" aria-label="Toggle navigation" onclick="drToggleTabs()">☰</button>
+            <ul class="tab-list">
+                {nav_links}
+            </ul>
+        </div>
+    </nav>
+    {sections}
+    <script>
+    function drShowTab(evt, slug) {{
+        document.querySelectorAll('.tab-pane').forEach(function (p) {{ p.classList.remove('active'); }});
+        document.querySelectorAll('.tab-link').forEach(function (l) {{ l.classList.remove('active'); }});
+        var pane = document.getElementById('tab-' + slug);
+        if (pane) pane.classList.add('active');
+        if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+        var list = document.querySelector('.tab-list');
+        if (list) list.classList.remove('show');
+    }}
+    function drToggleTabs() {{
+        var list = document.querySelector('.tab-list');
+        if (list) list.classList.toggle('show');
+    }}
+    </script>
+"""
