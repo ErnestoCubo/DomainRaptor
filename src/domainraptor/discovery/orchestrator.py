@@ -342,11 +342,17 @@ def create_default_orchestrator() -> DiscoveryOrchestrator:
     Returns:
         DiscoveryOrchestrator configured with free discovery clients
     """
+    from domainraptor.discovery.certspotter import CertSpotterClient
     from domainraptor.discovery.crtsh import CrtShClient
     from domainraptor.discovery.hackertarget import HackerTargetClient
 
     orchestrator = DiscoveryOrchestrator()
+    # crt.sh is the most complete CT source but its single-host backend (Sectigo)
+    # frequently returns 502/504 errors when overloaded. CertSpotter (SSLMate)
+    # is queried as a free, no-key fallback so a crt.sh outage no longer
+    # zero-outs CT-based subdomain discovery.
     orchestrator.add_client(CrtShClient())
+    orchestrator.add_client(CertSpotterClient())
     orchestrator.add_client(HackerTargetClient())
 
     return orchestrator

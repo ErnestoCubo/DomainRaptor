@@ -164,7 +164,7 @@ def assess_vulns_cmd(
     save: Annotated[
         bool,
         typer.Option("--save/--no-save", help="Save results to database"),
-    ] = False,
+    ] = True,
 ) -> None:
     """
     🔓 Check for known vulnerabilities.
