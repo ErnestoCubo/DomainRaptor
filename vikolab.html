@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Security Report: qatech.vikolab.com</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; background: #f9fafb; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #1f2937; }
+        h2 { color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background: #f3f4f6; font-weight: 600; }
+        .critical { color: #dc2626; font-weight: bold; }
+        .high { color: #ea580c; }
+        .medium { color: #ca8a04; }
+        .low { color: #2563eb; }
+        .risk-card { background: white; border-radius: 12px; padding: 24px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .risk-level { font-size: 32px; font-weight: bold; color: #ca8a04; }
+        .risk-score { font-size: 24px; color: #6b7280; }
+        .breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px; }
+        .breakdown-item { text-align: center; padding: 12px; background: #f9fafb; border-radius: 8px; }
+        .breakdown-value { font-size: 24px; font-weight: bold; color: #1f2937; }
+        .breakdown-label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
+        .factors { margin-top: 16px; }
+        .factor { padding: 8px 12px; background: #fef3c7; border-left: 3px solid #f59e0b; margin: 4px 0; }
+        .chart-container { display: flex; gap: 24px; align-items: center; margin: 20px 0; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .chart-legend { display: flex; flex-direction: column; gap: 8px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-color { width: 16px; height: 16px; border-radius: 4px; }
+        .executive-summary { background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%); color: white; padding: 32px; border-radius: 12px; margin-bottom: 24px; }
+        .executive-summary h2 { color: white; border-bottom-color: rgba(255,255,255,0.3); }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin: 20px 0; }
+        .metric-card { background: rgba(255,255,255,0.1); padding: 16px; border-radius: 8px; text-align: center; }
+        .metric-value { font-size: 28px; font-weight: bold; }
+        .metric-label { font-size: 12px; opacity: 0.8; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="container">
+    <h1>Security Report: qatech.vikolab.com</h1>
+    <p>Generated: 2026-05-28T00:08:23.939062</p>
+
+    <div class="risk-card">
+        <h2 style="border: none; margin-top: 0;">Risk Assessment</h2>
+        <div style="display: flex; align-items: center; gap: 24px;">
+            <div class="risk-level">MEDIUM</div>
+            <div class="risk-score">40.0/100</div>
+        </div>
+        <p style="color: #6b7280;">Moderate risks - plan mitigation activities</p>
+
+        <div class="breakdown">
+            <div class="breakdown-item">
+                <div class="breakdown-value">40</div>
+                <div class="breakdown-label">Vulnerabilities</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value">0.0</div>
+                <div class="breakdown-label">Configuration</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value">0.0</div>
+                <div class="breakdown-label">Exposure</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value">0.0</div>
+                <div class="breakdown-label">Reputation</div>
+            </div>
+        </div>
+
+        <div class="factors">
+            <strong>Top Risk Factors:</strong>
+            <div class="factor">8 HIGH vulnerabilities found</div>
+            <div class="factor">CISA KEV (actively exploited): CVE-2025-14847</div>
+            <div class="factor">CISA KEV (actively exploited): CVE-2020-11023</div>
+            <div class="factor">CISA KEV (actively exploited): CVE-2023-44487</div>
+            <div class="factor">Known exploit: CVE-2020-11022</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+        <path d="M 80 80 L 80.0 20.0 A 60 60 0 0 1 129.3790319536194 45.91611519613066 Z" fill="#ea580c" opacity="0.9"/><path d="M 80 80 L 129.3790319536194 45.91611519613066 A 60 60 0 1 1 79.99999999999999 20.0 Z" fill="#ca8a04" opacity="0.9"/>
+        <circle cx="80" cy="80" r="35" fill="white"/>
+        <text x="80" y="75" text-anchor="middle" fill="#1f2937" font-size="20" font-weight="bold">52</text>
+        <text x="80" y="92" text-anchor="middle" fill="#6b7280" font-size="11">Total</text>
+    </svg>
+        <div class="chart-legend">
+            <div class="legend-item"><div class="legend-color" style="background: #dc2626;"></div> Critical: 0</div>
+            <div class="legend-item"><div class="legend-color" style="background: #ea580c;"></div> High: 8</div>
+            <div class="legend-item"><div class="legend-color" style="background: #ca8a04;"></div> Medium: 44</div>
+            <div class="legend-item"><div class="legend-color" style="background: #2563eb;"></div> Low: 0</div>
+        </div>
+    </div>
+
+    <h2>Summary</h2>
+    <table>
+        <tr><th>Metric</th><th>Count</th></tr>
+        <tr><td>Total Assets</td><td>0</td></tr>
+        <tr><td>Subdomains</td><td>0</td></tr>
+        <tr><td>Services</td><td>0</td></tr>
+        <tr><td>Vulnerabilities</td><td>52</td></tr>
+        <tr><td>Config Issues</td><td>0</td></tr>
+    </table>
+
+    <h2>Vulnerabilities (52 total)</h2>
+    <table>
+        <tr><th>ID</th><th>Severity</th><th>CVSS</th><th>Affected Asset</th><th>Description</th></tr>
+        <tr><td><strong>CVE-2022-3358</strong></td><td class="high">high</td><td>7.5</td><td>168.119.238.139</td><td>OpenSSL supports creating a custom cipher via the legacy EVP_CIPHER_meth_new() function and associat...</td></tr>
+        <tr><td><strong>CVE-2023-2650</strong></td><td class="medium">medium</td><td>6.5</td><td>168.119.238.139</td><td>Issue summary: Processing some specially crafted ASN.1 object identifiers or
+data containing them ma...</td></tr>
+        <tr><td><strong>CVE-2022-4203</strong></td><td class="medium">medium</td><td>4.9</td><td>168.119.238.139</td><td>A read buffer overrun can be triggered in X.509 certificate verification,
+specifically in name const...</td></tr>
+        <tr><td><strong>CVE-2022-2097</strong></td><td class="medium">medium</td><td>5.3</td><td>168.119.238.139</td><td>AES OCB mode for 32-bit x86 platforms using the AES-NI assembly optimised implementation will not en...</td></tr>
+        <tr><td><strong>CVE-2022-4304</strong></td><td class="medium">medium</td><td>5.9</td><td>168.119.238.139</td><td>A timing based side channel exists in the OpenSSL RSA Decryption implementation
+which could be suffi...</td></tr>
+        <tr><td><strong>CVE-2025-14847</strong></td><td class="high">high</td><td>7.5</td><td>168.119.238.139</td><td>Mismatched length fields in Zlib compressed protocol headers may allow a read of uninitialized heap ...</td></tr>
+        <tr><td><strong>CVE-2022-3996</strong></td><td class="high">high</td><td>7.5</td><td>168.119.238.139</td><td>If an X.509 certificate contains a malformed policy constraint and
+policy processing is enabled, the...</td></tr>
+        <tr><td><strong>CVE-2009-1390</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Mutt 1.5.19, when linked against (1) OpenSSL (mutt_ssl.c) or (2) GnuTLS (mutt_ssl_gnutls.c), allows ...</td></tr>
+        <tr><td><strong>CVE-2025-69420</strong></td><td class="high">high</td><td>7.5</td><td>168.119.238.139</td><td>Issue summary: A type confusion vulnerability exists in the TimeStamp Response
+verification code whe...</td></tr>
+        <tr><td><strong>CVE-2025-69421</strong></td><td class="high">high</td><td>7.5</td><td>168.119.238.139</td><td>Issue summary: Processing a malformed PKCS#12 file can trigger a NULL pointer
+dereference in the PKC...</td></tr>
+        <tr><td><strong>CVE-2023-5678</strong></td><td class="medium">medium</td><td>5.3</td><td>168.119.238.139</td><td>Issue summary: Generating excessively long X9.42 DH keys or checking
+excessively long X9.42 DH keys ...</td></tr>
+        <tr><td><strong>CVE-2014-8180</strong></td><td class="medium">medium</td><td>5.5</td><td>168.119.238.139</td><td>MongoDB on Red Hat Satellite 6 allows local users to bypass authentication by logging in with an emp...</td></tr>
+        <tr><td><strong>CVE-2009-3766</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>mutt_ssl.c in mutt 1.5.16 and other versions before 1.5.19, when OpenSSL is used, does not verify th...</td></tr>
+        <tr><td><strong>CVE-2022-1292</strong></td><td class="high">high</td><td>7.3</td><td>168.119.238.139</td><td>The c_rehash script does not properly sanitise shell metacharacters to prevent command injection. Th...</td></tr>
+        <tr><td><strong>CVE-2009-3765</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>mutt_ssl.c in mutt 1.5.19 and 1.5.20, when OpenSSL is used, does not properly handle a '\0' characte...</td></tr>
+        <tr><td><strong>CVE-2025-68160</strong></td><td class="medium">medium</td><td>4.7</td><td>168.119.238.139</td><td>Issue summary: Writing large, newline-free data into a BIO chain using the
+line-buffering filter whe...</td></tr>
+        <tr><td><strong>CVE-2019-0190</strong></td><td class="high">high</td><td>7.5</td><td>168.119.238.139</td><td>A bug exists in the way mod_ssl handled client renegotiations. A remote attacker could send a carefu...</td></tr>
+        <tr><td><strong>CVE-2024-6119</strong></td><td class="high">high</td><td>7.5</td><td>168.119.238.139</td><td>Issue summary: Applications performing certificate name checks (e.g., TLS
+clients checking server ce...</td></tr>
+        <tr><td><strong>CVE-2024-0727</strong></td><td class="medium">medium</td><td>5.5</td><td>168.119.238.139</td><td>Issue summary: Processing a maliciously formatted PKCS12 file may lead OpenSSL
+to crash leading to a...</td></tr>
+        <tr><td><strong>CVE-2022-1434</strong></td><td class="medium">medium</td><td>5.9</td><td>168.119.238.139</td><td>The OpenSSL 3.0 implementation of the RC4-MD5 ciphersuite incorrectly uses the AAD data as the MAC k...</td></tr>
+        <tr><td><strong>CVE-2025-23419</strong></td><td class="medium">medium</td><td>4.3</td><td>168.119.238.139</td><td>When multiple server blocks are configured to share the same IP address and port, an attacker can us...</td></tr>
+        <tr><td><strong>CVE-2023-0465</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-0466</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-0464</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2020-11022</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2020-11023</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2022-1473</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2022-3786</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-0401</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2022-1343</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2022-4450</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-0286</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-3817</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2022-3602</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-4807</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-6129</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2025-69419</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2025-69418</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-44487</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-5363</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2026-22796</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2026-22795</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2025-12657</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2019-11358</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-0217</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-0216</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-0215</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2022-2068</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2009-3767</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-2975</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2025-15467</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+        <tr><td><strong>CVE-2023-1255</strong></td><td class="medium">medium</td><td>-</td><td>168.119.238.139</td><td>Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 801...</td></tr>
+    </table>
+
+    <h3>Vulnerability Details</h3>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-3358</strong>
+            <span class="high" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">high | CVSS 7.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.1946</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">OpenSSL supports creating a custom cipher via the legacy EVP_CIPHER_meth_new() function and associated function calls. This function was deprecated in OpenSSL 3.0 and application authors are instead encouraged to use the new provider mechanism in order to implement custom ciphers. OpenSSL versions 3.0.0 to 3.0.5 incorrectly handle legacy custom ciphers passed to the EVP_EncryptInit_ex2(), EVP_DecryptInit_ex2() and EVP_CipherInit_ex2() functions (as well as other similarly named encryption and decryption initialisation functions). Instead of using the custom cipher directly it incorrectly tries to fetch an equivalent cipher from the available providers. An equivalent cipher is found based on the NID passed to EVP_CIPHER_meth_new(). This NID is supposed to represent the unique NID for a given cipher. However it is possible for an application to incorrectly pass NID_undef as this value in the call to EVP_CIPHER_meth_new(). When NID_undef is used in this way the OpenSSL encryption/decryption initialisation function will match the NULL cipher as being equivalent and will fetch this from the available providers. This will succeed if the default provider has been loaded (or if a third party provider has been loaded that offers this cipher). Using the NULL cipher means that the plaintext is emitted as the ciphertext. Applications are only affected by this issue if they call EVP_CIPHER_meth_new() using NID_undef and subsequently use it in a call to an encryption/decryption initialisation function. Applications that only use SSL/TLS are not impacted by this issue. Fixed in OpenSSL 3.0.6 (Affected 3.0.0-3.0.5).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-2650</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 6.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.9213</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Issue summary: Processing some specially crafted ASN.1 object identifiers or
+data containing them may be very slow.
+
+Impact summary: Applications that use OBJ_obj2txt() directly, or use any of
+the OpenSSL subsystems OCSP, PKCS7/SMIME, CMS, CMP/CRMF or TS with no message
+size limit may experience notable to very long delays when processing those
+messages, which may lead to a Denial of Service.
+
+An OBJECT IDENTIFIER is composed of a series of numbers - sub-identifiers -
+most of which have no size limit.  OBJ_obj2txt() may be used to translate
+an ASN.1 OBJECT IDENTIFIER given in DER encoding form (using the OpenSSL
+type ASN1_OBJECT) to its canonical numeric text form, which are the
+sub-identifiers of the OBJECT IDENTIFIER in decimal form, separated by
+periods.
+
+When one of the sub-identifiers in the OBJECT IDENTIFIER is very large
+(these are sizes that are seen as absurdly large, taking up tens or hundreds
+of KiBs), the translation to a decimal number in text may take a very long
+time.  The time complexity is O(n^2) with 'n' being the size of the
+sub-identifiers in bytes (*).
+
+With OpenSSL 3.0, support to fetch cryptographic algorithms using names /
+identifiers in string form was introduced.  This includes using OBJECT
+IDENTIFIERs in canonical numeric text form as identifiers for fetching
+algorithms.
+
+Such OBJECT IDENTIFIERs may be received through the ASN.1 structure
+AlgorithmIdentifier, which is commonly used in multiple protocols to specify
+what cryptographic algorithm should be used to sign or verify, encrypt or
+decrypt, or digest passed data.
+
+Applications that call OBJ_obj2txt() directly with untrusted data are
+affected, with any version of OpenSSL.  If the use is for the mere purpose
+of display, the severity is considered low.
+
+In OpenSSL 3.0 and newer, this affects the subsystems OCSP, PKCS7/SMIME,
+CMS, CMP/CRMF or TS.  It also impacts anything that processes X.509
+certificates, including simple things like verifying its signature.
+
+The impact on TLS is relatively low, because all versions of OpenSSL have a
+100KiB limit on the peer's certificate chain.  Additionally, this only
+impacts clients, or servers that have explicitly enabled client
+authentication.
+
+In OpenSSL 1.1.1 and 1.0.2, this only affects displaying diverse objects,
+such as X.509 certificates.  This is assumed to not happen in such a way
+that it would cause a Denial of Service, so these versions are considered
+not affected by this issue in such a way that it would be cause for concern,
+and the severity is therefore considered low.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-4203</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 4.9<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0050</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">A read buffer overrun can be triggered in X.509 certificate verification,
+specifically in name constraint checking. Note that this occurs
+after certificate chain signature verification and requires either a
+CA to have signed the malicious certificate or for the application to
+continue certificate verification despite failure to construct a path
+to a trusted issuer.
+
+The read buffer overrun might result in a crash which could lead to
+a denial of service attack. In theory it could also result in the disclosure
+of private memory contents (such as private keys, or sensitive plaintext)
+although we are not aware of any working exploit leading to memory
+contents disclosure as of the time of release of this advisory.
+
+In a TLS client, this can be triggered by connecting to a malicious
+server. In a TLS server, this can be triggered if the server requests
+client authentication and a malicious client connects.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-2097</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 5.3<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0051</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">AES OCB mode for 32-bit x86 platforms using the AES-NI assembly optimised implementation will not encrypt the entirety of the data under some circumstances. This could reveal sixteen bytes of data that was preexisting in the memory that wasn't written. In the special case of "in place" encryption, sixteen bytes of the plaintext would be revealed. Since OpenSSL does not support OCB based cipher suites for TLS and DTLS, they are both unaffected. Fixed in OpenSSL 3.0.5 (Affected 3.0.0-3.0.4). Fixed in OpenSSL 1.1.1q (Affected 1.1.1-1.1.1p).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-4304</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 5.9<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0022</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">A timing based side channel exists in the OpenSSL RSA Decryption implementation
+which could be sufficient to recover a plaintext across a network in a
+Bleichenbacher style attack. To achieve a successful decryption an attacker
+would have to be able to send a very large number of trial messages for
+decryption. The vulnerability affects all RSA padding modes: PKCS#1 v1.5,
+RSA-OEAP and RSASVE.
+
+For example, in a TLS connection, RSA is commonly used by a client to send an
+encrypted pre-master secret to the server. An attacker that had observed a
+genuine connection between a client and a server could use this flaw to send
+trial messages to the server and record the time taken to process them. After a
+sufficiently large number of messages the attacker could recover the pre-master
+secret used for the original connection and thus be able to decrypt the
+application data sent over that connection.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-14847<span style="margin-left: 8px; padding: 2px 8px; background: #dc2626; color: #fff; border-radius: 4px; font-size: 11px;">CISA KEV</span></strong>
+            <span class="high" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">high | CVSS 7.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.5583</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Mismatched length fields in Zlib compressed protocol headers may allow a read of uninitialized heap memory by an unauthenticated client. This issue affects all MongoDB Server v7.0 prior to 7.0.28 versions, MongoDB Server v8.0 versions prior to 8.0.17, MongoDB Server v8.2 versions prior to 8.2.3, MongoDB Server v6.0 versions prior to 6.0.27, MongoDB Server v5.0 versions prior to 5.0.32, MongoDB Server v4.4 versions prior to 4.4.30, MongoDB Server v4.2 versions greater than or equal to 4.2.0, MongoDB Server v4.0 versions greater than or equal to 4.0.0, and MongoDB Server v3.6 versions greater than or equal to 3.6.0.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-3996</strong>
+            <span class="high" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">high | CVSS 7.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0014</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">If an X.509 certificate contains a malformed policy constraint and
+policy processing is enabled, then a write lock will be taken twice
+recursively.  On some operating systems (most widely: Windows) this
+results in a denial of service when the affected process hangs.  Policy
+processing being enabled on a publicly facing server is not considered
+to be a common setup.
+
+Policy processing is enabled by passing the `-policy'
+argument to the command line utilities or by calling the
+`X509_VERIFY_PARAM_set1_policies()' function.
+
+Update (31 March 2023): The description of the policy processing enablement
+was corrected based on CVE-2023-0466.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2009-1390</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0043</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Mutt 1.5.19, when linked against (1) OpenSSL (mutt_ssl.c) or (2) GnuTLS (mutt_ssl_gnutls.c), allows connections when only one TLS certificate in the chain is accepted instead of verifying the entire chain, which allows remote attackers to spoof trusted servers via a man-in-the-middle attack.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-69420</strong>
+            <span class="high" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">high | CVSS 7.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0050</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Issue summary: A type confusion vulnerability exists in the TimeStamp Response
+verification code where an ASN1_TYPE union member is accessed without first
+validating the type, causing an invalid or NULL pointer dereference when
+processing a malformed TimeStamp Response file.
+
+Impact summary: An application calling TS_RESP_verify_response() with a
+malformed TimeStamp Response can be caused to dereference an invalid or
+NULL pointer when reading, resulting in a Denial of Service.
+
+The functions ossl_ess_get_signing_cert() and ossl_ess_get_signing_cert_v2()
+access the signing cert attribute value without validating its type.
+When the type is not V_ASN1_SEQUENCE, this results in accessing invalid memory
+through the ASN1_TYPE union, causing a crash.
+
+Exploiting this vulnerability requires an attacker to provide a malformed
+TimeStamp Response to an application that verifies timestamp responses. The
+TimeStamp protocol (RFC 3161) is not widely used and the impact of the
+exploit is just a Denial of Service. For these reasons the issue was
+assessed as Low severity.
+
+The FIPS modules in 3.5, 3.4, 3.3 and 3.0 are not affected by this issue,
+as the TimeStamp Response implementation is outside the OpenSSL FIPS module
+boundary.
+
+OpenSSL 3.6, 3.5, 3.4, 3.3, 3.0 and 1.1.1 are vulnerable to this issue.
+
+OpenSSL 1.0.2 is not affected by this issue.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-69421</strong>
+            <span class="high" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">high | CVSS 7.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0008</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Issue summary: Processing a malformed PKCS#12 file can trigger a NULL pointer
+dereference in the PKCS12_item_decrypt_d2i_ex() function.
+
+Impact summary: A NULL pointer dereference can trigger a crash which leads to
+Denial of Service for an application processing PKCS#12 files.
+
+The PKCS12_item_decrypt_d2i_ex() function does not check whether the oct
+parameter is NULL before dereferencing it. When called from
+PKCS12_unpack_p7encdata() with a malformed PKCS#12 file, this parameter can
+be NULL, causing a crash. The vulnerability is limited to Denial of Service
+and cannot be escalated to achieve code execution or memory disclosure.
+
+Exploiting this issue requires an attacker to provide a malformed PKCS#12 file
+to an application that processes it. For that reason the issue was assessed as
+Low severity according to our Security Policy.
+
+The FIPS modules in 3.6, 3.5, 3.4, 3.3 and 3.0 are not affected by this issue,
+as the PKCS#12 implementation is outside the OpenSSL FIPS module boundary.
+
+OpenSSL 3.6, 3.5, 3.4, 3.3, 3.0, 1.1.1 and 1.0.2 are vulnerable to this issue.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-5678</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 5.3<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0054</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Issue summary: Generating excessively long X9.42 DH keys or checking
+excessively long X9.42 DH keys or parameters may be very slow.
+
+Impact summary: Applications that use the functions DH_generate_key() to
+generate an X9.42 DH key may experience long delays.  Likewise, applications
+that use DH_check_pub_key(), DH_check_pub_key_ex() or EVP_PKEY_public_check()
+to check an X9.42 DH key or X9.42 DH parameters may experience long delays.
+Where the key or parameters that are being checked have been obtained from
+an untrusted source this may lead to a Denial of Service.
+
+While DH_check() performs all the necessary checks (as of CVE-2023-3817),
+DH_check_pub_key() doesn't make any of these checks, and is therefore
+vulnerable for excessively large P and Q parameters.
+
+Likewise, while DH_generate_key() performs a check for an excessively large
+P, it doesn't check for an excessively large Q.
+
+An application that calls DH_generate_key() or DH_check_pub_key() and
+supplies a key or parameters obtained from an untrusted source could be
+vulnerable to a Denial of Service attack.
+
+DH_generate_key() and DH_check_pub_key() are also called by a number of
+other OpenSSL functions.  An application calling any of those other
+functions may similarly be affected.  The other functions affected by this
+are DH_check_pub_key_ex(), EVP_PKEY_public_check(), and EVP_PKEY_generate().
+
+Also vulnerable are the OpenSSL pkey command line application when using the
+"-pubcheck" option, as well as the OpenSSL genpkey command line application.
+
+The OpenSSL SSL/TLS implementation is not affected by this issue.
+
+The OpenSSL 3.0 and 3.1 FIPS providers are not affected by this issue.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2014-8180</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 5.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0005</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">MongoDB on Red Hat Satellite 6 allows local users to bypass authentication by logging in with an empty password and delete information which can cause a Denial of Service.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2009-3766</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0040</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">mutt_ssl.c in mutt 1.5.16 and other versions before 1.5.19, when OpenSSL is used, does not verify the domain name in the subject's Common Name (CN) field of an X.509 certificate, which allows man-in-the-middle attackers to spoof SSL servers via an arbitrary valid certificate.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-1292</strong>
+            <span class="high" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">high | CVSS 7.3<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.4121</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">The c_rehash script does not properly sanitise shell metacharacters to prevent command injection. This script is distributed by some operating systems in a manner where it is automatically executed. On such operating systems, an attacker could execute arbitrary commands with the privileges of the script. Use of the c_rehash script is considered obsolete and should be replaced by the OpenSSL rehash command line tool. Fixed in OpenSSL 3.0.3 (Affected 3.0.0,3.0.1,3.0.2). Fixed in OpenSSL 1.1.1o (Affected 1.1.1-1.1.1n). Fixed in OpenSSL 1.0.2ze (Affected 1.0.2-1.0.2zd).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2009-3765</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0059</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">mutt_ssl.c in mutt 1.5.19 and 1.5.20, when OpenSSL is used, does not properly handle a '\0' character in a domain name in the subject's Common Name (CN) field of an X.509 certificate, which allows man-in-the-middle attackers to spoof arbitrary SSL servers via a crafted certificate issued by a legitimate Certification Authority, a related issue to CVE-2009-2408.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-68160</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 4.7<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0003</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Issue summary: Writing large, newline-free data into a BIO chain using the
+line-buffering filter where the next BIO performs short writes can trigger
+a heap-based out-of-bounds write.
+
+Impact summary: This out-of-bounds write can cause memory corruption which
+typically results in a crash, leading to Denial of Service for an application.
+
+The line-buffering BIO filter (BIO_f_linebuffer) is not used by default in
+TLS/SSL data paths. In OpenSSL command-line applications, it is typically
+only pushed onto stdout/stderr on VMS systems. Third-party applications that
+explicitly use this filter with a BIO chain that can short-write and that
+write large, newline-free data influenced by an attacker would be affected.
+However, the circumstances where this could happen are unlikely to be under
+attacker control, and BIO_f_linebuffer is unlikely to be handling non-curated
+data controlled by an attacker. For that reason the issue was assessed as
+Low severity.
+
+The FIPS modules in 3.6, 3.5, 3.4, 3.3 and 3.0 are not affected by this issue,
+as the BIO implementation is outside the OpenSSL FIPS module boundary.
+
+OpenSSL 3.6, 3.5, 3.4, 3.3, 3.0, 1.1.1 and 1.0.2 are vulnerable to this issue.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2019-0190</strong>
+            <span class="high" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">high | CVSS 7.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.1739</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">A bug exists in the way mod_ssl handled client renegotiations. A remote attacker could send a carefully crafted request that would cause mod_ssl to enter a loop leading to a denial of service. This bug can be only triggered with Apache HTTP Server version 2.4.37 when using OpenSSL version 1.1.1 or later, due to an interaction in changes to handling of renegotiation attempts.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2024-6119</strong>
+            <span class="high" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">high | CVSS 7.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.1458</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Issue summary: Applications performing certificate name checks (e.g., TLS
+clients checking server certificates) may attempt to read an invalid memory
+address resulting in abnormal termination of the application process.
+
+Impact summary: Abnormal termination of an application can a cause a denial of
+service.
+
+Applications performing certificate name checks (e.g., TLS clients checking
+server certificates) may attempt to read an invalid memory address when
+comparing the expected name with an `otherName` subject alternative name of an
+X.509 certificate. This may result in an exception that terminates the
+application program.
+
+Note that basic certificate chain validation (signatures, dates, ...) is not
+affected, the denial of service can occur only when the application also
+specifies an expected DNS name, Email address or IP address.
+
+TLS servers rarely solicit client certificates, and even when they do, they
+generally don't perform a name check against a reference identifier (expected
+identity), but rather extract the presented identity after checking the
+certificate chain.  So TLS servers are generally not affected and the severity
+of the issue is Moderate.
+
+The FIPS modules in 3.3, 3.2, 3.1 and 3.0 are not affected by this issue.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2024-0727</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 5.5<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0024</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Issue summary: Processing a maliciously formatted PKCS12 file may lead OpenSSL
+to crash leading to a potential Denial of Service attack
+
+Impact summary: Applications loading files in the PKCS12 format from untrusted
+sources might terminate abruptly.
+
+A file in PKCS12 format can contain certificates and keys and may come from an
+untrusted source. The PKCS12 specification allows certain fields to be NULL, but
+OpenSSL does not correctly check for this case. This can lead to a NULL pointer
+dereference that results in OpenSSL crashing. If an application processes PKCS12
+files from an untrusted source using the OpenSSL APIs then that application will
+be vulnerable to this issue.
+
+OpenSSL APIs that are vulnerable to this are: PKCS12_parse(),
+PKCS12_unpack_p7data(), PKCS12_unpack_p7encdata(), PKCS12_unpack_authsafes()
+and PKCS12_newpass().
+
+We have also fixed a similar issue in SMIME_write_PKCS7(). However since this
+function is related to writing data we do not consider it security significant.
+
+The FIPS modules in 3.2, 3.1 and 3.0 are not affected by this issue.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-1434</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 5.9<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0007</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">The OpenSSL 3.0 implementation of the RC4-MD5 ciphersuite incorrectly uses the AAD data as the MAC key. This makes the MAC key trivially predictable. An attacker could exploit this issue by performing a man-in-the-middle attack to modify data being sent from one endpoint to an OpenSSL 3.0 recipient such that the modified data would still pass the MAC integrity check. Note that data sent from an OpenSSL 3.0 endpoint to a non-OpenSSL 3.0 endpoint will always be rejected by the recipient and the connection will fail at that point. Many application protocols require data to be sent from the client to the server first. Therefore, in such a case, only an OpenSSL 3.0 server would be impacted when talking to a non-OpenSSL 3.0 client. If both endpoints are OpenSSL 3.0 then the attacker could modify data being sent in both directions. In this case both clients and servers could be affected, regardless of the application protocol. Note that in the absence of an attacker this bug means that an OpenSSL 3.0 endpoint communicating with a non-OpenSSL 3.0 endpoint will fail to complete the handshake when using this ciphersuite. The confidentiality of data is not impacted by this issue, i.e. an attacker cannot decrypt data that has been encrypted using this ciphersuite - they can only modify it. In order for this attack to work both endpoints must legitimately negotiate the RC4-MD5 ciphersuite. This ciphersuite is not compiled by default in OpenSSL 3.0, and is not available within the default provider or the default ciphersuite list. This ciphersuite will never be used if TLSv1.3 has been negotiated. In order for an OpenSSL 3.0 endpoint to use this ciphersuite the following must have occurred: 1) OpenSSL must have been compiled with the (non-default) compile time option enable-weak-ssl-ciphers 2) OpenSSL must have had the legacy provider explicitly loaded (either through application code or via configuration) 3) The ciphersuite must have been explicitly added to the ciphersuite list 4) The libssl security level must have been set to 0 (default is 1) 5) A version of SSL/TLS below TLSv1.3 must have been negotiated 6) Both endpoints must negotiate the RC4-MD5 ciphersuite in preference to any others that both endpoints have in common Fixed in OpenSSL 3.0.3 (Affected 3.0.0,3.0.1,3.0.2).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-23419</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium | CVSS 4.3<span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0286</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">When multiple server blocks are configured to share the same IP address and port, an attacker can use session resumption to bypass client certificate authentication requirements on these servers. This vulnerability arises when  TLS Session Tickets https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_ticket_key  are used and/or the  SSL session cache https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_cache  are used in the default server and the default server is performing client certificate authentication.  
+
+Note: Software versions which have reached End of Technical Support (EoTS) are not evaluated.</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-0465</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0054</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-0466</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0085</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-0464</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0073</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2020-11022</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0246</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+        <p style="margin-top: 8px; padding: 8px; background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 4px;"><strong>Public Exploits (1):</strong><ul style="margin: 4px 0 0 16px; padding: 0;"><li><a href="https://www.exploit-db.com/exploits/49766" target="_blank" rel="noopener noreferrer">Exploit-DB: https://www.exploit-db.com/exploits/49766</a></li></ul></p>
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2020-11023<span style="margin-left: 8px; padding: 2px 8px; background: #dc2626; color: #fff; border-radius: 4px; font-size: 11px;">CISA KEV</span></strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.3466</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+        <p style="margin-top: 8px; padding: 8px; background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 4px;"><strong>Public Exploits (1):</strong><ul style="margin: 4px 0 0 16px; padding: 0;"><li><a href="https://www.exploit-db.com/exploits/49767" target="_blank" rel="noopener noreferrer">Exploit-DB: https://www.exploit-db.com/exploits/49767</a></li></ul></p>
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-1473</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0027</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-3786</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.2730</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-0401</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0069</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-1343</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0019</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-4450</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0015</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-0286</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.8833</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-3817</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0034</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-3602</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.8351</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-4807</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0067</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-6129</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0342</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-69419</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0009</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-69418</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0001</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-44487<span style="margin-left: 8px; padding: 2px 8px; background: #dc2626; color: #fff; border-radius: 4px; font-size: 11px;">CISA KEV</span></strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.9446</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+        <p style="margin-top: 8px; padding: 8px; background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 4px;"><strong>Public Exploits (1):</strong><ul style="margin: 4px 0 0 16px; padding: 0;"><li><a href="https://www.exploit-db.com/exploits/52426" target="_blank" rel="noopener noreferrer">Exploit-DB: https://www.exploit-db.com/exploits/52426</a></li></ul></p>
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-5363</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0647</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2026-22796</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0023</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2026-22795</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0002</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-12657</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0005</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2019-11358</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0244</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+        <p style="margin-top: 8px; padding: 8px; background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 4px;"><strong>Public Exploits (1):</strong><ul style="margin: 4px 0 0 16px; padding: 0;"><li><a href="https://www.exploit-db.com/exploits/52141" target="_blank" rel="noopener noreferrer">Exploit-DB: https://www.exploit-db.com/exploits/52141</a></li></ul></p>
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-0217</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0086</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-0216</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0085</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-0215</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0043</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2022-2068</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.2022</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2009-3767</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0220</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-2975</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0020</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2025-15467</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0262</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <div style="background: white; border-left: 4px solid #6b7280; padding: 16px; margin: 12px 0; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 16px;">CVE-2023-1255</strong>
+            <span class="medium" style="padding: 4px 12px; background: #f3f4f6; border-radius: 4px;">medium <span style="margin-left: 12px; color: #6b7280;">EPSS: 0.0010</span></span>
+        </div>
+        <p style="margin: 8px 0; color: #374151;">Affects NGINX web server (HTTP/HTTPS services). Host 168.119.238.139 exposes ports [8080, 27017, 8010, 80, 8020 +4 more] running nginx:80, nginx:443, https-simple-new:3001, auto:3002, http-simple-new:8010 (+4 more) (Hetzner Online GmbH).</p>
+        <div style="font-size: 12px; color: #6b7280;">
+            <span>Affected: 168.119.238.139</span> |
+            <span>Source: shodan</span>
+        </div>
+
+
+    </div>
+
+    <h2>Configuration Issues</h2>
+    <table>
+        <tr><th>ID</th><th>Severity</th><th>Category</th><th>Title</th></tr>
+    </table>
+
+    </div>
+</body>
+</html>

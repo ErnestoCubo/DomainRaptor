@@ -6,7 +6,7 @@ import logging
 import math
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich.panel import Panel
@@ -21,6 +21,10 @@ from domainraptor.utils.output import (
     print_info,
     print_success,
 )
+
+if TYPE_CHECKING:
+    from domainraptor.core.types import ScanResult
+    from domainraptor.storage.repository import ScanRepository
 
 app = typer.Typer(
     name="report",
@@ -408,6 +412,85 @@ def _exploit_source_label(url: str) -> str:
     return "Exploit"
 
 
+def _build_merged_scan(repo: ScanRepository, target: str) -> ScanResult | None:
+    """Combine the latest scan of each scan_type for ``target`` into one ScanResult.
+
+    Reports default to "show me everything we know about this target". Picking
+    only the single most recent scan hides data captured by earlier scans of a
+    different type (e.g. an ``assess`` scan's config_issues are lost as soon as
+    a later ``discover`` scan exists). We deduplicate by stable keys per field
+    so re-runs don't inflate counts.
+    """
+    from domainraptor.core.types import ScanResult
+
+    # Pull a generous window of recent scans and keep the newest per scan_type.
+    recent = repo.list_by_target(target, limit=20)
+    if not recent:
+        return None
+
+    latest_by_type: dict[str, ScanResult] = {}
+    for s in recent:  # list_by_target returns newest-first
+        if s.scan_type not in latest_by_type:
+            latest_by_type[s.scan_type] = s
+
+    # If we only have one scan_type, no merging needed — return it as-is.
+    if len(latest_by_type) == 1:
+        return next(iter(latest_by_type.values()))
+
+    newest = recent[0]
+    merged = ScanResult(
+        target=target,
+        scan_type="aggregated",
+        started_at=min(s.started_at for s in latest_by_type.values()),
+        completed_at=newest.completed_at,
+        status=newest.status,
+    )
+
+    seen_assets: set[tuple[str, str]] = set()
+    seen_dns: set[tuple[str, str]] = set()
+    seen_certs: set[tuple[str, str]] = set()
+    seen_services: set[tuple[str, int, str]] = set()
+    seen_vulns: set[tuple[str, str]] = set()
+    seen_issues: set[tuple[str, str]] = set()
+
+    for s in latest_by_type.values():
+        for a in s.assets:
+            key = (a.type.value, a.value)
+            if key not in seen_assets:
+                seen_assets.add(key)
+                merged.assets.append(a)
+        for r in s.dns_records:
+            key = (r.record_type, str(r.value))
+            if key not in seen_dns:
+                seen_dns.add(key)
+                merged.dns_records.append(r)
+        for c in s.certificates:
+            key = (c.subject or "", c.not_after.isoformat() if c.not_after else "")
+            if key not in seen_certs:
+                seen_certs.add(key)
+                merged.certificates.append(c)
+        for svc in s.services:
+            key = (svc.metadata.get("ip", ""), int(svc.port or 0), svc.service_name or "")
+            if key not in seen_services:
+                seen_services.add(key)
+                merged.services.append(svc)
+        for v in s.vulnerabilities:
+            key = (v.id, v.affected_asset or "")
+            if key not in seen_vulns:
+                seen_vulns.add(key)
+                merged.vulnerabilities.append(v)
+        for i in s.config_issues:
+            key = (i.id, i.affected_asset or "")
+            if key not in seen_issues:
+                seen_issues.add(key)
+                merged.config_issues.append(i)
+        # Carry forward metadata; later (older) scans don't overwrite newer keys.
+        for k, val in s.metadata.items():
+            merged.metadata.setdefault(k, val)
+
+    return merged
+
+
 def _build_report_data(
     target: str,
     include_history: bool,
@@ -427,7 +510,12 @@ def _build_report_data(
         except ValueError:
             logging.debug("Non-numeric scan_id '%s', treating as not found", scan_id)
     else:
-        scan = repo.get_latest_for_target(target)
+        # Merge the most recent scan of each scan_type for this target so the
+        # report reflects the union of evidence collected (e.g. assess gives
+        # config_issues/vulns, discover/recon give assets/services/certs).
+        # Otherwise the latest single scan would zero out all the categories
+        # populated by earlier scans of a different type.
+        scan = _build_merged_scan(repo, target)
 
     if not scan:
         # Return empty report structure if no scan found
@@ -446,6 +534,7 @@ def _build_report_data(
                 "high": 0,
                 "medium": 0,
                 "low": 0,
+                "info": 0,
                 "config_issues": 0,
             },
             "assets": [],
@@ -455,8 +544,9 @@ def _build_report_data(
             "config_issues": [],
         }
 
-    # Count vulnerabilities by severity
-    vuln_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    # Count vulnerabilities by severity (include INFO so the pie chart total
+    # matches the headline `total_vulnerabilities`).
+    vuln_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
     for vuln in scan.vulnerabilities:
         severity = vuln.severity.value.lower()
         if severity in vuln_counts:
@@ -587,6 +677,7 @@ def _build_report_data(
             "high": vuln_counts["high"],
             "medium": vuln_counts["medium"],
             "low": vuln_counts["low"],
+            "info": vuln_counts["info"],
             "config_issues": len(scan.config_issues),
             "dns_records": len(scan.dns_records),
         },
@@ -913,7 +1004,8 @@ def _generate_vuln_chart_svg(summary: dict) -> str:
     high = summary.get("high", 0)
     medium = summary.get("medium", 0)
     low = summary.get("low", 0)
-    total = critical + high + medium + low
+    info = summary.get("info", 0)
+    total = critical + high + medium + low + info
 
     if total == 0:
         return """<svg width="160" height="160" viewBox="0 0 160 160">
@@ -922,8 +1014,8 @@ def _generate_vuln_chart_svg(summary: dict) -> str:
         </svg>"""
 
     # Calculate percentages and arc positions
-    colors = ["#dc2626", "#ea580c", "#ca8a04", "#2563eb"]
-    values = [critical, high, medium, low]
+    colors = ["#dc2626", "#ea580c", "#ca8a04", "#2563eb", "#6b7280"]
+    values = [critical, high, medium, low, info]
 
     paths = []
     start_angle = -90  # Start from top
@@ -1012,6 +1104,7 @@ def _format_html_executive(data: dict, risk: dict, risk_color: str, vuln_chart: 
             <div class="legend-item"><div class="legend-color" style="background: #ea580c;"></div> High: {high_count}</div>
             <div class="legend-item"><div class="legend-color" style="background: #ca8a04;"></div> Medium: {summary.get("medium", 0)}</div>
             <div class="legend-item"><div class="legend-color" style="background: #2563eb;"></div> Low: {summary.get("low", 0)}</div>
+            <div class="legend-item"><div class="legend-color" style="background: #6b7280;"></div> Info: {summary.get("info", 0)}</div>
         </div>
     </div>
 
@@ -1064,6 +1157,7 @@ def _format_html_technical(data: dict, risk: dict, risk_color: str, vuln_chart: 
             <div class="legend-item"><div class="legend-color" style="background: #ea580c;"></div> High: {summary.get("high", 0)}</div>
             <div class="legend-item"><div class="legend-color" style="background: #ca8a04;"></div> Medium: {summary.get("medium", 0)}</div>
             <div class="legend-item"><div class="legend-color" style="background: #2563eb;"></div> Low: {summary.get("low", 0)}</div>
+            <div class="legend-item"><div class="legend-color" style="background: #6b7280;"></div> Info: {summary.get("info", 0)}</div>
         </div>
     </div>
 """
@@ -1414,6 +1508,7 @@ def _format_html_full(data: dict, risk: dict, risk_color: str, vuln_chart: str) 
             <div class="legend-item"><div class="legend-color" style="background: #ea580c;"></div> High: {summary.get("high", 0)}</div>
             <div class="legend-item"><div class="legend-color" style="background: #ca8a04;"></div> Medium: {summary.get("medium", 0)}</div>
             <div class="legend-item"><div class="legend-color" style="background: #2563eb;"></div> Low: {summary.get("low", 0)}</div>
+            <div class="legend-item"><div class="legend-color" style="background: #6b7280;"></div> Info: {summary.get("info", 0)}</div>
         </div>
     </div>
 
