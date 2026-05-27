@@ -32,6 +32,8 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class ReconDepth(str, Enum):
     """Reconnaissance depth level."""
@@ -305,8 +307,12 @@ def _resolve_ips_for_recon(result: ScanResult, limit: int | None) -> None:
                         ip_asset.parent = subdomain_asset.value
                         if ip_asset not in result.assets:
                             result.assets.append(ip_asset)
-            except Exception:  # noqa: PERF203, S112
-                continue  # Skip failed resolutions
+            except Exception as exc:  # noqa: PERF203
+                # Record per-subdomain failures instead of silently passing
+                # (Bandit B112). Resolution failures are expected for some
+                # hosts so we continue with the rest.
+                result.errors.append(f"IP resolution failed for {subdomain_asset.value}: {exc}")
+                continue
 
     except Exception as e:
         result.errors.append(f"IP resolution failed: {e}")
@@ -343,8 +349,11 @@ def _fetch_nvd_descriptions(cve_ids: list[str], progress: Any, task: Any) -> dic
                 except NVDRateLimitError:  # noqa: PERF203
                     # Stop fetching on rate limit, use what we have
                     break
-                except Exception:  # noqa: S112
-                    continue  # Skip individual failures
+                except Exception as exc:
+                    # Log per-CVE failures (Bandit B112) and continue with
+                    # the remaining identifiers.
+                    logger.warning("NVD lookup failed for %s: %s", cve_id, exc)
+                    continue
         finally:
             client.close()
 

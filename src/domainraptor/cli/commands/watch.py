@@ -422,8 +422,9 @@ def _perform_initial_scan(
         try:
             crt_client = CrtShClient()
             scan.assets.extend(crt_client.query(target))
-        except Exception:  # noqa: S110
-            pass  # Continue even if crt.sh fails
+        except Exception as exc:
+            # Record crt.sh failure instead of silent pass (Bandit B110).
+            scan.errors.append(f"crt.sh query failed: {exc}")
         progress.update(task, advance=40)
 
         # Get certificates
@@ -432,8 +433,9 @@ def _perform_initial_scan(
         try:
             cert_scanner = CertScanner()
             scan.certificates = cert_scanner.get_certificate(target)
-        except Exception:  # noqa: S110
-            pass
+        except Exception as exc:
+            # Record certificate scan failure (Bandit B110).
+            scan.errors.append(f"Certificate scan failed: {exc}")
         progress.update(task, advance=20)
 
         scan.status = "completed"
@@ -487,8 +489,9 @@ def _check_target(watch_target: WatchTarget, config: AppConfig) -> list[Change]:
         try:
             crt_client = CrtShClient()
             new_scan.assets.extend(crt_client.query(watch_target.target))
-        except Exception:  # noqa: S110
-            pass
+        except Exception as exc:
+            # Record crt.sh failure (Bandit B110).
+            new_scan.errors.append(f"crt.sh query failed: {exc}")
 
         # Certificate check
         from domainraptor.discovery.cert_scanner import CertScanner
@@ -496,8 +499,9 @@ def _check_target(watch_target: WatchTarget, config: AppConfig) -> list[Change]:
         try:
             cert_scanner = CertScanner()
             new_scan.certificates = cert_scanner.get_certificate(watch_target.target)
-        except Exception:  # noqa: S110
-            pass
+        except Exception as exc:
+            # Record certificate scan failure (Bandit B110).
+            new_scan.errors.append(f"Certificate scan failed: {exc}")
 
         new_scan.status = "completed"
         new_scan.completed_at = datetime.now()
