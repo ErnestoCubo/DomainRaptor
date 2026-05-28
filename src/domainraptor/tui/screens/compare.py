@@ -35,7 +35,7 @@ class CompareScreen(Widget):
                 yield Label("Target:", id="arg1-label")
                 yield Input(placeholder="example.com", id="arg1")
             with Horizontal(classes="arg-row", id="row-arg2"):
-                yield Label("Arg 2:")
+                yield Label("Arg 2:", id="arg2-label")
                 yield Input(placeholder="(optional) scan-id or target", id="arg2")
             # Run button is provided by ScanRunner; no separate one here.
             yield ScanRunner(id="runner")
@@ -50,12 +50,24 @@ class CompareScreen(Widget):
     def _apply_subcmd_visibility(self, sub: str) -> None:
         # All subcommands need a target/scan-id, so 'arg1' is always visible.
         # 'history' takes exactly one positional (target) — hide arg2.
-        # 'scans' takes two scan-ids; 'targets' takes two targets — show arg2.
+        # 'scans' takes two scan-ids; 'targets' takes two targets — show arg2
+        # and label/placeholder it accordingly (it is REQUIRED for those two,
+        # not optional, so do not advertise it as such).
         arg1_label = "Target:" if sub in {"history", "targets"} else "Scan-id:"
         arg1_placeholder = "example.com" if sub in {"history", "targets"} else "scan-id (e.g. 42)"
         with contextlib.suppress(Exception):
             self.query_one("#arg1-label", Label).update(arg1_label)
             self.query_one("#arg1", Input).placeholder = arg1_placeholder
+
+        if sub == "targets":
+            arg2_label, arg2_placeholder = "Target B:", "other.example.com"
+        elif sub == "scans":
+            arg2_label, arg2_placeholder = "Scan B:", "scan-id (e.g. 43)"
+        else:  # history
+            arg2_label, arg2_placeholder = "Arg 2:", "(unused for history)"
+        with contextlib.suppress(Exception):
+            self.query_one("#arg2-label", Label).update(arg2_label)
+            self.query_one("#arg2", Input).placeholder = arg2_placeholder
         with contextlib.suppress(Exception):
             self.query_one("#row-arg2").display = sub != "history"
 
@@ -72,6 +84,10 @@ class CompareScreen(Widget):
         if not a:
             label = "target" if sub in {"history", "targets"} else "scan-id"
             runner.append(f"[yellow]Please provide a {label} in Arg 1.[/yellow]")
+            return
+        if sub in {"scans", "targets"} and not b:
+            label = "second target" if sub == "targets" else "second scan-id"
+            runner.append(f"[yellow]Please provide a {label} in Arg 2.[/yellow]")
             return
         args = ["compare", sub, a]
         if b and sub != "history":
