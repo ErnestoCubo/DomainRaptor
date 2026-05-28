@@ -152,7 +152,11 @@ class ScanRunner(Vertical):
         env = {**os.environ, "PYTHONUNBUFFERED": "1", "NO_COLOR": "1"}
 
         try:
-            proc = subprocess.Popen(
+            # argv is a fixed list (sys.executable + module path + --no-banner
+            # + TUI-built args), shell=False, no untrusted input concatenation.
+            # ruff S603 is suppressed for this file in ruff.toml; mirror the
+            # justification for Bandit/GHAS with the nosec directive below.
+            proc = subprocess.Popen(  # nosec B603
                 [sys.executable, "-m", "domainraptor.cli.main", "--no-banner", *args],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
