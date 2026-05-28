@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import socket
 import ssl
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 
 from domainraptor.assessment.base import AssessmentConfig, ConfigurationChecker
 from domainraptor.core.types import ConfigIssue, SeverityLevel
@@ -67,17 +68,15 @@ class SSLAnalyzer(ConfigurationChecker):
     def assess(self, target: str) -> list[ConfigIssue]:
         """Assess SSL/TLS configuration of target."""
         issues: list[ConfigIssue] = []
-        
+
         # Parse target (domain:port)
         hostname = target
         port = self.port
         if ":" in target:
             parts = target.rsplit(":", 1)
             hostname = parts[0]
-            try:
+            with contextlib.suppress(ValueError):
                 port = int(parts[1])
-            except ValueError:
-                pass
 
         logger.info(f"Analyzing SSL/TLS for {hostname}:{port}")
 
@@ -117,37 +116,27 @@ class SSLAnalyzer(ConfigurationChecker):
         context.verify_mode = ssl.CERT_REQUIRED
 
         try:
-            with socket.create_connection(
-                (hostname, port), timeout=self.config.timeout
-            ) as sock:
-                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                    # Get connection info
-                    ssl_info.protocol_version = ssock.version() or ""
-                    cipher = ssock.cipher()
-                    if cipher:
-                        ssl_info.cipher_name = cipher[0]
-                        ssl_info.cipher_bits = cipher[2]
+            with (
+                socket.create_connection((hostname, port), timeout=self.config.timeout) as sock,
+                context.wrap_socket(sock, server_hostname=hostname) as ssock,
+            ):
+                # Get connection info
+                ssl_info.protocol_version = ssock.version() or ""
+                cipher = ssock.cipher()
+                if cipher:
+                    ssl_info.cipher_name = cipher[0]
+                    ssl_info.cipher_bits = cipher[2]
 
-                    # Get certificate info
-                    cert = ssock.getpeercert()
-                    if cert:
-                        ssl_info.cert_subject = self._parse_cert_name(
-                            cert.get("subject", ())
-                        )
-                        ssl_info.cert_issuer = self._parse_cert_name(
-                            cert.get("issuer", ())
-                        )
-                        ssl_info.cert_not_before = self._parse_cert_date(
-                            cert.get("notBefore")
-                        )
-                        ssl_info.cert_not_after = self._parse_cert_date(
-                            cert.get("notAfter")
-                        )
-                        # Get SAN
-                        san = cert.get("subjectAltName", ())
-                        ssl_info.cert_san = [
-                            name for _, name in san if _ == "DNS"
-                        ]
+                # Get certificate info
+                cert = ssock.getpeercert()
+                if cert:
+                    ssl_info.cert_subject = self._parse_cert_name(cert.get("subject", ()))
+                    ssl_info.cert_issuer = self._parse_cert_name(cert.get("issuer", ()))
+                    ssl_info.cert_not_before = self._parse_cert_date(cert.get("notBefore"))
+                    ssl_info.cert_not_after = self._parse_cert_date(cert.get("notAfter"))
+                    # Get SAN
+                    san = cert.get("subjectAltName", ())
+                    ssl_info.cert_san = [name for _, name in san if _ == "DNS"]
 
         except ssl.SSLCertVerificationError as e:
             ssl_info.has_valid_cert = False
@@ -155,7 +144,7 @@ class SSLAnalyzer(ConfigurationChecker):
             logger.warning(f"Certificate verification failed: {e}")
             # Try without verification to still get info
             return self._get_ssl_info_insecure(hostname, port, ssl_info)
-        except (socket.error, ssl.SSLError, TimeoutError) as e:
+        except (OSError, ssl.SSLError, TimeoutError) as e:
             logger.error(f"SSL connection failed: {e}")
             return None
 
@@ -167,32 +156,28 @@ class SSLAnalyzer(ConfigurationChecker):
 
         return ssl_info
 
-    def _get_ssl_info_insecure(
-        self, hostname: str, port: int, ssl_info: SSLInfo
-    ) -> SSLInfo:
+    def _get_ssl_info_insecure(self, hostname: str, port: int, ssl_info: SSLInfo) -> SSLInfo:
         """Get SSL info without certificate verification."""
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
 
         try:
-            with socket.create_connection(
-                (hostname, port), timeout=self.config.timeout
-            ) as sock:
-                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                    ssl_info.protocol_version = ssock.version() or ""
-                    cipher = ssock.cipher()
-                    if cipher:
-                        ssl_info.cipher_name = cipher[0]
-                        ssl_info.cipher_bits = cipher[2]
+            with (
+                socket.create_connection((hostname, port), timeout=self.config.timeout) as sock,
+                context.wrap_socket(sock, server_hostname=hostname) as ssock,
+            ):
+                ssl_info.protocol_version = ssock.version() or ""
+                cipher = ssock.cipher()
+                if cipher:
+                    ssl_info.cipher_name = cipher[0]
+                    ssl_info.cipher_bits = cipher[2]
         except Exception as e:
             logger.error(f"Insecure SSL connection also failed: {e}")
 
         return ssl_info
 
-    def _test_protocol(
-        self, hostname: str, port: int, version: ssl.TLSVersion
-    ) -> bool:
+    def _test_protocol(self, hostname: str, port: int, version: ssl.TLSVersion) -> bool:
         """Test if server supports a specific TLS version."""
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname = False
@@ -201,22 +186,17 @@ class SSLAnalyzer(ConfigurationChecker):
         context.maximum_version = version
 
         try:
-            with socket.create_connection(
-                (hostname, port), timeout=self.config.timeout
-            ) as sock:
-                with context.wrap_socket(sock, server_hostname=hostname):
-                    return True
-        except (ssl.SSLError, socket.error, TimeoutError):
+            with (
+                socket.create_connection((hostname, port), timeout=self.config.timeout) as sock,
+                context.wrap_socket(sock, server_hostname=hostname),
+            ):
+                return True
+        except (OSError, ssl.SSLError, TimeoutError):
             return False
 
     def _parse_cert_name(self, name: tuple) -> dict[str, str]:
         """Parse certificate subject/issuer tuple."""
-        result = {}
-        for item in name:
-            if item:
-                for key, value in item:
-                    result[key] = value
-        return result
+        return {key: value for item in name if item for key, value in item}
 
     def _parse_cert_date(self, date_str: str | None) -> datetime | None:
         """Parse certificate date string."""
@@ -397,8 +377,6 @@ class SSLAnalyzer(ConfigurationChecker):
         if ":" in target:
             parts = target.rsplit(":", 1)
             hostname = parts[0]
-            try:
+            with contextlib.suppress(ValueError):
                 port = int(parts[1])
-            except ValueError:
-                pass
         return self._get_ssl_info(hostname, port)

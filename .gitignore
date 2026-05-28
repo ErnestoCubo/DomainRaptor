@@ -40,7 +40,6 @@ env/
 # UV Package Manager
 # ========================
 .uv/
-uv.lock
 
 # ========================
 # IDE / Editors
@@ -149,3 +148,7 @@ docs/_build/
 # ========================
 .docker/
 docker-compose.override.yml
+
+# Generated reports
+report.html
+*.report.html

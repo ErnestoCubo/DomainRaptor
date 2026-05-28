@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
+import contextlib
+import re
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
 from domainraptor.assessment import (
-    AssessmentOptions,
-    AssessmentOrchestrator,
     DnsSecurityChecker,
     HeadersChecker,
     SSLAnalyzer,
 )
-from domainraptor.core.config import AppConfig, ScanMode
+from domainraptor.core.config import AppConfig
 from domainraptor.core.types import (
-    ConfigIssue,
     ScanResult,
     SeverityLevel,
     Vulnerability,
@@ -44,9 +43,13 @@ app = typer.Typer(
 def assess_callback(
     ctx: typer.Context,
     target: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--target", "-T", help="Target domain or IP to assess"),
     ] = None,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
 ) -> None:
     """
     🛡️ Assess security posture of a target.
@@ -117,6 +120,17 @@ def assess_callback(
         console.print()
         print_config_issues_table(result.config_issues)
 
+    # Save to database
+    if save:
+        try:
+            from domainraptor.storage import ScanRepository
+
+            repo = ScanRepository()
+            scan_id = repo.save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as e:
+            print_warning(f"Failed to save results: {e}")
+
 
 # ============================================
 # Subcommands
@@ -141,8 +155,16 @@ def assess_vulns_cmd(
     ] = SeverityLevel.LOW,
     exploit_check: Annotated[
         bool,
-        typer.Option("--exploits", "-e", help="Check for known exploits"),
-    ] = False,
+        typer.Option(
+            "--exploits/--no-exploits",
+            "-e",
+            help="Enrich vulnerabilities with CISA KEV, EPSS and Exploit-DB data",
+        ),
+    ] = True,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
 ) -> None:
     """
     🔓 Check for known vulnerabilities.
@@ -161,7 +183,7 @@ def assess_vulns_cmd(
         [dim]# Include exploit availability[/dim]
         domainraptor assess vulns example.com --exploits
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = ctx.obj.get("config", AppConfig())
 
     print_info(f"Vulnerability assessment for: [bold]{target}[/bold]")
     print_info(f"Min severity: {min_severity.value} | CVE check: {cve_check}")
@@ -186,9 +208,26 @@ def assess_vulns_cmd(
             _query_nvd(target, result, min_severity)
             progress.update(task, advance=40)
 
-        # Exploit-db check
-        if exploit_check:
-            progress.update(task, description="Checking exploit databases...")
+        # Backfill any CVE that still lacks description/severity/CVSS, so the
+        # downstream report always has rich data regardless of which path
+        # (Shodan, direct, fallback) populated the vulnerability list.
+        if result.vulnerabilities:
+            _backfill_nvd_descriptions(result.vulnerabilities)
+
+        # Exploit enrichment (KEV / EPSS / Exploit-DB)
+        enrichment_summary = None
+        if exploit_check and result.vulnerabilities:
+            progress.update(task, description="Enriching with KEV / EPSS / Exploit-DB...")
+            try:
+                from domainraptor.exploitation import ExploitEnricher
+
+                enricher = ExploitEnricher()
+                enrichment_summary = enricher.enrich(result.vulnerabilities)
+            except Exception as exc:  # enrichment must never abort scan
+                print_warning(f"Exploit enrichment failed: {exc}")
+                result.errors.append(f"exploit_enrichment: {exc}")
+            progress.update(task, advance=20)
+        else:
             progress.update(task, advance=20)
 
         progress.update(task, advance=10)
@@ -199,6 +238,12 @@ def assess_vulns_cmd(
     # Output
     console.print()
     print_scan_summary(result)
+
+    # Show errors if any
+    if result.errors:
+        console.print()
+        for error in result.errors:
+            print_warning(error)
 
     if result.vulnerabilities:
         console.print()
@@ -212,8 +257,40 @@ def assess_vulns_cmd(
         console.print("\n[bold]Summary by Severity:[/bold]")
         for sev, count in sorted(by_severity.items()):
             console.print(f"  {sev.upper()}: {count}")
+
+        if enrichment_summary is not None:
+            console.print("\n[bold]Exploit Enrichment:[/bold]")
+            console.print(
+                f"  CISA KEV: {enrichment_summary.in_kev}/{enrichment_summary.total}"
+                f"  |  EPSS≥0.5: {enrichment_summary.high_epss}"
+                f"  |  With public exploit: {enrichment_summary.with_exploits}"
+            )
+            # Surface exploit references inline so the user sees source + URL
+            refs_shown = False
+            for vuln in result.vulnerabilities:
+                refs = getattr(vuln, "exploit_refs", None) or []
+                if not refs:
+                    continue
+                if not refs_shown:
+                    console.print("\n[bold]Exploit References:[/bold]")
+                    refs_shown = True
+                console.print(f"  [cyan]{vuln.id}[/cyan]")
+                for url in refs:
+                    source = _exploit_source_label(url)
+                    console.print(f"    - {source}: {url}")
     else:
         print_success("No vulnerabilities found!")
+
+    # Persist to database so reports / risk recalc can use the enriched data
+    if save:
+        try:
+            from domainraptor.storage import ScanRepository
+
+            repo = ScanRepository()
+            scan_id = repo.save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as exc:
+            print_warning(f"Failed to save results: {exc}")
 
 
 @app.command("config")
@@ -221,12 +298,16 @@ def assess_config_cmd(
     ctx: typer.Context,
     target: Annotated[str, typer.Argument(help="Target domain or IP")],
     category: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--category", "-c", help="Check specific category: ssl, dns, headers, all"),
     ] = "all",
     best_practices: Annotated[
         bool,
         typer.Option("--best-practices", "-b", help="Check against security best practices"),
+    ] = True,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
     ] = True,
 ) -> None:
     """
@@ -252,7 +333,7 @@ def assess_config_cmd(
         [dim]# DNS security check[/dim]
         domainraptor assess config example.com --category dns
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = ctx.obj.get("config", AppConfig())
 
     print_info(f"Configuration assessment for: [bold]{target}[/bold]")
     print_info(f"Category: {category}")
@@ -302,6 +383,16 @@ def assess_config_cmd(
     else:
         print_success("No configuration issues found!")
 
+    # Persist so downstream commands (compare, report, exploits) can see results.
+    if save:
+        try:
+            from domainraptor.storage import ScanRepository
+
+            scan_id = ScanRepository().save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as exc:
+            print_warning(f"Failed to save results: {exc}")
+
 
 @app.command("outdated")
 def assess_outdated_cmd(
@@ -311,6 +402,10 @@ def assess_outdated_cmd(
         bool,
         typer.Option("--include-minor", "-m", help="Include minor version updates"),
     ] = False,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
 ) -> None:
     """
     📦 Check for outdated software versions.
@@ -326,7 +421,7 @@ def assess_outdated_cmd(
         [dim]# Include minor updates[/dim]
         domainraptor assess outdated example.com --include-minor
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = ctx.obj.get("config", AppConfig())
 
     print_info(f"Outdated software check for: [bold]{target}[/bold]")
 
@@ -358,6 +453,15 @@ def assess_outdated_cmd(
     else:
         print_success("All detected software is up to date!")
 
+    if save:
+        try:
+            from domainraptor.storage import ScanRepository
+
+            scan_id = ScanRepository().save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as exc:
+            print_warning(f"Failed to save results: {exc}")
+
 
 # ============================================
 # Internal assessment functions
@@ -375,28 +479,19 @@ def _assess_vulnerabilities(target: str, result: ScanResult, config: AppConfig) 
 def _assess_configuration(target: str, result: ScanResult, config: AppConfig) -> None:
     """Perform configuration assessment using real checkers."""
     # SSL/TLS check
-    try:
-        with SSLAnalyzer() as ssl_checker:
-            issues = ssl_checker.assess_safe(target)
-            result.config_issues.extend(issues)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception), SSLAnalyzer() as ssl_checker:
+        issues = ssl_checker.assess_safe(target)
+        result.config_issues.extend(issues)
 
     # DNS security check
-    try:
-        with DnsSecurityChecker() as dns_checker:
-            issues = dns_checker.assess_safe(target)
-            result.config_issues.extend(issues)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception), DnsSecurityChecker() as dns_checker:
+        issues = dns_checker.assess_safe(target)
+        result.config_issues.extend(issues)
 
     # HTTP headers check
-    try:
-        with HeadersChecker() as headers_checker:
-            issues = headers_checker.assess_safe(target)
-            result.config_issues.extend(issues)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception), HeadersChecker() as headers_checker:
+        issues = headers_checker.assess_safe(target)
+        result.config_issues.extend(issues)
 
 
 def _assess_outdated(target: str, result: ScanResult, config: AppConfig) -> None:
@@ -406,11 +501,309 @@ def _assess_outdated(target: str, result: ScanResult, config: AppConfig) -> None
     pass
 
 
+def _exploit_source_label(url: str) -> str:
+    """Derive a human-readable source label from an exploit reference URL."""
+    lowered = url.lower()
+    if "exploit-db.com" in lowered:
+        return "Exploit-DB"
+    if "github.com" in lowered:
+        return "GitHub"
+    if "metasploit" in lowered or "rapid7.com" in lowered:
+        return "Metasploit"
+    if "packetstormsecurity" in lowered:
+        return "Packet Storm"
+    if "0day.today" in lowered:
+        return "0day.today"
+    return "Exploit"
+
+
 def _query_nvd(target: str, result: ScanResult, min_severity: SeverityLevel) -> None:
-    """Query NVD for vulnerabilities."""
-    # NVD API requires knowing specific software/versions
-    # This needs service detection first
-    pass
+    """Query Shodan for services and enrich with NVD CVE data.
+
+    Strategy:
+    1. Resolve target to IPs
+    2. Query Shodan for host info (services, ports, known CVEs)
+    3. Enrich CVEs with NVD data (description, CVSS score, severity)
+    """
+    import os
+    import socket
+
+    shodan_key = os.environ.get("SHODAN_API_KEY")
+    if not shodan_key:
+        result.errors.append(
+            "Shodan API key not configured. Run: domainraptor config set SHODAN_API_KEY <key>"
+        )
+        return
+
+    # Resolve target to IPs
+    ips_to_check: list[str] = []
+    try:
+        socket.inet_aton(target)
+        ips_to_check.append(target)
+    except OSError:
+        try:
+            _, _, ip_list = socket.gethostbyname_ex(target)
+            ips_to_check.extend(ip_list)
+        except socket.gaierror:
+            result.errors.append(f"Could not resolve domain: {target}")
+            return
+
+    if not ips_to_check:
+        result.errors.append(f"No IPs found for target: {target}")
+        return
+
+    try:
+        from domainraptor.discovery.shodan_client import ShodanClient
+
+        shodan = ShodanClient(api_key=shodan_key)
+
+        severity_order = {
+            SeverityLevel.CRITICAL: 4,
+            SeverityLevel.HIGH: 3,
+            SeverityLevel.MEDIUM: 2,
+            SeverityLevel.LOW: 1,
+            SeverityLevel.INFO: 0,
+        }
+        min_sev_value = severity_order.get(min_severity, 0)
+
+        # Collect all CVEs - use helper function to avoid try-except in loop
+        all_cves, errors = _collect_cves_from_ips(shodan, ips_to_check[:10])
+        result.errors.extend(errors)
+
+        if not all_cves:
+            return  # No CVEs found
+
+        # Enrich with NVD data (reusing pattern from recon.py)
+        nvd_info = _fetch_nvd_for_assess(list(all_cves.keys()))
+
+        for cve_id, context in all_cves.items():
+            nvd_data = nvd_info.get(cve_id)
+
+            if nvd_data:
+                desc = nvd_data.description
+                severity = SeverityLevel(nvd_data.severity.lower())
+                cvss_score = nvd_data.cvss_v3_score
+            else:
+                # Fallback description with context
+                desc = _build_cve_description(
+                    cve_id,
+                    context["ip"],
+                    context["services_summary"],
+                    context["host_result"],
+                )
+                severity = SeverityLevel.MEDIUM
+                cvss_score = None
+
+            # Filter by minimum severity
+            if severity_order.get(severity, 0) < min_sev_value:
+                continue
+
+            result.vulnerabilities.append(
+                Vulnerability(
+                    id=cve_id,
+                    title=f"CVE {cve_id}",
+                    severity=severity,
+                    description=desc,
+                    affected_asset=context["ip"],
+                    source="shodan+nvd" if nvd_data else "shodan",
+                    detected_at=datetime.now(),
+                    cvss_score=cvss_score,
+                )
+            )
+
+    except ImportError:
+        result.errors.append("Shodan client not available")
+
+
+def _collect_cves_from_ips(shodan, ips: list[str]) -> tuple[dict[str, dict], list[str]]:
+    """Collect CVEs from Shodan for a list of IPs.
+
+    Returns:
+        Tuple of (cves_dict, errors_list)
+    """
+    all_cves: dict[str, dict] = {}
+    errors: list[str] = []
+
+    for ip in ips:
+        cve_data, error = _fetch_shodan_host_cves(shodan, ip)
+        if error:
+            errors.append(error)
+        all_cves.update(cve_data)
+
+    return all_cves, errors
+
+
+def _fetch_shodan_host_cves(shodan, ip: str) -> tuple[dict[str, dict], str | None]:
+    """Fetch CVEs for a single IP from Shodan.
+
+    Returns:
+        Tuple of (cves_dict, error_message or None)
+    """
+    try:
+        host_result = shodan.host_info(ip)
+
+        # Build services summary for context
+        services_summary = ", ".join(
+            f"{svc.service_name or 'unknown'}:{svc.port}" for svc in host_result.services[:5]
+        )
+        if len(host_result.services) > 5:
+            services_summary += f" (+{len(host_result.services) - 5} more)"
+
+        cves = {}
+        for cve_id in host_result.vulns:
+            if cve_id not in cves:
+                cves[cve_id] = {
+                    "ip": ip,
+                    "services_summary": services_summary,
+                    "host_result": host_result,
+                }
+
+        return cves, None
+
+    except Exception as e:
+        return {}, f"Shodan lookup failed for {ip}: {e}"
+
+
+def _fetch_nvd_for_assess(cve_ids: list[str]) -> dict:
+    """Fetch CVE details from NVD API.
+
+    Reuses NVDClient from discovery module.
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    if not cve_ids:
+        return {}
+
+    try:
+        from domainraptor.discovery.nvd_client import NVDClient
+
+        client = NVDClient()
+        results = {}
+
+        try:
+            for cve_id in cve_ids:
+                cve_info, should_stop = _fetch_single_cve(client, cve_id, logger)
+                if cve_info:
+                    results[cve_id] = cve_info
+                if should_stop:
+                    break
+        finally:
+            client.close()
+
+        return results
+
+    except ImportError:
+        return {}
+    except Exception:
+        return {}
+
+
+def _fetch_single_cve(client, cve_id: str, logger) -> tuple[object | None, bool]:
+    """Fetch a single CVE from NVD.
+
+    Returns:
+        Tuple of (cve_info or None, should_stop_fetching)
+    """
+    from domainraptor.discovery.nvd_client import NVDRateLimitError
+
+    try:
+        info = client.get_cve(cve_id)
+        return info, False
+    except NVDRateLimitError:
+        return None, True  # Stop on rate limit
+    except Exception as e:
+        logger.debug("Failed to fetch CVE %s from NVD: %s", cve_id, e)
+        return None, False
+
+
+def _backfill_nvd_descriptions(vulns: list) -> None:
+    """Fill missing NVD-sourced fields (description, severity, CVSS) on vulns.
+
+    Used by both ``assess vulns`` (after the initial scan, to recover from NVD
+    rate-limit failures during enumeration) and ``assess exploits`` (when
+    re-enriching vulnerabilities loaded from a previous scan). Vulnerabilities
+    that already have a real NVD description are skipped so we don't waste NVD
+    quota — only entries with no description, or with the generic context-only
+    fallback string, are looked up again.
+    """
+    if not vulns:
+        return
+
+    needs_lookup = [
+        v
+        for v in vulns
+        if v.id
+        and v.id.upper().startswith("CVE-")
+        and (not v.description or v.description.startswith(("Affects", "Security vulnerability")))
+    ]
+    if not needs_lookup:
+        return
+
+    cve_infos = _fetch_nvd_for_assess([v.id for v in needs_lookup])
+    if not cve_infos:
+        return
+
+    for vuln in needs_lookup:
+        info = cve_infos.get(vuln.id)
+        if info is None:
+            continue
+        if info.description:
+            vuln.description = info.description
+        if info.severity:
+            with contextlib.suppress(ValueError, AttributeError):
+                vuln.severity = SeverityLevel(info.severity.lower())
+        if info.cvss_v3_score is not None and vuln.cvss_score is None:
+            vuln.cvss_score = info.cvss_v3_score
+        if info.cvss_v3_vector and not vuln.cvss_vector:
+            vuln.cvss_vector = info.cvss_v3_vector
+        if info.references and not vuln.references:
+            vuln.references = list(info.references)
+
+
+def _build_cve_description(cve_id: str, ip: str, services_summary: str, host_result) -> str:
+    """Build CVE description from context when NVD data unavailable."""
+    # CVE keyword mappings
+    cve_contexts = {
+        "openssl": ("OpenSSL cryptographic library", "SSL/TLS"),
+        "ssl": ("SSL/TLS protocol", "encrypted connections"),
+        "tls": ("TLS protocol", "encrypted communications"),
+        "nginx": ("NGINX web server", "HTTP/HTTPS"),
+        "apache": ("Apache HTTP Server", "web hosting"),
+        "ssh": ("SSH service", "remote access"),
+        "openssh": ("OpenSSH", "secure shell"),
+        "http": ("HTTP protocol", "web services"),
+    }
+
+    host_services = [
+        svc.service_name.lower() if svc.service_name else "" for svc in host_result.services
+    ]
+
+    affected_component = None
+    affected_type = None
+
+    for keyword, (component, vtype) in cve_contexts.items():
+        if any(keyword in svc for svc in host_services):
+            affected_component = component
+            affected_type = vtype
+            break
+
+    if affected_component:
+        desc = f"Affects {affected_component} ({affected_type}). "
+    else:
+        desc = "Security vulnerability detected. "
+
+    ports_str = ", ".join(str(p) for p in host_result.ports[:5])
+    desc += f"Host {ip} exposes ports [{ports_str}]"
+
+    if services_summary:
+        desc += f" running {services_summary}"
+
+    if host_result.org:
+        desc += f" ({host_result.org})"
+
+    return desc + "."
 
 
 def _check_ssl_config(target: str, result: ScanResult) -> None:
@@ -447,3 +840,324 @@ def _check_outdated_software(target: str, result: ScanResult, include_minor: boo
     """Check for outdated software versions."""
     # Requires service fingerprinting - placeholder for future
     pass
+
+
+@app.command("list")
+def list_vulns_cmd(
+    ctx: typer.Context,
+    scan_id: Annotated[
+        int,
+        typer.Argument(help="Scan ID to list vulnerabilities from"),
+    ],
+    enrich: Annotated[
+        bool,
+        typer.Option("--enrich", "-e", help="Enrich with NVD descriptions (slower)"),
+    ] = False,
+    all_vulns: Annotated[
+        bool,
+        typer.Option("--all", "-a", help="Show all vulnerabilities (no limit)"),
+    ] = False,
+    output_json: Annotated[
+        bool,
+        typer.Option("--json", help="Output as JSON"),
+    ] = False,
+    min_severity: Annotated[
+        str,
+        typer.Option("--min-severity", "-s", help="Filter by minimum severity"),
+    ] = "low",
+) -> None:
+    """
+    📋 List all vulnerabilities from a scan.
+
+    Shows detailed vulnerability information from a previous scan.
+    Use --enrich to fetch descriptions from NVD (National Vulnerability Database).
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# List vulns from scan 32[/dim]
+        domainraptor assess list 32
+
+        [dim]# Enrich with NVD descriptions[/dim]
+        domainraptor assess list 32 --enrich
+
+        [dim]# Show all as JSON[/dim]
+        domainraptor assess list 32 --all --json
+
+        [dim]# High severity only[/dim]
+        domainraptor assess list 32 --min-severity high
+    """
+    import json
+
+    from rich.panel import Panel
+    from rich.table import Table
+
+    from domainraptor.storage import ScanRepository
+
+    print_info(f"Loading vulnerabilities from scan {scan_id}...")
+
+    # Load scan
+    repo = ScanRepository()
+    scan = repo.get_by_id(scan_id)
+
+    if not scan:
+        print_warning(f"Scan {scan_id} not found")
+        raise typer.Exit(1)
+
+    vulns = scan.vulnerabilities
+
+    if not vulns:
+        print_warning(f"No vulnerabilities found in scan {scan_id}")
+        return
+
+    # Filter by severity
+    severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+    min_sev_value = severity_order.get(min_severity.lower(), 0)
+    vulns = [v for v in vulns if severity_order.get(v.severity.value.lower(), 0) >= min_sev_value]
+
+    print_info(f"Found {len(vulns)} vulnerabilities (min severity: {min_severity})")
+
+    # Enrich with NVD if requested
+    if enrich:
+        console.print()
+        print_info("Enriching with NVD data (this may take a while)...")
+        from domainraptor.discovery.nvd_client import NVDClient, NVDRateLimitError
+
+        client = NVDClient()
+        enriched_count = 0
+        try:
+            with create_progress() as progress:
+                task = progress.add_task("Fetching CVE details...", total=len(vulns))
+
+                for vuln in vulns:
+                    if vuln.id.startswith("CVE-"):
+                        try:
+                            info = client.get_cve(vuln.id)
+                            if info:
+                                vuln.description = info.description
+                                vuln.severity = SeverityLevel(info.severity.lower())
+                                vuln.cvss_score = info.cvss_v3_score
+                                vuln.cvss_vector = info.cvss_v3_vector
+                                enriched_count += 1
+                        except NVDRateLimitError:
+                            print_warning(
+                                f"Rate limited - enriched {enriched_count}/{len(vulns)} CVEs"
+                            )
+                            break
+                    progress.advance(task)
+
+            print_info(f"Enriched {enriched_count} of {len(vulns)} vulnerabilities")
+        finally:
+            client.close()
+
+    # Output
+    if output_json:
+        data = [
+            {
+                "id": v.id,
+                "title": v.title,
+                "severity": v.severity.value,
+                "description": v.description,
+                "affected_asset": v.affected_asset,
+                "cvss_score": v.cvss_score,
+                "source": v.source,
+            }
+            for v in vulns
+        ]
+        console.print(json.dumps(data, indent=2))
+    else:
+        # Print as table
+        limit = None if all_vulns else 30
+        displayed = vulns[:limit] if limit else vulns
+
+        table = Table(
+            title=f"Vulnerabilities - Scan {scan_id} ({len(vulns)} total)",
+            show_header=True,
+            header_style="bold cyan",
+        )
+        table.add_column("CVE ID", style="bold yellow", width=18)
+        table.add_column("Severity", width=10)
+        table.add_column("CVSS", width=6)
+        table.add_column("Affected", width=18)
+        table.add_column("Description", max_width=50)
+
+        severity_colors = {
+            "critical": "red bold",
+            "high": "red",
+            "medium": "yellow",
+            "low": "green",
+            "info": "blue",
+        }
+
+        for v in displayed:
+            sev = v.severity.value.lower()
+            color = severity_colors.get(sev, "white")
+            cvss = f"{v.cvss_score:.1f}" if v.cvss_score else "-"
+            desc = v.description[:80] + "..." if len(v.description) > 80 else v.description
+
+            table.add_row(
+                v.id,
+                f"[{color}]{sev.upper()}[/{color}]",
+                cvss,
+                v.affected_asset or "-",
+                desc or "No description available",
+            )
+
+        console.print(table)
+
+        if limit and len(vulns) > limit:
+            console.print(f"\n[dim]Showing {limit} of {len(vulns)}. Use --all to see all.[/dim]")
+
+        # Summary
+        console.print()
+        by_severity = {}
+        for v in vulns:
+            sev = v.severity.value
+            by_severity[sev] = by_severity.get(sev, 0) + 1
+
+        summary = " | ".join(
+            f"[{severity_colors.get(s.lower(), 'white')}]{s.upper()}: {c}[/{severity_colors.get(s.lower(), 'white')}]"
+            for s, c in sorted(
+                by_severity.items(), key=lambda x: severity_order.get(x[0].lower(), 0), reverse=True
+            )
+        )
+        console.print(Panel(summary, title="Summary by Severity"))
+
+
+# ============================================
+# Exploit enrichment (CISA KEV + EPSS + Exploit-DB)
+# ============================================
+
+
+_CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
+
+
+@app.command("exploits")
+def assess_exploits_cmd(
+    ctx: typer.Context,
+    target: Annotated[
+        str,
+        typer.Argument(help="Domain or CVE id (e.g. example.com or CVE-2023-1234)"),
+    ],
+    kev_only: Annotated[
+        bool,
+        typer.Option("--kev-only", help="Only show vulnerabilities present in CISA KEV"),
+    ] = False,
+    min_epss: Annotated[
+        float,
+        typer.Option(
+            "--min-epss",
+            help="Filter by minimum EPSS score (0.0 - 1.0)",
+            min=0.0,
+            max=1.0,
+        ),
+    ] = 0.0,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Persist enriched vulnerabilities back to DB"),
+    ] = True,
+) -> None:
+    """🧨 Enrich CVEs with CISA KEV, EPSS scores and Exploit-DB references.
+
+    [bold cyan]Examples:[/bold cyan]
+
+        [dim]# Enrich every CVE found in the latest scan for a domain[/dim]
+        domainraptor assess exploits example.com
+
+        [dim]# Inspect a single CVE[/dim]
+        domainraptor assess exploits CVE-2021-44228
+
+        [dim]# Only KEV entries[/dim]
+        domainraptor assess exploits example.com --kev-only
+    """
+    from rich.table import Table
+
+    from domainraptor.core.types import Vulnerability
+    from domainraptor.exploitation import ExploitEnricher
+
+    vulnerabilities: list[Vulnerability] = []
+
+    if _CVE_PATTERN.match(target):
+        cve = target.upper()
+        vulnerabilities.append(
+            Vulnerability(
+                id=cve,
+                title=cve,
+                severity=SeverityLevel.INFO,
+            )
+        )
+    else:
+        try:
+            from domainraptor.storage.repository import ScanRepository
+
+            repo = ScanRepository()
+            # `assess vulns`, `assess config` and `assess exploits` each save
+            # a separate scan record with their own scan_type. Picking only the
+            # most recent scan misses the prior `assess_vulns` results when the
+            # user has since run `assess config`. Walk the recent history and
+            # pick the newest scan that actually carries vulnerabilities.
+            recent = repo.list_by_target(target, limit=20)
+        except Exception as exc:
+            print_error(f"Failed to load latest scan for {target}: {exc}")
+            raise typer.Exit(1) from None
+
+        latest = next((s for s in recent if s.vulnerabilities), None)
+        if latest is None:
+            print_warning(f"No stored vulnerabilities for {target}. Run 'assess vulns' first.")
+            raise typer.Exit(0)
+        vulnerabilities = list(latest.vulnerabilities)
+
+    # Backfill NVD descriptions/severity/CVSS for any vuln that is missing them.
+    # `assess vulns` already tries this during the initial scan, but NVD is
+    # rate-limited and frequently returns 429s — if that happened we'd end up
+    # with bare CVE IDs in the report. Re-trying here costs nothing when data
+    # is already present (we only look up vulns with empty descriptions).
+    _backfill_nvd_descriptions(vulnerabilities)
+
+    print_info(f"Enriching {len(vulnerabilities)} CVE(s)...")
+    enricher = ExploitEnricher()
+    summary = enricher.enrich(vulnerabilities)
+
+    filtered = vulnerabilities
+    if kev_only:
+        filtered = [v for v in filtered if v.in_cisa_kev]
+    if min_epss > 0:
+        filtered = [v for v in filtered if (v.epss_score or 0.0) >= min_epss]
+
+    if not filtered:
+        print_warning("No vulnerabilities match the requested filters")
+    else:
+        table = Table(title=f"Exploit enrichment for {target}")
+        table.add_column("CVE", style="cyan")
+        table.add_column("Severity", style="magenta")
+        table.add_column("KEV", style="red", justify="center")
+        table.add_column("EPSS", style="yellow", justify="right")
+        table.add_column("%ile", style="yellow", justify="right")
+        table.add_column("Exploit-DB", style="green", justify="right")
+        for vuln in filtered:
+            table.add_row(
+                vuln.id or "-",
+                str(vuln.severity.value),
+                "YES" if vuln.in_cisa_kev else "-",
+                f"{vuln.epss_score:.3f}" if vuln.epss_score is not None else "-",
+                f"{vuln.epss_percentile:.2f}" if vuln.epss_percentile is not None else "-",
+                str(len(vuln.exploit_refs)),
+            )
+        console.print(table)
+
+    print_success(
+        f"KEV: {summary.in_kev} | EPSS: {summary.with_epss} (≥0.5: {summary.high_epss}) | "
+        f"Exploits: {summary.with_exploits} of {summary.total}"
+    )
+
+    if save and not _CVE_PATTERN.match(target):
+        with contextlib.suppress(Exception):
+            from domainraptor.storage.repository import ScanRepository
+
+            result = ScanResult(
+                target=target,
+                scan_type="assess_exploits",
+                started_at=datetime.now(),
+            )
+            result.vulnerabilities = vulnerabilities
+            scan_id = ScanRepository().save(result)
+            print_info(f"Enriched results saved (scan ID: {scan_id})")

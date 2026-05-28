@@ -1,0 +1,101 @@
+"""Compare screen."""
+
+from __future__ import annotations
+
+import contextlib
+
+from textual.app import ComposeResult
+from textual.containers import Horizontal, Vertical
+from textual.widget import Widget
+from textual.widgets import Input, Label, Select, Static
+
+from domainraptor.tui.screens._common import ScanRunner
+
+
+class CompareScreen(Widget):
+    DEFAULT_CSS = """
+    CompareScreen { height: 1fr; }
+    CompareScreen .arg-row { height: auto; }
+    /* Width 12 fits the longest dynamic label ("Target B:" is 9 chars and
+       "Scan-id:" is 8) with a little padding so nothing wraps when the
+       subcommand changes. */
+    CompareScreen .arg-row Label { padding: 1 1 0 0; width: 12; }
+    CompareScreen .arg-row Input { width: 1fr; }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Label("Compare", classes="title")
+            yield Static("Compare scans over time or between targets.", classes="subtitle")
+            yield Label("Subcommand", classes="field-label")
+            yield Select(
+                [("history", "history"), ("scans", "scans"), ("targets", "targets")],
+                value="history",
+                id="subcmd",
+                allow_blank=False,
+            )
+            with Horizontal(classes="arg-row", id="row-arg1"):
+                yield Label("Target:", id="arg1-label")
+                yield Input(placeholder="example.com", id="arg1")
+            with Horizontal(classes="arg-row", id="row-arg2"):
+                yield Label("Arg 2:", id="arg2-label")
+                yield Input(placeholder="(optional) scan-id or target", id="arg2")
+            # Run button is provided by ScanRunner; no separate one here.
+            yield ScanRunner(id="runner")
+
+    def on_mount(self) -> None:
+        self._apply_subcmd_visibility("history")
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        if event.select.id == "subcmd":
+            self._apply_subcmd_visibility(str(event.value))
+
+    def _apply_subcmd_visibility(self, sub: str) -> None:
+        # All subcommands need a target/scan-id, so 'arg1' is always visible.
+        # 'history' takes exactly one positional (target) — hide arg2.
+        # 'scans' takes two scan-ids; 'targets' takes two targets — show arg2
+        # and label/placeholder it accordingly (it is REQUIRED for those two,
+        # not optional, so do not advertise it as such).
+        arg1_label = "Target:" if sub in {"history", "targets"} else "Scan-id:"
+        arg1_placeholder = "example.com" if sub in {"history", "targets"} else "scan-id (e.g. 42)"
+        with contextlib.suppress(Exception):
+            self.query_one("#arg1-label", Label).update(arg1_label)
+            self.query_one("#arg1", Input).placeholder = arg1_placeholder
+
+        if sub == "targets":
+            arg2_label, arg2_placeholder = "Target B:", "other.example.com"
+        elif sub == "scans":
+            arg2_label, arg2_placeholder = "Scan B:", "scan-id (e.g. 43)"
+        else:  # history
+            arg2_label, arg2_placeholder = "Arg 2:", "(unused for history)"
+        with contextlib.suppress(Exception):
+            self.query_one("#arg2-label", Label).update(arg2_label)
+            self.query_one("#arg2", Input).placeholder = arg2_placeholder
+        with contextlib.suppress(Exception):
+            self.query_one("#row-arg2").display = sub != "history"
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id in {"arg1", "arg2"}:
+            self.post_message(ScanRunner.RunRequested())
+            event.stop()
+
+    def on_scan_runner_run_requested(self, _: ScanRunner.RunRequested) -> None:
+        runner = self.query_one("#runner", ScanRunner)
+        sub = str(self.query_one("#subcmd", Select).value)
+        a = self.query_one("#arg1", Input).value.strip()
+        b = self.query_one("#arg2", Input).value.strip()
+        # Mirror the dynamic field labels in the validation messages so the
+        # wording stays consistent with what the user actually sees on screen
+        # (e.g. "Target B" rather than the generic "Arg 2").
+        arg1_field = "Target" if sub in {"history", "targets"} else "Scan-id"
+        if not a:
+            runner.append(f"[yellow]Please provide a value for {arg1_field}.[/yellow]")
+            return
+        if sub in {"scans", "targets"} and not b:
+            arg2_field = "Target B" if sub == "targets" else "Scan B"
+            runner.append(f"[yellow]Please provide a value for {arg2_field}.[/yellow]")
+            return
+        args = ["compare", sub, a]
+        if b and sub != "history":
+            args.append(b)
+        runner.run_command(args)

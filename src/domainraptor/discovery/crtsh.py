@@ -55,7 +55,10 @@ class CrtShClient(SubdomainClient):
         logger.info(f"crt.sh: Querying certificates for {target}")
 
         # Query crt.sh JSON API
-        url = f"{self.BASE_URL}/?q=%.{target}&output=json"
+        # crt.sh accepts both `crt.sh/?q=` and `crt.sh?q=` but we prefer the
+        # latter; the trailing slash before the query string is redundant and
+        # was reported as confusing by users inspecting logs.
+        url = f"{self.BASE_URL}?q=%.{target}&output=json"
 
         try:
             response = self.get(url)
@@ -85,18 +88,17 @@ class CrtShClient(SubdomainClient):
                     self._extract_domains(name.strip(), target, subdomains)
 
         # Convert to Asset objects
-        assets: list[Asset] = []
-        for subdomain in sorted(subdomains):
-            assets.append(
-                Asset(
-                    type=AssetType.SUBDOMAIN,
-                    value=subdomain,
-                    parent=target,
-                    source=self.name,
-                    first_seen=datetime.now(),
-                    last_seen=datetime.now(),
-                )
+        assets = [
+            Asset(
+                type=AssetType.SUBDOMAIN,
+                value=subdomain,
+                parent=target,
+                source=self.name,
+                first_seen=datetime.now(),
+                last_seen=datetime.now(),
             )
+            for subdomain in sorted(subdomains)
+        ]
 
         logger.info(f"crt.sh: Found {len(assets)} unique subdomains for {target}")
         return assets
@@ -112,7 +114,7 @@ class CrtShClient(SubdomainClient):
         """
         logger.info(f"crt.sh: Querying certificate details for {target}")
 
-        url = f"{self.BASE_URL}/?q=%.{target}&output=json"
+        url = f"{self.BASE_URL}?q=%.{target}&output=json"
 
         try:
             response = self.get(url)
@@ -215,6 +217,14 @@ class CrtShClient(SubdomainClient):
         return True
 
     @staticmethod
+    def _try_parse_date_format(date_str: str, fmt: str) -> datetime | None:
+        """Try to parse a date string with a specific format."""
+        try:
+            return datetime.strptime(date_str.split("+")[0].split("Z")[0], fmt)
+        except ValueError:
+            return None
+
+    @staticmethod
     def _parse_date(date_str: str) -> datetime | None:
         """Parse date string from crt.sh API."""
         if not date_str:
@@ -227,9 +237,9 @@ class CrtShClient(SubdomainClient):
         ]
 
         for fmt in formats:
-            try:
-                return datetime.strptime(date_str.split("+")[0].split("Z")[0], fmt)
-            except ValueError:
-                continue
+            result = CrtShClient._try_parse_date_format(date_str, fmt)
+            if result is not None:
+                return result
 
+        logger.debug(f"Could not parse date: {date_str}")
         return None

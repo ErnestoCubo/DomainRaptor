@@ -21,24 +21,23 @@ from domainraptor.assessment.ssl_analyzer import SSLAnalyzer, SSLInfo
 __all__ = [
     # Base
     "AssessmentConfig",
-    "BaseAssessmentClient",
-    "ConfigurationChecker",
-    "VulnerabilityScanner",
-    "filter_by_min_severity",
-    "sort_by_severity",
-    # SSL
-    "SSLAnalyzer",
-    "SSLInfo",
-    # Headers
-    "HeadersChecker",
-    "SecurityHeaders",
-    # DNS
-    "DnsSecurityChecker",
-    "DnsSecurityInfo",
     # Orchestrator
     "AssessmentOptions",
     "AssessmentOrchestrator",
     "AssessmentProgress",
+    "BaseAssessmentClient",
+    "ConfigurationChecker",
+    # DNS
+    "DnsSecurityChecker",
+    "DnsSecurityInfo",
+    # Headers
+    "HeadersChecker",
+    # SSL
+    "SSLAnalyzer",
+    "SSLInfo",
+    "SecurityHeaders",
+    "VulnerabilityScanner",
+    "filter_by_min_severity",
     "run_assessment",
+    "sort_by_severity",
 ]
-

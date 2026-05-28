@@ -177,19 +177,16 @@ class WhoisClient:
         if info is None or info.nameservers is None:
             return []
 
-        assets: list[Asset] = []
-        for ns in info.nameservers:
-            assets.append(
-                Asset(
-                    type=AssetType.DOMAIN,
-                    value=ns,
-                    parent=target,
-                    source=self.name,
-                    metadata={"role": "nameserver"},
-                )
+        return [
+            Asset(
+                type=AssetType.DOMAIN,
+                value=ns,
+                parent=target,
+                source=self.name,
+                metadata={"role": "nameserver"},
             )
-
-        return assets
+            for ns in info.nameservers
+        ]
 
     def check_expiry(self, target: str) -> dict[str, Any]:
         """Check domain expiration status.
@@ -231,6 +228,14 @@ class WhoisClient:
             return [str(v) for v in value if v]
         return None
 
+    @staticmethod
+    def _try_parse_date_format(value: str, fmt: str) -> datetime | None:
+        """Try to parse a date string with a specific format."""
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            return None
+
     def _parse_date(self, value: Any) -> datetime | None:
         """Parse date value which may be a list or single value."""
         value = self._get_first(value)
@@ -248,8 +253,8 @@ class WhoisClient:
                 "%d-%b-%Y",
             ]
             for fmt in formats:
-                try:
-                    return datetime.strptime(value, fmt)
-                except ValueError:
-                    continue
+                result = self._try_parse_date_format(value, fmt)
+                if result is not None:
+                    return result
+            logger.debug(f"Could not parse WHOIS date: {value}")
         return None
