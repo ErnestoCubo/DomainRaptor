@@ -64,9 +64,7 @@ class CertSpotterClient(SubdomainClient):
         """
         logger.info("certspotter: querying certificates for %s", target)
 
-        url = (
-            f"{self.BASE_URL}/issuances?domain={target}" "&include_subdomains=true&expand=dns_names"
-        )
+        url = f"{self.BASE_URL}/issuances?domain={target}&include_subdomains=true&expand=dns_names"
 
         try:
             response = self.get(url)
