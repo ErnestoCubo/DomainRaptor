@@ -164,7 +164,7 @@ def assess_vulns_cmd(
     save: Annotated[
         bool,
         typer.Option("--save/--no-save", help="Save results to database"),
-    ] = False,
+    ] = True,
 ) -> None:
     """
     🔓 Check for known vulnerabilities.
@@ -207,6 +207,12 @@ def assess_vulns_cmd(
             progress.update(task, description="Querying CVE databases...")
             _query_nvd(target, result, min_severity)
             progress.update(task, advance=40)
+
+        # Backfill any CVE that still lacks description/severity/CVSS, so the
+        # downstream report always has rich data regardless of which path
+        # (Shodan, direct, fallback) populated the vulnerability list.
+        if result.vulnerabilities:
+            _backfill_nvd_descriptions(result.vulnerabilities)
 
         # Exploit enrichment (KEV / EPSS / Exploit-DB)
         enrichment_summary = None
@@ -299,6 +305,10 @@ def assess_config_cmd(
         bool,
         typer.Option("--best-practices", "-b", help="Check against security best practices"),
     ] = True,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
 ) -> None:
     """
     ⚙️ Check security configurations.
@@ -373,6 +383,16 @@ def assess_config_cmd(
     else:
         print_success("No configuration issues found!")
 
+    # Persist so downstream commands (compare, report, exploits) can see results.
+    if save:
+        try:
+            from domainraptor.storage import ScanRepository
+
+            scan_id = ScanRepository().save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as exc:
+            print_warning(f"Failed to save results: {exc}")
+
 
 @app.command("outdated")
 def assess_outdated_cmd(
@@ -382,6 +402,10 @@ def assess_outdated_cmd(
         bool,
         typer.Option("--include-minor", "-m", help="Include minor version updates"),
     ] = False,
+    save: Annotated[
+        bool,
+        typer.Option("--save/--no-save", help="Save results to database"),
+    ] = True,
 ) -> None:
     """
     📦 Check for outdated software versions.
@@ -428,6 +452,15 @@ def assess_outdated_cmd(
         print_config_issues_table(result.config_issues)
     else:
         print_success("All detected software is up to date!")
+
+    if save:
+        try:
+            from domainraptor.storage import ScanRepository
+
+            scan_id = ScanRepository().save(result)
+            print_info(f"Results saved to database (scan ID: {scan_id})")
+        except Exception as exc:
+            print_warning(f"Failed to save results: {exc}")
 
 
 # ============================================
@@ -683,6 +716,50 @@ def _fetch_single_cve(client, cve_id: str, logger) -> tuple[object | None, bool]
     except Exception as e:
         logger.debug("Failed to fetch CVE %s from NVD: %s", cve_id, e)
         return None, False
+
+
+def _backfill_nvd_descriptions(vulns: list) -> None:
+    """Fill missing NVD-sourced fields (description, severity, CVSS) on vulns.
+
+    Used by both ``assess vulns`` (after the initial scan, to recover from NVD
+    rate-limit failures during enumeration) and ``assess exploits`` (when
+    re-enriching vulnerabilities loaded from a previous scan). Vulnerabilities
+    that already have a real NVD description are skipped so we don't waste NVD
+    quota — only entries with no description, or with the generic context-only
+    fallback string, are looked up again.
+    """
+    if not vulns:
+        return
+
+    needs_lookup = [
+        v
+        for v in vulns
+        if v.id
+        and v.id.upper().startswith("CVE-")
+        and (not v.description or v.description.startswith(("Affects", "Security vulnerability")))
+    ]
+    if not needs_lookup:
+        return
+
+    cve_infos = _fetch_nvd_for_assess([v.id for v in needs_lookup])
+    if not cve_infos:
+        return
+
+    for vuln in needs_lookup:
+        info = cve_infos.get(vuln.id)
+        if info is None:
+            continue
+        if info.description:
+            vuln.description = info.description
+        if info.severity:
+            with contextlib.suppress(ValueError, AttributeError):
+                vuln.severity = SeverityLevel(info.severity.lower())
+        if info.cvss_v3_score is not None and vuln.cvss_score is None:
+            vuln.cvss_score = info.cvss_v3_score
+        if info.cvss_v3_vector and not vuln.cvss_vector:
+            vuln.cvss_vector = info.cvss_v3_vector
+        if info.references and not vuln.references:
+            vuln.references = list(info.references)
 
 
 def _build_cve_description(cve_id: str, ip: str, services_summary: str, host_result) -> str:
@@ -977,7 +1054,7 @@ def assess_exploits_cmd(
     save: Annotated[
         bool,
         typer.Option("--save/--no-save", help="Persist enriched vulnerabilities back to DB"),
-    ] = False,
+    ] = True,
 ) -> None:
     """🧨 Enrich CVEs with CISA KEV, EPSS scores and Exploit-DB references.
 
@@ -1013,15 +1090,28 @@ def assess_exploits_cmd(
             from domainraptor.storage.repository import ScanRepository
 
             repo = ScanRepository()
-            latest = repo.get_latest_for_target(target)
+            # `assess vulns`, `assess config` and `assess exploits` each save
+            # a separate scan record with their own scan_type. Picking only the
+            # most recent scan misses the prior `assess_vulns` results when the
+            # user has since run `assess config`. Walk the recent history and
+            # pick the newest scan that actually carries vulnerabilities.
+            recent = repo.list_by_target(target, limit=20)
         except Exception as exc:
             print_error(f"Failed to load latest scan for {target}: {exc}")
             raise typer.Exit(1) from None
 
-        if latest is None or not latest.vulnerabilities:
+        latest = next((s for s in recent if s.vulnerabilities), None)
+        if latest is None:
             print_warning(f"No stored vulnerabilities for {target}. Run 'assess vulns' first.")
             raise typer.Exit(0)
         vulnerabilities = list(latest.vulnerabilities)
+
+    # Backfill NVD descriptions/severity/CVSS for any vuln that is missing them.
+    # `assess vulns` already tries this during the initial scan, but NVD is
+    # rate-limited and frequently returns 429s — if that happened we'd end up
+    # with bare CVE IDs in the report. Re-trying here costs nothing when data
+    # is already present (we only look up vulns with empty descriptions).
+    _backfill_nvd_descriptions(vulnerabilities)
 
     print_info(f"Enriching {len(vulnerabilities)} CVE(s)...")
     enricher = ExploitEnricher()
