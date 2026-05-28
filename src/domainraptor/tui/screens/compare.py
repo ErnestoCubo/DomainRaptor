@@ -16,7 +16,10 @@ class CompareScreen(Widget):
     DEFAULT_CSS = """
     CompareScreen { height: 1fr; }
     CompareScreen .arg-row { height: auto; }
-    CompareScreen .arg-row Label { padding: 1 1 0 0; width: 8; }
+    /* Width 12 fits the longest dynamic label ("Target B:" is 9 chars and
+       "Scan-id:" is 8) with a little padding so nothing wraps when the
+       subcommand changes. */
+    CompareScreen .arg-row Label { padding: 1 1 0 0; width: 12; }
     CompareScreen .arg-row Input { width: 1fr; }
     """
 
@@ -81,13 +84,16 @@ class CompareScreen(Widget):
         sub = str(self.query_one("#subcmd", Select).value)
         a = self.query_one("#arg1", Input).value.strip()
         b = self.query_one("#arg2", Input).value.strip()
+        # Mirror the dynamic field labels in the validation messages so the
+        # wording stays consistent with what the user actually sees on screen
+        # (e.g. "Target B" rather than the generic "Arg 2").
+        arg1_field = "Target" if sub in {"history", "targets"} else "Scan-id"
         if not a:
-            label = "target" if sub in {"history", "targets"} else "scan-id"
-            runner.append(f"[yellow]Please provide a {label} in Arg 1.[/yellow]")
+            runner.append(f"[yellow]Please provide a value for {arg1_field}.[/yellow]")
             return
         if sub in {"scans", "targets"} and not b:
-            label = "second target" if sub == "targets" else "second scan-id"
-            runner.append(f"[yellow]Please provide a {label} in Arg 2.[/yellow]")
+            arg2_field = "Target B" if sub == "targets" else "Scan B"
+            runner.append(f"[yellow]Please provide a value for {arg2_field}.[/yellow]")
             return
         args = ["compare", sub, a]
         if b and sub != "history":
