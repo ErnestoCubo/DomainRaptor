@@ -1113,6 +1113,23 @@ def _breakdown_card(label: str, value: float, max_value: float) -> str:
             </div>"""
 
 
+def _breakdown_count_card(label: str, count: int, weighted: float, max_value: float) -> str:
+    """Variant of ``_breakdown_card`` for finding-count categories.
+
+    The risk-breakdown for vulnerabilities sits at the weighted contribution
+    (``min(raw * 0.4, 40)``), which saturates at 40 very quickly and made the
+    card uninformative — it almost always read ``40/40`` no matter how many
+    CVEs were found. Display the raw count instead (which is what users
+    expect from a card labelled *Vulnerabilities*) and keep the color grading
+    driven by the weighted contribution so the visual signal is preserved.
+    """
+    color = _score_color(weighted, max_value)
+    return f"""            <div class="breakdown-item" style="border-top: 4px solid {color};">
+                <div class="breakdown-value" style="color: {color};">{count}</div>
+                <div class="breakdown-label">{label}</div>
+            </div>"""
+
+
 def _format_html_executive(data: dict, risk: dict, risk_color: str, vuln_chart: str) -> str:
     """Executive template: high-level summary focused on business impact."""
     summary = data.get("summary", {})
@@ -1196,7 +1213,7 @@ def _format_html_technical(data: dict, risk: dict, risk_color: str, vuln_chart: 
         <p style="color: #6b7280;">{risk.get("level_description", "")}</p>
 
         <div class="breakdown">
-{_breakdown_card("Vulnerabilities", breakdown.get("vulnerabilities", 0), RISK_CATEGORY_MAX["vulnerabilities"])}
+{_breakdown_count_card("Vulnerabilities", summary.get("total_vulnerabilities", 0), breakdown.get("vulnerabilities", 0), RISK_CATEGORY_MAX["vulnerabilities"])}
 {_breakdown_card("Configuration", breakdown.get("configuration", 0), RISK_CATEGORY_MAX["configuration"])}
 {_breakdown_card("Exposure", breakdown.get("exposure", 0), RISK_CATEGORY_MAX["exposure"])}
 {_breakdown_card("Reputation", breakdown.get("reputation", 0), RISK_CATEGORY_MAX["reputation"])}
@@ -1549,7 +1566,7 @@ def _format_html_full(data: dict, risk: dict, risk_color: str, vuln_chart: str) 
         <p style="color: #6b7280;">{risk.get("level_description", "")}</p>
 
         <div class="breakdown">
-{_breakdown_card("Vulnerabilities", breakdown.get("vulnerabilities", 0), RISK_CATEGORY_MAX["vulnerabilities"])}
+{_breakdown_count_card("Vulnerabilities", summary.get("total_vulnerabilities", 0), breakdown.get("vulnerabilities", 0), RISK_CATEGORY_MAX["vulnerabilities"])}
 {_breakdown_card("Configuration", breakdown.get("configuration", 0), RISK_CATEGORY_MAX["configuration"])}
 {_breakdown_card("Exposure", breakdown.get("exposure", 0), RISK_CATEGORY_MAX["exposure"])}
 {_breakdown_card("Reputation", breakdown.get("reputation", 0), RISK_CATEGORY_MAX["reputation"])}
