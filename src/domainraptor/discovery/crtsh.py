@@ -55,7 +55,10 @@ class CrtShClient(SubdomainClient):
         logger.info(f"crt.sh: Querying certificates for {target}")
 
         # Query crt.sh JSON API
-        url = f"{self.BASE_URL}/?q=%.{target}&output=json"
+        # crt.sh accepts both `crt.sh/?q=` and `crt.sh?q=` but we prefer the
+        # latter; the trailing slash before the query string is redundant and
+        # was reported as confusing by users inspecting logs.
+        url = f"{self.BASE_URL}?q=%.{target}&output=json"
 
         try:
             response = self.get(url)
@@ -111,7 +114,7 @@ class CrtShClient(SubdomainClient):
         """
         logger.info(f"crt.sh: Querying certificate details for {target}")
 
-        url = f"{self.BASE_URL}/?q=%.{target}&output=json"
+        url = f"{self.BASE_URL}?q=%.{target}&output=json"
 
         try:
             response = self.get(url)
