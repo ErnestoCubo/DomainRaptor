@@ -10,6 +10,7 @@ from domainraptor.discovery.censys_client import (
     CensysClient,
     CensysHostResult,
 )
+from domainraptor.discovery.certspotter import CertSpotterClient
 from domainraptor.discovery.crtsh import CrtShClient
 from domainraptor.discovery.dns import DnsClient, DnsConfig
 from domainraptor.discovery.hackertarget import HackerTargetClient
@@ -27,6 +28,7 @@ __all__ = [
     "CensysCertificateResult",
     "CensysClient",
     "CensysHostResult",
+    "CertSpotterClient",
     "ClientConfig",
     "CrtShClient",
     "DiscoveryOrchestrator",
