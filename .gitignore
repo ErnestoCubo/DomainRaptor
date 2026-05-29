@@ -142,6 +142,7 @@ data/
 # ========================
 site/
 docs/_build/
+docs/social/
 
 # ========================
 # Docker
