@@ -1,6 +1,6 @@
 # 🦖 DomainRaptor
 
-![DomainRaptor](DomainRaptor.jpg)
+![DomainRaptor](DomainRaptorText.png)
 
 [![Version](https://img.shields.io/github/v/release/ErnestoCubo/DomainRaptor?sort=semver)](https://github.com/ErnestoCubo/DomainRaptor/releases)
 [![PyPI](https://img.shields.io/pypi/v/domainraptor)](https://pypi.org/project/domainraptor/)
