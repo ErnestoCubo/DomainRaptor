@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/ErnestoCubo/DomainRaptor/compare/v0.6.0...v0.6.1) (2026-05-29)
+
+
+### Documentation
+
+* add brand assets, refresh README, ignore social drafts ([7896172](https://github.com/ErnestoCubo/DomainRaptor/commit/789617288f3bf256774505ec1cdf532a3e095453))
+* add brand assets, refresh README, ignore social drafts ([fb8c8c0](https://github.com/ErnestoCubo/DomainRaptor/commit/fb8c8c0d7f6415e3b7c2773dcc1d15af9232477c))
+
 ## [0.6.0](https://github.com/ErnestoCubo/DomainRaptor/compare/v0.5.0...v0.6.0) (2026-05-29)
 
 
