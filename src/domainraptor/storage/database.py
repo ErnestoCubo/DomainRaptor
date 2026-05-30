@@ -42,6 +42,7 @@ class DatabaseManager:
             yield conn
             conn.commit()
         except Exception:
+            logger.error("Database transaction failed; rolling back", exc_info=True)
             conn.rollback()
             raise
         finally:

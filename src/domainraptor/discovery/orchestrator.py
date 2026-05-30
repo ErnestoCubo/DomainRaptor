@@ -7,7 +7,7 @@ and deduplication of discovered assets.
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Protocol
@@ -203,14 +203,19 @@ class DiscoveryOrchestrator:
                 executor.submit(client.query, target): client for client in self._clients
             }
 
+            per_task_timeout = getattr(self, "timeout", 60) + 10
             for future in as_completed(future_to_client):
                 client = future_to_client[future]
                 try:
-                    assets = future.result()
+                    assets = future.result(timeout=per_task_timeout)
                     self._process_client_results(client.name, assets, result)
                     result.sources_used.append(client.name)
+                except FutureTimeoutError:
+                    msg = f"timed out after {per_task_timeout}s"
+                    logger.error("Client %s %s", client.name, msg)
+                    result.errors[client.name] = msg
                 except Exception as e:
-                    logger.error(f"Client {client.name} failed: {e}")
+                    logger.error("Client %s failed: %s", client.name, e, exc_info=True)
                     result.errors[client.name] = str(e)
 
     def _run_client_safe(self, client: Any, target: str) -> tuple[list[Asset], str | None]:

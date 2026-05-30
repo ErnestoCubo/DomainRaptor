@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import re
 from datetime import datetime
 from typing import Annotated
@@ -31,6 +32,8 @@ from domainraptor.utils.output import (
     print_vulnerabilities_table,
     print_warning,
 )
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="assess",
@@ -696,7 +699,8 @@ def _fetch_nvd_for_assess(cve_ids: list[str]) -> dict:
 
     except ImportError:
         return {}
-    except Exception:
+    except Exception as exc:
+        logger.warning("NVD CVE fetch failed: %s", exc, exc_info=True)
         return {}
 
 

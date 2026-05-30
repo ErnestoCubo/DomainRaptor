@@ -104,7 +104,10 @@ class DashboardScreen(Widget):
         """Open the selected scan's target in the Reports screen."""
         try:
             row = event.data_table.get_row(event.row_key)
-        except Exception:
+        except Exception as exc:  # pragma: no cover - defensive
+            import logging
+
+            logging.getLogger(__name__).debug("Failed to read selected row: %s", exc)
             return
         if len(row) < 2:
             return

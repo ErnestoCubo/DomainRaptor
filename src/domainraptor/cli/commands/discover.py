@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime
 from typing import Annotated
@@ -22,6 +23,8 @@ from domainraptor.utils.output import (
     print_success,
     print_warning,
 )
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="discover",
@@ -372,7 +375,8 @@ def _discover_ports(target: str, result: ScanResult, config: AppConfig) -> None:
             import socket
 
             ip = socket.gethostbyname(target)
-        except Exception:
+        except OSError as exc:
+            logger.debug("Resolution failed for %s: %s", target, exc)
             result.errors.append(f"Could not resolve {target} for port scanning")
             return
     else:
@@ -598,7 +602,8 @@ def discover_ports_cmd(
 
             ip = socket.gethostbyname(target)
             print_info(f"Resolved to: {ip}")
-        except Exception:
+        except OSError as exc:
+            logger.debug("Resolution failed for %s: %s", target, exc)
             print_error(f"Could not resolve {target}")
             raise typer.Exit(1) from None
     else:

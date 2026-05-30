@@ -161,7 +161,8 @@ class HackerTargetClient(SubdomainClient):
         try:
             response = self.get(url)
             text = response.text
-        except Exception:
+        except Exception as exc:
+            logger.error("HackerTarget: dns_lookup failed for %s: %s", target, exc, exc_info=True)
             return {}
 
         records: dict[str, list[str]] = {}
@@ -191,7 +192,8 @@ class HackerTargetClient(SubdomainClient):
         try:
             response = self.get(url)
             text = response.text
-        except Exception:
+        except Exception as exc:
+            logger.error("HackerTarget: http_headers failed for %s: %s", target, exc, exc_info=True)
             return {}
 
         headers: dict[str, str] = {}

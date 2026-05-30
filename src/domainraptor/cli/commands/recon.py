@@ -236,7 +236,8 @@ def _load_existing_scan(scan_id: int) -> ScanResult | None:
 
         repo = ScanRepository()
         return repo.get_by_id(scan_id)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to load scan %s: %s", scan_id, exc, exc_info=True)
         return None
 
 
