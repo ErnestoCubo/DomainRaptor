@@ -26,40 +26,39 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceQuotaExceededError,
+    SourceRateLimitError,
+)
 from domainraptor.core.types import Asset, AssetType
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class VirusTotalError(Exception):
+class VirusTotalError(SourceError):
     """Base exception for VirusTotal client errors."""
 
-    pass
+    source = "virustotal"
 
 
-class VirusTotalAPIKeyError(VirusTotalError):
+class VirusTotalAPIKeyError(VirusTotalError, SourceAPIKeyError):
     """Raised when API key is missing or invalid."""
 
-    pass
 
-
-class VirusTotalRateLimitError(VirusTotalError):
+class VirusTotalRateLimitError(VirusTotalError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class VirusTotalQuotaExceededError(VirusTotalError):
+class VirusTotalQuotaExceededError(VirusTotalError, SourceQuotaExceededError):
     """Raised when daily quota is exceeded."""
 
-    pass
 
-
-class VirusTotalNotFoundError(VirusTotalError):
+class VirusTotalNotFoundError(VirusTotalError, SourceNotFoundError):
     """Raised when resource not found."""
-
-    pass
 
 
 @dataclass

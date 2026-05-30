@@ -20,40 +20,39 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceQuotaExceededError,
+    SourceRateLimitError,
+)
 from domainraptor.core.types import Asset, AssetType
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class SecurityTrailsError(Exception):
+class SecurityTrailsError(SourceError):
     """Base exception for SecurityTrails client errors."""
 
-    pass
+    source = "securitytrails"
 
 
-class SecurityTrailsAPIKeyError(SecurityTrailsError):
+class SecurityTrailsAPIKeyError(SecurityTrailsError, SourceAPIKeyError):
     """Raised when API key is missing or invalid."""
 
-    pass
 
-
-class SecurityTrailsRateLimitError(SecurityTrailsError):
+class SecurityTrailsRateLimitError(SecurityTrailsError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class SecurityTrailsQuotaExceededError(SecurityTrailsError):
+class SecurityTrailsQuotaExceededError(SecurityTrailsError, SourceQuotaExceededError):
     """Raised when monthly quota is exceeded."""
 
-    pass
 
-
-class SecurityTrailsNotFoundError(SecurityTrailsError):
+class SecurityTrailsNotFoundError(SecurityTrailsError, SourceNotFoundError):
     """Raised when domain not found."""
-
-    pass
 
 
 @dataclass

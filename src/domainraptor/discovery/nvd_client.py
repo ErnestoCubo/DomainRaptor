@@ -24,19 +24,19 @@ from typing import Any
 
 import httpx
 
+from domainraptor.core.exceptions import SourceError, SourceRateLimitError
+
 logger = logging.getLogger(__name__)
 
 
-class NVDError(Exception):
+class NVDError(SourceError):
     """Base exception for NVD client errors."""
 
-    pass
+    source = "nvd"
 
 
-class NVDRateLimitError(NVDError):
+class NVDRateLimitError(NVDError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
-
-    pass
 
 
 @dataclass

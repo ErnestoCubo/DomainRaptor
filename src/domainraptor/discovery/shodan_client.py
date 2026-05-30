@@ -19,34 +19,34 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceRateLimitError,
+)
 from domainraptor.core.types import Asset, AssetType, Service, SeverityLevel, Vulnerability
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class ShodanError(Exception):
+class ShodanError(SourceError):
     """Base exception for Shodan client errors."""
 
-    pass
+    source = "shodan"
 
 
-class ShodanAPIKeyError(ShodanError):
+class ShodanAPIKeyError(ShodanError, SourceAPIKeyError):
     """Raised when API key is missing or invalid."""
 
-    pass
 
-
-class ShodanRateLimitError(ShodanError):
+class ShodanRateLimitError(ShodanError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class ShodanNotFoundError(ShodanError):
+class ShodanNotFoundError(ShodanError, SourceNotFoundError):
     """Raised when host/domain not found in Shodan."""
-
-    pass
 
 
 @dataclass

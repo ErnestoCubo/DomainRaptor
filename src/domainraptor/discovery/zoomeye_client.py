@@ -20,34 +20,34 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceRateLimitError,
+)
 from domainraptor.core.types import Asset, AssetType, Service
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class ZoomEyeError(Exception):
+class ZoomEyeError(SourceError):
     """Base exception for ZoomEye client errors."""
 
-    pass
+    source = "zoomeye"
 
 
-class ZoomEyeAPIKeyError(ZoomEyeError):
+class ZoomEyeAPIKeyError(ZoomEyeError, SourceAPIKeyError):
     """Raised when API key is missing or invalid."""
 
-    pass
 
-
-class ZoomEyeRateLimitError(ZoomEyeError):
+class ZoomEyeRateLimitError(ZoomEyeError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class ZoomEyeNotFoundError(ZoomEyeError):
+class ZoomEyeNotFoundError(ZoomEyeError, SourceNotFoundError):
     """Raised when host/domain not found."""
-
-    pass
 
 
 @dataclass

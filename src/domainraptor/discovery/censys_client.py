@@ -20,34 +20,34 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceRateLimitError,
+)
 from domainraptor.core.types import Asset, AssetType, Service
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class CensysError(Exception):
+class CensysError(SourceError):
     """Base exception for Censys client errors."""
 
-    pass
+    source = "censys"
 
 
-class CensysAPIKeyError(CensysError):
+class CensysAPIKeyError(CensysError, SourceAPIKeyError):
     """Raised when API credentials are missing or invalid."""
 
-    pass
 
-
-class CensysRateLimitError(CensysError):
+class CensysRateLimitError(CensysError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class CensysNotFoundError(CensysError):
+class CensysNotFoundError(CensysError, SourceNotFoundError):
     """Raised when host/domain not found."""
-
-    pass
 
 
 @dataclass
