@@ -1001,54 +1001,55 @@ def fullscan_cmd(
         if shodan and os.environ.get("SHODAN_API_KEY"):
             progress.update(task, description="[Shodan] Enriching hosts...")
             try:
+                from domainraptor.cli._concurrency import parallel_map
                 from domainraptor.discovery.shodan_client import ShodanClient
 
                 client = ShodanClient()
-                for ip in unique_ips:
-                    try:
-                        host = client.host_info(ip)
-                        if ip not in all_hosts:
-                            all_hosts[ip] = {
-                                "ip": ip,
-                                "hostnames": [],
-                                "ports": [],
-                                "services": [],
-                                "vulns": [],
-                                "sources": [],
-                            }
-                        all_hosts[ip]["hostnames"].extend(host.hostnames)
-                        all_hosts[ip]["ports"].extend(host.ports)
-                        all_hosts[ip]["org"] = host.org
-                        all_hosts[ip]["asn"] = host.asn
-                        all_hosts[ip]["country"] = host.country
-                        all_hosts[ip]["city"] = host.city
-                        all_hosts[ip]["os"] = host.os
-                        all_hosts[ip]["sources"].append("shodan")
-
-                        for svc in host.services:
-                            all_hosts[ip]["services"].append(
-                                {
-                                    "port": svc.port,
-                                    "protocol": svc.protocol,
-                                    "service": svc.service_name,
-                                    "version": svc.version,
-                                    "banner": svc.banner[:200] if svc.banner else "",
-                                    "source": "shodan",
-                                }
-                            )
-
-                        for cve in host.vulns:
-                            all_hosts[ip]["vulns"].append(cve)
-                            all_vulns.append(
-                                {
-                                    "cve": cve,
-                                    "ip": ip,
-                                    "source": "shodan",
-                                }
-                            )
-                    except Exception:
-                        logging.debug("Shodan lookup failed for host")
+                shodan_results = parallel_map(unique_ips, client.host_info, max_workers=5)
+                for ip, host, exc in shodan_results:
                     progress.update(task, advance=1)
+                    if exc is not None or host is None:
+                        logging.debug("Shodan lookup failed for %s: %s", ip, exc)
+                        continue
+                    if ip not in all_hosts:
+                        all_hosts[ip] = {
+                            "ip": ip,
+                            "hostnames": [],
+                            "ports": [],
+                            "services": [],
+                            "vulns": [],
+                            "sources": [],
+                        }
+                    all_hosts[ip]["hostnames"].extend(host.hostnames)
+                    all_hosts[ip]["ports"].extend(host.ports)
+                    all_hosts[ip]["org"] = host.org
+                    all_hosts[ip]["asn"] = host.asn
+                    all_hosts[ip]["country"] = host.country
+                    all_hosts[ip]["city"] = host.city
+                    all_hosts[ip]["os"] = host.os
+                    all_hosts[ip]["sources"].append("shodan")
+
+                    for svc in host.services:
+                        all_hosts[ip]["services"].append(
+                            {
+                                "port": svc.port,
+                                "protocol": svc.protocol,
+                                "service": svc.service_name,
+                                "version": svc.version,
+                                "banner": svc.banner[:200] if svc.banner else "",
+                                "source": "shodan",
+                            }
+                        )
+
+                    for cve in host.vulns:
+                        all_hosts[ip]["vulns"].append(cve)
+                        all_vulns.append(
+                            {
+                                "cve": cve,
+                                "ip": ip,
+                                "source": "shodan",
+                            }
+                        )
                 print_success(
                     f"[Shodan] Enriched {len([h for h in all_hosts.values() if 'shodan' in h.get('sources', [])])} hosts"
                 )
@@ -1059,43 +1060,45 @@ def fullscan_cmd(
         if censys and censys_configured:
             progress.update(task, description="[Censys] Enriching hosts...")
             try:
+                from domainraptor.cli._concurrency import parallel_map
                 from domainraptor.discovery.censys_client import CensysClient
 
                 client = CensysClient()
                 censys_enriched = 0
-                for ip in unique_ips[:25]:  # Censys rate limit is stricter
-                    try:
-                        host = client.get_host(ip)
-                        if host:
-                            if ip not in all_hosts:
-                                all_hosts[ip] = {
-                                    "ip": ip,
-                                    "hostnames": [],
-                                    "ports": [],
-                                    "services": [],
-                                    "vulns": [],
-                                    "sources": [],
-                                }
-                            all_hosts[ip]["hostnames"].extend(host.hostnames)
-                            all_hosts[ip]["ports"].extend(host.ports)
-                            all_hosts[ip]["autonomous_system"] = host.autonomous_system
-                            all_hosts[ip]["labels"] = host.labels
-                            all_hosts[ip]["sources"].append("censys")
-
-                            for svc in host.services:
-                                all_hosts[ip]["services"].append(
-                                    {
-                                        "port": svc.port,
-                                        "protocol": svc.protocol,
-                                        "service": svc.service_name,
-                                        "version": svc.version,
-                                        "source": "censys",
-                                    }
-                                )
-                            censys_enriched += 1
-                    except Exception:
-                        logging.debug("Censys lookup failed for host")
+                censys_results = parallel_map(unique_ips[:25], client.get_host, max_workers=3)
+                for ip, host, exc in censys_results:
                     progress.update(task, advance=1)
+                    if exc is not None:
+                        logging.debug("Censys lookup failed for %s: %s", ip, exc)
+                        continue
+                    if not host:
+                        continue
+                    if ip not in all_hosts:
+                        all_hosts[ip] = {
+                            "ip": ip,
+                            "hostnames": [],
+                            "ports": [],
+                            "services": [],
+                            "vulns": [],
+                            "sources": [],
+                        }
+                    all_hosts[ip]["hostnames"].extend(host.hostnames)
+                    all_hosts[ip]["ports"].extend(host.ports)
+                    all_hosts[ip]["autonomous_system"] = host.autonomous_system
+                    all_hosts[ip]["labels"] = host.labels
+                    all_hosts[ip]["sources"].append("censys")
+
+                    for svc in host.services:
+                        all_hosts[ip]["services"].append(
+                            {
+                                "port": svc.port,
+                                "protocol": svc.protocol,
+                                "service": svc.service_name,
+                                "version": svc.version,
+                                "source": "censys",
+                            }
+                        )
+                    censys_enriched += 1
                 print_success(f"[Censys] Enriched {censys_enriched} hosts")
             except Exception as e:
                 errors.append(f"Censys enrichment: {e}")
@@ -1104,49 +1107,52 @@ def fullscan_cmd(
         if zoomeye and os.environ.get("ZOOMEYE_API_KEY"):
             progress.update(task, description="[ZoomEye] Enriching hosts...")
             try:
+                from domainraptor.cli._concurrency import parallel_map
                 from domainraptor.discovery.zoomeye_client import ZoomEyeClient, ZoomEyeError
 
                 client = ZoomEyeClient()
                 zoomeye_enriched = 0
                 zoomeye_skipped = False
-                for ip in unique_ips[:20]:  # ZoomEye has credit limits
-                    try:
-                        host = client.search_by_ip(ip)
-                        if host:
-                            if ip not in all_hosts:
-                                all_hosts[ip] = {
-                                    "ip": ip,
-                                    "hostnames": [],
-                                    "ports": [],
-                                    "services": [],
-                                    "vulns": [],
-                                    "sources": [],
-                                }
-                            all_hosts[ip]["device_type"] = host.device_type
-                            all_hosts[ip]["sources"].append("zoomeye")
-
-                            for svc in host.services:
-                                all_hosts[ip]["services"].append(
-                                    {
-                                        "port": svc.port,
-                                        "protocol": svc.protocol,
-                                        "service": svc.service_name,
-                                        "version": svc.version,
-                                        "source": "zoomeye",
-                                    }
-                                )
-                            zoomeye_enriched += 1
-                    except ZoomEyeError as e:
-                        if "Insufficient credits" in str(e) or "402" in str(e):
+                zoomeye_results = parallel_map(unique_ips[:20], client.search_by_ip, max_workers=3)
+                for ip, host, exc in zoomeye_results:
+                    progress.update(task, advance=1)
+                    if exc is not None:
+                        if isinstance(exc, ZoomEyeError) and (
+                            "Insufficient credits" in str(exc) or "402" in str(exc)
+                        ):
                             if not zoomeye_skipped:
                                 print_warning(
                                     "[ZoomEye] Host enrichment requires paid credits, skipping..."
                                 )
                                 zoomeye_skipped = True
-                            break
-                    except Exception:
-                        logging.debug("ZoomEye lookup failed for host")
-                    progress.update(task, advance=1)
+                            continue
+                        logging.debug("ZoomEye lookup failed for %s: %s", ip, exc)
+                        continue
+                    if not host:
+                        continue
+                    if ip not in all_hosts:
+                        all_hosts[ip] = {
+                            "ip": ip,
+                            "hostnames": [],
+                            "ports": [],
+                            "services": [],
+                            "vulns": [],
+                            "sources": [],
+                        }
+                    all_hosts[ip]["device_type"] = host.device_type
+                    all_hosts[ip]["sources"].append("zoomeye")
+
+                    for svc in host.services:
+                        all_hosts[ip]["services"].append(
+                            {
+                                "port": svc.port,
+                                "protocol": svc.protocol,
+                                "service": svc.service_name,
+                                "version": svc.version,
+                                "source": "zoomeye",
+                            }
+                        )
+                    zoomeye_enriched += 1
                 if zoomeye_enriched > 0:
                     print_success(f"[ZoomEye] Enriched {zoomeye_enriched} hosts")
                 elif not zoomeye_skipped:
