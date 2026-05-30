@@ -16,7 +16,6 @@ from domainraptor.core.types import (
     AssetType,
     Certificate,
     Change,
-    ChangeType,
     ConfigIssue,
     DnsRecord,
     ScanResult,
@@ -24,6 +23,8 @@ from domainraptor.core.types import (
     SeverityLevel,
     Vulnerability,
 )
+
+from ._factories import SampleDataFactory
 
 if TYPE_CHECKING:
     from domainraptor.storage.database import Database
@@ -37,159 +38,67 @@ if TYPE_CHECKING:
 @pytest.fixture
 def sample_asset() -> Asset:
     """Create a sample asset for testing."""
-    return Asset(
-        type=AssetType.SUBDOMAIN,
-        value="www.example.com",
-        parent="example.com",
-        source="test",
-        metadata={"resolved_ip": "93.184.216.34"},
-    )
+    return SampleDataFactory.asset()
 
 
 @pytest.fixture
 def sample_domain_asset() -> Asset:
     """Create a sample domain asset."""
-    return Asset(
-        type=AssetType.DOMAIN,
-        value="example.com",
-        source="test",
-    )
+    return SampleDataFactory.domain_asset()
 
 
 @pytest.fixture
 def sample_ip_asset() -> Asset:
     """Create a sample IP asset."""
-    return Asset(
-        type=AssetType.IP,
-        value="93.184.216.34",
-        parent="example.com",
-        source="dns",
-        metadata={"ip_version": 4},
-    )
+    return SampleDataFactory.ip_asset()
 
 
 @pytest.fixture
 def sample_assets() -> list[Asset]:
     """Create a list of sample assets."""
-    return [
-        Asset(type=AssetType.DOMAIN, value="example.com", source="input"),
-        Asset(
-            type=AssetType.SUBDOMAIN, value="www.example.com", parent="example.com", source="crt_sh"
-        ),
-        Asset(
-            type=AssetType.SUBDOMAIN, value="api.example.com", parent="example.com", source="dns"
-        ),
-        Asset(type=AssetType.IP, value="93.184.216.34", parent="example.com", source="dns"),
-        Asset(
-            type=AssetType.IP,
-            value="2606:2800:220:1:248:1893:25c8:1946",
-            parent="example.com",
-            source="dns",
-        ),
-    ]
+    return SampleDataFactory.asset_collection()
 
 
 @pytest.fixture
 def sample_dns_records() -> list[DnsRecord]:
     """Create sample DNS records."""
-    return [
-        DnsRecord(record_type="A", value="93.184.216.34", ttl=3600),
-        DnsRecord(record_type="AAAA", value="2606:2800:220:1:248:1893:25c8:1946", ttl=3600),
-        DnsRecord(record_type="MX", value="mail.example.com", ttl=3600, priority=10),
-        DnsRecord(record_type="NS", value="ns1.example.com", ttl=86400),
-        DnsRecord(record_type="TXT", value="v=spf1 include:_spf.example.com ~all", ttl=3600),
-    ]
+    return SampleDataFactory.dns_records()
 
 
 @pytest.fixture
 def sample_certificate() -> Certificate:
     """Create a sample certificate."""
-    return Certificate(
-        subject="example.com",
-        issuer="Let's Encrypt Authority X3",
-        serial_number="0123456789abcdef",
-        not_before=datetime.now() - timedelta(days=30),
-        not_after=datetime.now() + timedelta(days=60),
-        san=["example.com", "www.example.com"],
-        fingerprint_sha256="abc123def456",  # pragma: allowlist secret
-        is_expired=False,
-        days_until_expiry=60,
-    )
+    return SampleDataFactory.certificate()
 
 
 @pytest.fixture
 def expired_certificate() -> Certificate:
     """Create an expired certificate."""
-    return Certificate(
-        subject="expired.example.com",
-        issuer="Let's Encrypt Authority X3",
-        serial_number="expired123",
-        not_before=datetime.now() - timedelta(days=400),
-        not_after=datetime.now() - timedelta(days=35),
-        san=["expired.example.com"],
-        fingerprint_sha256="expired456",  # pragma: allowlist secret
-        is_expired=True,
-        days_until_expiry=-35,
-    )
+    return SampleDataFactory.expired_certificate()
 
 
 @pytest.fixture
 def sample_service() -> Service:
     """Create a sample service."""
-    return Service(
-        port=443,
-        protocol="tcp",
-        service_name="https",
-        version="nginx/1.18.0",
-        banner="nginx",
-        cpe=["cpe:/a:nginx:nginx:1.18.0"],
-    )
+    return SampleDataFactory.service()
 
 
 @pytest.fixture
 def sample_vulnerability() -> Vulnerability:
     """Create a sample vulnerability."""
-    return Vulnerability(
-        id="CVE-2021-12345",
-        title="Test Vulnerability",
-        severity=SeverityLevel.HIGH,
-        description="A test vulnerability for testing purposes",
-        affected_asset="example.com",
-        cvss_score=7.5,
-        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
-        references=["https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-12345"],
-        remediation="Update to the latest version",
-        source="test",
-    )
+    return SampleDataFactory.vulnerability()
 
 
 @pytest.fixture
 def sample_config_issue() -> ConfigIssue:
     """Create a sample configuration issue."""
-    return ConfigIssue(
-        id="HDR-001",
-        title="Missing HSTS Header",
-        severity=SeverityLevel.MEDIUM,
-        category="headers",
-        description="HTTP Strict Transport Security header is not set",
-        affected_asset="https://example.com",
-        current_value="",
-        recommended_value="max-age=31536000; includeSubDomains",
-        remediation="Add Strict-Transport-Security header to HTTP responses",
-    )
+    return SampleDataFactory.config_issue()
 
 
 @pytest.fixture
 def sample_change() -> Change:
     """Create a sample change."""
-    return Change(
-        change_type=ChangeType.NEW,
-        asset_type=AssetType.SUBDOMAIN,
-        asset_value="new.example.com",
-        old_value=None,
-        new_value="new.example.com",
-        description="New subdomain discovered",
-    )
+    return SampleDataFactory.change()
 
 
 @pytest.fixture
