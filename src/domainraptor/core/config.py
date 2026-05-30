@@ -63,6 +63,12 @@ class AppConfig:
 
     # Storage
     db_path: Path = field(default_factory=lambda: Path.home() / ".domainraptor" / "data.db")
+    # Optional SQLAlchemy URL overriding `db_path`. When unset, a sqlite URL is
+    # derived from `db_path`. Supported schemes include:
+    #   postgresql+psycopg://...
+    #   mysql+pymysql://...
+    #   sqlite:////absolute/path/to/data.db
+    database_url: str | None = None
     cache_ttl: int = 3600  # 1 hour
 
     # Output
@@ -105,6 +111,7 @@ class AppConfig:
             "DOMAINRAPTOR_DEBUG": ("debug", lambda x: x.lower() == "true"),
             "DOMAINRAPTOR_MODE": ("mode", str),
             "DOMAINRAPTOR_DB_PATH": ("db_path", Path),
+            "DOMAINRAPTOR_DATABASE_URL": ("database_url", str),
             "SHODAN_API_KEY": ("sources.shodan.api_key", str),
             "VIRUSTOTAL_API_KEY": ("sources.virustotal.api_key", str),
             "CENSYS_API_KEY": ("sources.censys.api_key", str),
@@ -155,10 +162,22 @@ class AppConfig:
             free_only=data.get("free_only", False),
             sources=sources,
             db_path=Path(data.get("db_path", Path.home() / ".domainraptor" / "data.db")),
+            database_url=data.get("database_url"),
             cache_ttl=data.get("cache_ttl", 3600),
             output_format=output_format,
             output_file=Path(data["output_file"]) if data.get("output_file") else None,
         )
+
+    def resolve_database_url(self) -> str:
+        """Return the effective SQLAlchemy URL.
+
+        Uses ``database_url`` when set; otherwise derives a SQLite URL from
+        ``db_path``. The SQLite URL uses an absolute path and the ``sqlite:///``
+        scheme (note the three slashes plus the absolute path = four total).
+        """
+        if self.database_url:
+            return self.database_url
+        return f"sqlite:///{self.db_path.expanduser().resolve()}"
 
     def save(self, config_path: Path) -> None:
         """Save configuration to file."""
@@ -172,6 +191,7 @@ class AppConfig:
             "max_workers": self.max_workers,
             "free_only": self.free_only,
             "db_path": str(self.db_path),
+            "database_url": self.database_url,
             "cache_ttl": self.cache_ttl,
             "output_format": self.output_format.value,
             "sources": {
