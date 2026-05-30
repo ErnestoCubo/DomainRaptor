@@ -14,6 +14,7 @@ import typer
 from rich.panel import Panel
 from rich.table import Table
 
+from domainraptor.cli._base import get_app_config
 from domainraptor.core.config import AppConfig
 from domainraptor.core.types import AssetType, ScanResult
 from domainraptor.utils.output import (
@@ -123,7 +124,7 @@ def recon_callback(
         )
         raise typer.Exit(1)
 
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    config: AppConfig = get_app_config(ctx)
 
     print_info(f"Starting full recon for: [bold]{target}[/bold]")
     print_info(f"Depth: {depth.value} | Max IPs: {max_ips}")

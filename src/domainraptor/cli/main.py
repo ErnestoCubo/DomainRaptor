@@ -10,6 +10,7 @@ import typer
 from rich.console import Console
 
 from domainraptor import __version__
+from domainraptor.cli._base import get_app_config
 from domainraptor.cli.commands import (
     assess,
     compare,
@@ -231,7 +232,7 @@ def config_cmd(
     ] = None,
 ) -> None:
     """⚙️ Manage configuration."""
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    config: AppConfig = get_app_config(ctx)
 
     if init:
         config_path = Path.home() / ".config" / "domainraptor" / "config.yaml"
@@ -279,7 +280,7 @@ def db_cmd(
     ] = None,
 ) -> None:
     """🗄️ Database operations."""
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    config: AppConfig = get_app_config(ctx)
 
     if info:
         if config.db_path.exists():
@@ -349,7 +350,7 @@ def export_cmd(
     ] = OutputFormat.JSON,
 ) -> None:
     """📤 Export data to file."""
-    ctx.obj.get("config", AppConfig())
+    get_app_config(ctx)
     print_info(f"Exporting {target} to: {output} ({format_type.value})")
     # TODO: Implement export
     print_info("Export complete")

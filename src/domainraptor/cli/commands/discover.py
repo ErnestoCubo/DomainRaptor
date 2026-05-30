@@ -9,6 +9,7 @@ from typing import Annotated
 
 import typer
 
+from domainraptor.cli._base import get_app_config
 from domainraptor.core.config import AppConfig, ScanMode
 from domainraptor.core.types import ScanResult
 from domainraptor.utils.output import (
@@ -102,7 +103,7 @@ def discover_callback(
             raise typer.Exit()
         return
 
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    config: AppConfig = get_app_config(ctx)
 
     # Parse sources
     source_list = sources.split(",") if sources else None

@@ -15,6 +15,7 @@ from domainraptor.assessment import (
     HeadersChecker,
     SSLAnalyzer,
 )
+from domainraptor.cli._base import get_app_config
 from domainraptor.core.config import AppConfig
 from domainraptor.core.types import (
     ScanResult,
@@ -79,7 +80,7 @@ def assess_callback(
             raise typer.Exit()
         return
 
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    config: AppConfig = get_app_config(ctx)
 
     print_info(f"Starting full assessment for: [bold]{target}[/bold]")
     print_info(f"Mode: {config.mode.value}")
@@ -186,7 +187,7 @@ def assess_vulns_cmd(
         [dim]# Include exploit availability[/dim]
         domainraptor assess vulns example.com --exploits
     """
-    _config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = get_app_config(ctx)
 
     print_info(f"Vulnerability assessment for: [bold]{target}[/bold]")
     print_info(f"Min severity: {min_severity.value} | CVE check: {cve_check}")
@@ -336,7 +337,7 @@ def assess_config_cmd(
         [dim]# DNS security check[/dim]
         domainraptor assess config example.com --category dns
     """
-    _config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = get_app_config(ctx)
 
     print_info(f"Configuration assessment for: [bold]{target}[/bold]")
     print_info(f"Category: {category}")
@@ -424,7 +425,7 @@ def assess_outdated_cmd(
         [dim]# Include minor updates[/dim]
         domainraptor assess outdated example.com --include-minor
     """
-    _config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = get_app_config(ctx)
 
     print_info(f"Outdated software check for: [bold]{target}[/bold]")
 
