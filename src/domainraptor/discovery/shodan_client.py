@@ -11,7 +11,6 @@ Docs: https://shodan.readthedocs.io/
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 import re
@@ -165,57 +164,10 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         return self._parse_host_result(data)
 
     def _parse_host_result(self, data: dict[str, Any]) -> ShodanHostResult:
-        """Parse Shodan host API response."""
-        services: list[Service] = []
+        """Parse Shodan host API response (delegates to `_mappers.shodan`)."""
+        from domainraptor.discovery._mappers.shodan import parse_host_result
 
-        for item in data.get("data", []):
-            port = item.get("port", 0)
-            transport = item.get("transport", "tcp")
-
-            service = Service(
-                port=port,
-                protocol=transport,
-                service_name=item.get("product", "") or item.get("_shodan", {}).get("module", ""),
-                version=item.get("version", "") or "",
-                banner=item.get("data", "")[:500] if item.get("data") else "",
-                cpe=item.get("cpe", []) or [],
-                metadata={
-                    "module": item.get("_shodan", {}).get("module", ""),
-                    "ssl": bool(item.get("ssl")),
-                    "http": item.get("http", {}),
-                },
-            )
-            services.append(service)
-
-        last_update = None
-        if data.get("last_update"):
-            with contextlib.suppress(ValueError, AttributeError):
-                last_update = datetime.fromisoformat(data["last_update"].replace("Z", "+00:00"))
-
-        # Handle vulns - can be dict (older API) or list (newer API)
-        raw_vulns = data.get("vulns", [])
-        if isinstance(raw_vulns, dict):
-            vuln_list = list(raw_vulns.keys())
-        elif isinstance(raw_vulns, list):
-            vuln_list = raw_vulns
-        else:
-            vuln_list = []
-
-        return ShodanHostResult(
-            ip=data.get("ip_str", ""),
-            hostnames=data.get("hostnames", []),
-            country=data.get("country_name", "") or data.get("country_code", ""),
-            city=data.get("city", "") or "",
-            org=data.get("org", "") or "",
-            asn=data.get("asn", "") or "",
-            isp=data.get("isp", "") or "",
-            os=data.get("os"),
-            ports=data.get("ports", []),
-            services=services,
-            vulns=vuln_list,
-            last_update=last_update,
-            tags=data.get("tags", []),
-        )
+        return parse_host_result(data)
 
     def dns_domain(self, domain: str) -> list[Asset]:
         """Get subdomains for a domain from Shodan DNS.
