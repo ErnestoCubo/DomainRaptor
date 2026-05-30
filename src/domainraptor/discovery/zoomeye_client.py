@@ -183,7 +183,7 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         except ZoomEyeError:
             raise
         except Exception as e:
-            logger.error(f"ZoomEye: Search failed: {e}")
+            logger.error(f"ZoomEye: Search failed: {e}", exc_info=True)
             raise ZoomEyeError(f"Search failed: {e}") from e
 
         results: list[ZoomEyeHostResult] = []
@@ -226,7 +226,7 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         except ZoomEyeError:
             raise
         except Exception as e:
-            logger.error(f"ZoomEye: Web search failed: {e}")
+            logger.error(f"ZoomEye: Web search failed: {e}", exc_info=True)
             raise ZoomEyeError(f"Web search failed: {e}") from e
 
         return data.get("matches", [])[:limit]
@@ -284,7 +284,7 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         except ZoomEyeError:
             raise
         except Exception as e:
-            logger.error(f"ZoomEye: Domain search failed: {e}")
+            logger.error(f"ZoomEye: Domain search failed: {e}", exc_info=True)
             raise ZoomEyeError(f"Domain search failed: {e}") from e
 
         results = data.get("list", [])[:limit]
@@ -425,7 +425,7 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         except ZoomEyeError:
             raise
         except Exception as e:
-            logger.error(f"ZoomEye: Failed to get resources info: {e}")
+            logger.error(f"ZoomEye: Failed to get resources info: {e}", exc_info=True)
             raise ZoomEyeError(f"Failed to get resources info: {e}") from e
 
     def get_subdomains(self, domain: str, limit: int = 100) -> list[Asset]:

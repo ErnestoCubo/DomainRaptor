@@ -141,7 +141,7 @@ class DnsClient:
         except dns.exception.Timeout:
             logger.warning(f"DNS: Timeout querying {rtype} for {target}")
             return DnsQueryResult(records=[], should_break=False)
-        except Exception as e:
+        except (dns.exception.DNSException, OSError) as e:
             logger.debug(f"DNS: Error querying {rtype} for {target}: {e}")
             return DnsQueryResult(records=[], should_break=False)
 
@@ -169,7 +169,7 @@ class DnsClient:
                 )
                 for rdata in answers
             )
-        except Exception as e:
+        except dns.exception.DNSException as e:
             logger.debug(f"DNS: No A records for {target}: {e}")
 
         # IPv6
@@ -185,7 +185,7 @@ class DnsClient:
                 )
                 for rdata in answers
             )
-        except Exception as e:
+        except dns.exception.DNSException as e:
             logger.debug(f"DNS: No AAAA records for {target}: {e}")
 
         return assets
@@ -206,7 +206,7 @@ class DnsClient:
             if answers:
                 # Remove trailing dot
                 return str(answers[0]).rstrip(".")
-        except Exception as e:
+        except dns.exception.DNSException as e:
             logger.debug(f"DNS: Reverse lookup failed for {ip}: {e}")
 
         return None

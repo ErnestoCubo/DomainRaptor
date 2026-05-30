@@ -73,7 +73,7 @@ class AsnClient(BaseClient[Asset]):
             response = self.get(url, params={"query_term": name})
             payload = response.json()
         except Exception as exc:
-            logger.error("asn: search by name failed for %s: %s", name, exc)
+            logger.error("asn: search by name failed for %s: %s", name, exc, exc_info=True)
             return []
 
         data = payload.get("data", {}) if isinstance(payload, dict) else {}
@@ -95,7 +95,7 @@ class AsnClient(BaseClient[Asset]):
             details = self.get(f"{BGPVIEW_URL}/asn/{asn}").json()
             prefixes = self.get(f"{BGPVIEW_URL}/asn/{asn}/prefixes").json()
         except Exception as exc:
-            logger.warning("asn: BGPView lookup failed for AS%d: %s", asn, exc)
+            logger.warning("asn: BGPView lookup failed for AS%d: %s", asn, exc, exc_info=True)
             return None
 
         info_data = (details or {}).get("data", {}) if isinstance(details, dict) else {}
@@ -122,7 +122,7 @@ class AsnClient(BaseClient[Asset]):
             response = self.get(RIPESTAT_URL, params={"resource": f"AS{asn}"})
             payload = response.json()
         except Exception as exc:
-            logger.warning("asn: RIPEstat lookup failed for AS%d: %s", asn, exc)
+            logger.warning("asn: RIPEstat lookup failed for AS%d: %s", asn, exc, exc_info=True)
             return None
 
         data = payload.get("data", {}) if isinstance(payload, dict) else {}

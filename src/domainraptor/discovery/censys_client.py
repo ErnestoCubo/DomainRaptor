@@ -235,7 +235,7 @@ class CensysClient(BaseClient[CensysHostResult]):
         except CensysError:
             raise
         except Exception as e:
-            logger.error(f"Censys: Search failed: {e}")
+            logger.error(f"Censys: Search failed: {e}", exc_info=True)
             raise CensysError(f"Search failed: {e}") from e
 
         results: list[CensysHostResult] = []
@@ -300,7 +300,7 @@ class CensysClient(BaseClient[CensysHostResult]):
         except CensysError:
             raise
         except Exception as e:
-            logger.error(f"Censys: Host lookup failed: {e}")
+            logger.error(f"Censys: Host lookup failed: {e}", exc_info=True)
             raise CensysError(f"Host lookup failed: {e}") from e
 
         # v3 API returns result.resource instead of just result
@@ -359,7 +359,7 @@ class CensysClient(BaseClient[CensysHostResult]):
         except CensysError:
             raise
         except Exception as e:
-            logger.error(f"Censys: Certificate search failed: {e}")
+            logger.error(f"Censys: Certificate search failed: {e}", exc_info=True)
             raise CensysError(f"Certificate search failed: {e}") from e
 
         results: list[CensysCertificateResult] = []
@@ -663,5 +663,5 @@ class CensysClient(BaseClient[CensysHostResult]):
         except CensysError:
             raise
         except Exception as e:
-            logger.error(f"Censys: Failed to get account info: {e}")
+            logger.error(f"Censys: Failed to get account info: {e}", exc_info=True)
             raise CensysError(f"Failed to get account info: {e}") from e

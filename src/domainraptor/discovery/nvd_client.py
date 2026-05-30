@@ -153,7 +153,7 @@ class NVDClient:
             except NVDError:
                 raise
             except Exception as e:
-                logger.error(f"NVD lookup failed for {cve_id}: {e}")
+                logger.error(f"NVD lookup failed for {cve_id}: {e}", exc_info=True)
                 return None
 
         return None  # Should not reach here
@@ -190,7 +190,7 @@ class NVDClient:
                 if info:
                     results[cve_id] = info
             except Exception as e:
-                logger.error(f"Failed to fetch {cve_id}: {e}")
+                logger.error(f"Failed to fetch {cve_id}: {e}", exc_info=True)
 
         return results
 

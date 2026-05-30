@@ -262,7 +262,7 @@ class VirusTotalClient(BaseClient[ReputationResult]):
         except VirusTotalError:
             raise
         except Exception as e:
-            logger.error(f"VirusTotal: Failed to lookup {domain}: {e}")
+            logger.error(f"VirusTotal: Failed to lookup {domain}: {e}", exc_info=True)
             raise VirusTotalError(f"Failed to lookup domain {domain}: {e}") from e
 
         return self._parse_domain_result(data, domain)
@@ -317,7 +317,7 @@ class VirusTotalClient(BaseClient[ReputationResult]):
         except VirusTotalError:
             raise
         except Exception as e:
-            logger.error(f"VirusTotal: Failed to lookup {ip}: {e}")
+            logger.error(f"VirusTotal: Failed to lookup {ip}: {e}", exc_info=True)
             raise VirusTotalError(f"Failed to lookup IP {ip}: {e}") from e
 
         return self._parse_ip_result(data, ip)
@@ -375,7 +375,9 @@ class VirusTotalClient(BaseClient[ReputationResult]):
         except VirusTotalError:
             raise
         except Exception as e:
-            logger.error(f"VirusTotal: Subdomain enumeration failed for {domain}: {e}")
+            logger.error(
+                f"VirusTotal: Subdomain enumeration failed for {domain}: {e}", exc_info=True
+            )
             raise VirusTotalError(f"Subdomain enumeration failed: {e}") from e
 
         assets: list[Asset] = []

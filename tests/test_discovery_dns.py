@@ -190,7 +190,7 @@ class TestDnsClient:
         """Test resolve_ip handles errors gracefully."""
         mock_resolver = MagicMock()
         mock_resolver_prop.return_value = mock_resolver
-        mock_resolver.resolve.side_effect = Exception("DNS error")
+        mock_resolver.resolve.side_effect = dns.exception.DNSException("DNS error")
 
         client = DnsClient()
         assets = client.resolve_ip("example.com")

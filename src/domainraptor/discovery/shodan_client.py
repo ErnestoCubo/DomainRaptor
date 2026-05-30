@@ -159,7 +159,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: Failed to lookup {ip}: {e}")
+            logger.error(f"Shodan: Failed to lookup {ip}: {e}", exc_info=True)
             raise ShodanError(f"Failed to lookup host {ip}: {e}") from e
 
         return self._parse_host_result(data)
@@ -242,7 +242,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: DNS lookup failed for {domain}: {e}")
+            logger.error(f"Shodan: DNS lookup failed for {domain}: {e}", exc_info=True)
             raise ShodanError(f"DNS lookup failed: {e}") from e
 
         assets: list[Asset] = []
@@ -291,7 +291,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: DNS resolve failed: {e}")
+            logger.error(f"Shodan: DNS resolve failed: {e}", exc_info=True)
             return {}
 
     def reverse_dns(self, ips: list[str]) -> dict[str, list[str]]:
@@ -321,7 +321,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: Reverse DNS failed: {e}")
+            logger.error(f"Shodan: Reverse DNS failed: {e}", exc_info=True)
             return {}
 
     def get_vulns_for_host(self, ip: str) -> list[Vulnerability]:
@@ -500,7 +500,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: Org search failed for {org}: {e}")
+            logger.error(f"Shodan: Org search failed for {org}: {e}", exc_info=True)
             raise ShodanError(f"Org search failed: {e}") from e
 
         return results
@@ -557,7 +557,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: SSL search failed for {domain}: {e}")
+            logger.error(f"Shodan: SSL search failed for {domain}: {e}", exc_info=True)
             raise ShodanError(f"SSL search failed: {e}") from e
 
         return results
@@ -613,7 +613,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: ASN search failed for {asn_normalized}: {e}")
+            logger.error(f"Shodan: ASN search failed for {asn_normalized}: {e}", exc_info=True)
             raise ShodanError(f"ASN search failed: {e}") from e
 
         return results

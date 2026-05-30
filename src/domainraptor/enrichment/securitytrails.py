@@ -204,7 +204,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: Failed to lookup {domain}: {e}")
+            logger.error(f"SecurityTrails: Failed to lookup {domain}: {e}", exc_info=True)
             raise SecurityTrailsError(f"Failed to lookup domain {domain}: {e}") from e
 
         return self._parse_domain_result(data, domain)
@@ -261,7 +261,9 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: Subdomain enumeration failed for {domain}: {e}")
+            logger.error(
+                f"SecurityTrails: Subdomain enumeration failed for {domain}: {e}", exc_info=True
+            )
             raise SecurityTrailsError(f"Subdomain enumeration failed: {e}") from e
 
         assets: list[Asset] = []
@@ -307,7 +309,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: DNS history failed for {domain}: {e}")
+            logger.error(f"SecurityTrails: DNS history failed for {domain}: {e}", exc_info=True)
             raise SecurityTrailsError(f"DNS history lookup failed: {e}") from e
 
         return self._parse_dns_history(data, record_type)
@@ -375,7 +377,9 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: Associated domains failed for {domain}: {e}")
+            logger.error(
+                f"SecurityTrails: Associated domains failed for {domain}: {e}", exc_info=True
+            )
             return []
 
         records = data.get("records", [])
@@ -404,7 +408,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: IP neighbors failed for {ip}: {e}")
+            logger.error(f"SecurityTrails: IP neighbors failed for {ip}: {e}", exc_info=True)
             return []
 
         blocks = data.get("blocks", [])

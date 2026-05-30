@@ -69,7 +69,7 @@ class BaseAssessmentClient(ABC, Generic[T]):
         try:
             return self.assess(target)
         except Exception as e:
-            logger.error(f"{self.name}: Assessment failed for {target}: {e}")
+            logger.error(f"{self.name}: Assessment failed for {target}: {e}", exc_info=True)
             return []
 
 
