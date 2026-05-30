@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import sqlite3
 from datetime import datetime
@@ -21,6 +20,7 @@ from domainraptor.core.types import (
     WatchTarget,
 )
 from domainraptor.storage.database import DatabaseManager, get_database
+from domainraptor.utils._serialization import json_dumps, json_loads_dict, json_loads_list
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class ScanRepository:
                     _datetime_to_str(scan.completed_at),
                     scan.duration_seconds,
                     len(scan.errors),
-                    json.dumps(scan.metadata),
+                    json_dumps(scan.metadata),
                 ),
             )
             scan_id = cursor.lastrowid
@@ -90,7 +90,7 @@ class ScanRepository:
                         asset.source,
                         _datetime_to_str(asset.first_seen),
                         _datetime_to_str(asset.last_seen),
-                        json.dumps(asset.metadata),
+                        json_dumps(asset.metadata),
                     ),
                 )
 
@@ -120,7 +120,7 @@ class ScanRepository:
                         cert.serial_number,
                         _datetime_to_str(cert.not_before),
                         _datetime_to_str(cert.not_after),
-                        json.dumps(cert.san),
+                        json_dumps(cert.san),
                         cert.fingerprint_sha256,
                         1 if cert.is_expired else 0,
                         cert.days_until_expiry,
@@ -169,13 +169,13 @@ class ScanRepository:
                         vuln.affected_asset,
                         vuln.cvss_score,
                         vuln.cvss_vector,
-                        json.dumps(vuln.references),
+                        json_dumps(vuln.references),
                         vuln.remediation,
                         _datetime_to_str(vuln.detected_at),
                         vuln.source,
                         vuln.epss_score,
                         1 if vuln.in_cisa_kev else 0,
-                        json.dumps(vuln.exploit_refs),
+                        json_dumps(vuln.exploit_refs),
                     ),
                 )
 
@@ -198,8 +198,8 @@ class ScanRepository:
                         svc.banner,
                         svc.metadata.get("product", ""),
                         svc.metadata.get("os", ""),
-                        json.dumps(svc.cpe),
-                        json.dumps(svc.metadata),
+                        json_dumps(svc.cpe),
+                        json_dumps(svc.metadata),
                         svc.metadata.get("source", "shodan"),
                     ),
                 )
@@ -222,7 +222,7 @@ class ScanRepository:
                 status=row["status"],
                 started_at=_str_to_datetime(row["started_at"]) or datetime.now(),
                 completed_at=_str_to_datetime(row["completed_at"]),
-                metadata=json.loads(row["metadata"] or "{}"),
+                metadata=json_loads_dict(row["metadata"]),
             )
 
             # Load assets
@@ -235,7 +235,7 @@ class ScanRepository:
                         source=asset_row["source"],
                         first_seen=_str_to_datetime(asset_row["first_seen"]) or datetime.now(),
                         last_seen=_str_to_datetime(asset_row["last_seen"]) or datetime.now(),
-                        metadata=json.loads(asset_row["metadata"] or "{}"),
+                        metadata=json_loads_dict(asset_row["metadata"]),
                     )
                 )
 
@@ -261,7 +261,7 @@ class ScanRepository:
                         serial_number=cert_row["serial_number"],
                         not_before=_str_to_datetime(cert_row["not_before"]) or datetime.now(),
                         not_after=_str_to_datetime(cert_row["not_after"]) or datetime.now(),
-                        san=json.loads(cert_row["san"] or "[]"),
+                        san=json_loads_list(cert_row["san"]),
                         fingerprint_sha256=cert_row["fingerprint_sha256"] or "",
                         is_expired=bool(cert_row["is_expired"]),
                         days_until_expiry=cert_row["days_until_expiry"] or 0,
@@ -299,19 +299,19 @@ class ScanRepository:
                         affected_asset=vuln_row["affected_asset"] or "",
                         cvss_score=vuln_row["cvss_score"],
                         cvss_vector=vuln_row["cvss_vector"] or "",
-                        references=json.loads(vuln_row["vuln_references"] or "[]"),
+                        references=json_loads_list(vuln_row["vuln_references"]),
                         remediation=vuln_row["remediation"] or "",
                         detected_at=_str_to_datetime(vuln_row["detected_at"]) or datetime.now(),
                         source=vuln_row["source"] or "",
                         epss_score=vuln_row["epss_score"],
                         in_cisa_kev=bool(vuln_row["in_cisa_kev"]),
-                        exploit_refs=json.loads(vuln_row["exploit_refs"] or "[]"),
+                        exploit_refs=json_loads_list(vuln_row["exploit_refs"]),
                     )
                 )
 
             # Load services
             for svc_row in conn.execute("SELECT * FROM services WHERE scan_id = ?", (scan_id,)):
-                metadata = json.loads(svc_row["metadata"] or "{}")
+                metadata = json_loads_dict(svc_row["metadata"])
                 metadata["ip"] = svc_row["ip"]
                 metadata["product"] = svc_row["product"] or ""
                 metadata["os"] = svc_row["os"] or ""
@@ -323,7 +323,7 @@ class ScanRepository:
                         service_name=svc_row["service_name"] or "",
                         version=svc_row["version"] or "",
                         banner=svc_row["banner"] or "",
-                        cpe=json.loads(svc_row["cpe"] or "[]"),
+                        cpe=json_loads_list(svc_row["cpe"]),
                         metadata=metadata,
                     )
                 )
@@ -531,8 +531,8 @@ def _row_to_watch_target(row: sqlite3.Row) -> WatchTarget:
         last_check=_str_to_datetime(row["last_check"]),
         next_check=_str_to_datetime(row["next_check"]),
         enabled=bool(row["enabled"]),
-        notify_on=json.loads(row["notify_on"] or "[]"),
-        metadata=json.loads(row["metadata"] or "{}"),
+        notify_on=json_loads_list(row["notify_on"]),
+        metadata=json_loads_dict(row["metadata"]),
     )
 
 
@@ -559,8 +559,8 @@ class WatchRepository:
                     _datetime_to_str(target.last_check),
                     _datetime_to_str(target.next_check),
                     1 if target.enabled else 0,
-                    json.dumps(target.notify_on),
-                    json.dumps(target.metadata),
+                    json_dumps(target.notify_on),
+                    json_dumps(target.metadata),
                 ),
             )
             return cursor.lastrowid or 0
