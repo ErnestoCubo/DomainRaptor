@@ -9,6 +9,7 @@ from typing import Generic, TypeVar
 
 import httpx
 
+from domainraptor.core._http import create_http_client
 from domainraptor.core.types import ConfigIssue, SeverityLevel, Vulnerability
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class BaseAssessmentClient(ABC, Generic[T]):
     def http_client(self) -> httpx.Client:
         """Lazy-initialized HTTP client."""
         if self._http_client is None:
-            self._http_client = httpx.Client(
+            self._http_client = create_http_client(
                 timeout=self.config.timeout,
                 verify=self.config.verify_ssl,
                 follow_redirects=self.config.follow_redirects,
