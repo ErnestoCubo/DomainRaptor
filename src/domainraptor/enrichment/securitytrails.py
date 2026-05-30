@@ -13,7 +13,6 @@ Docs: https://docs.securitytrails.com/reference
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 from dataclasses import dataclass, field
@@ -210,31 +209,10 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         return self._parse_domain_result(data, domain)
 
     def _parse_domain_result(self, data: dict[str, Any], domain: str) -> DomainInfo:
-        """Parse SecurityTrails domain API response."""
-        current_dns: dict[str, list[str]] = {}
+        """Parse SecurityTrails domain API response (delegates to `_mappers.securitytrails`)."""
+        from domainraptor.enrichment._mappers.securitytrails import parse_domain_result
 
-        # Parse current DNS records
-        dns_data = data.get("current_dns", {})
-        for record_type in ["a", "aaaa", "mx", "ns", "soa", "txt"]:
-            records = dns_data.get(record_type, {})
-            values = records.get("values", [])
-            if values:
-                # Extract IP/value from nested structure
-                extracted = []
-                for v in values:
-                    if isinstance(v, dict):
-                        extracted.append(v.get("ip", v.get("value", str(v))))
-                    else:
-                        extracted.append(str(v))
-                current_dns[record_type.upper()] = extracted
-
-        return DomainInfo(
-            domain=domain,
-            alexa_rank=data.get("alexa_rank"),
-            apex_domain=data.get("apex_domain", domain),
-            current_dns=current_dns,
-            subdomain_count=data.get("subdomain_count", 0),
-        )
+        return parse_domain_result(data, domain)
 
     def get_subdomains(self, domain: str) -> list[Asset]:
         """Get subdomains for a domain.
@@ -317,42 +295,10 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
     def _parse_dns_history(
         self, data: dict[str, Any], record_type: str
     ) -> list[HistoricalDnsRecord]:
-        """Parse SecurityTrails DNS history response."""
-        records: list[HistoricalDnsRecord] = []
+        """Parse SecurityTrails DNS history response (delegates to `_mappers.securitytrails`)."""
+        from domainraptor.enrichment._mappers.securitytrails import parse_dns_history
 
-        for item in data.get("records", []):
-            values = item.get("values", [])
-            extracted_values = []
-            organizations = []
-
-            for v in values:
-                if isinstance(v, dict):
-                    extracted_values.append(v.get("ip", v.get("value", str(v))))
-                    if v.get("ip_organization"):
-                        organizations.append(v["ip_organization"])
-                else:
-                    extracted_values.append(str(v))
-
-            first_seen = None
-            last_seen = None
-            if item.get("first_seen"):
-                with contextlib.suppress(ValueError, TypeError):
-                    first_seen = datetime.strptime(item["first_seen"], "%Y-%m-%d")
-            if item.get("last_seen"):
-                with contextlib.suppress(ValueError, TypeError):
-                    last_seen = datetime.strptime(item["last_seen"], "%Y-%m-%d")
-
-            records.append(
-                HistoricalDnsRecord(
-                    record_type=record_type.upper(),
-                    values=extracted_values,
-                    first_seen=first_seen,
-                    last_seen=last_seen,
-                    organizations=list(set(organizations)),
-                )
-            )
-
-        return records
+        return parse_dns_history(data, record_type)
 
     def get_associated_domains(self, domain: str) -> list[str]:
         """Get domains associated with the same organization/registrant.

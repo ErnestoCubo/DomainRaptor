@@ -18,7 +18,6 @@ Docs: https://developers.virustotal.com/reference
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 import time
@@ -268,31 +267,10 @@ class VirusTotalClient(BaseClient[ReputationResult]):
         return self._parse_domain_result(data, domain)
 
     def _parse_domain_result(self, data: dict[str, Any], domain: str) -> ReputationResult:
-        """Parse VirusTotal domain API response."""
-        attrs = data.get("data", {}).get("attributes", {})
-        stats = attrs.get("last_analysis_stats", {})
+        """Parse VirusTotal domain API response (delegates to `_mappers.virustotal`)."""
+        from domainraptor.enrichment._mappers.virustotal import parse_domain_result
 
-        last_analysis = None
-        if attrs.get("last_analysis_date"):
-            with contextlib.suppress(ValueError, TypeError):
-                last_analysis = datetime.fromtimestamp(attrs["last_analysis_date"])
-
-        return ReputationResult(
-            resource=domain,
-            resource_type="domain",
-            malicious=stats.get("malicious", 0),
-            suspicious=stats.get("suspicious", 0),
-            harmless=stats.get("harmless", 0),
-            undetected=stats.get("undetected", 0),
-            total_engines=sum(stats.values()) if stats else 0,
-            reputation_score=attrs.get("reputation", 0),
-            last_analysis_date=last_analysis,
-            categories=attrs.get("categories", {}),
-            tags=attrs.get("tags", []),
-            whois=attrs.get("whois", ""),
-            registrar=attrs.get("registrar", ""),
-            last_dns_records=attrs.get("last_dns_records", []),
-        )
+        return parse_domain_result(data, domain)
 
     def get_ip_report(self, ip: str) -> ReputationResult:
         """Get reputation report for an IP address.
@@ -323,29 +301,10 @@ class VirusTotalClient(BaseClient[ReputationResult]):
         return self._parse_ip_result(data, ip)
 
     def _parse_ip_result(self, data: dict[str, Any], ip: str) -> ReputationResult:
-        """Parse VirusTotal IP API response."""
-        attrs = data.get("data", {}).get("attributes", {})
-        stats = attrs.get("last_analysis_stats", {})
+        """Parse VirusTotal IP API response (delegates to `_mappers.virustotal`)."""
+        from domainraptor.enrichment._mappers.virustotal import parse_ip_result
 
-        last_analysis = None
-        if attrs.get("last_analysis_date"):
-            with contextlib.suppress(ValueError, TypeError):
-                last_analysis = datetime.fromtimestamp(attrs["last_analysis_date"])
-
-        return ReputationResult(
-            resource=ip,
-            resource_type="ip",
-            malicious=stats.get("malicious", 0),
-            suspicious=stats.get("suspicious", 0),
-            harmless=stats.get("harmless", 0),
-            undetected=stats.get("undetected", 0),
-            total_engines=sum(stats.values()) if stats else 0,
-            reputation_score=attrs.get("reputation", 0),
-            last_analysis_date=last_analysis,
-            tags=attrs.get("tags", []),
-            as_owner=attrs.get("as_owner", ""),
-            country=attrs.get("country", ""),
-        )
+        return parse_ip_result(data, ip)
 
     def get_subdomains(self, domain: str, limit: int = 100) -> list[Asset]:
         """Get subdomains for a domain from VirusTotal.
