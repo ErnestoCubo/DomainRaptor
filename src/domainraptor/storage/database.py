@@ -8,7 +8,10 @@ import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,24 @@ class DatabaseManager:
         self.db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection: sqlite3.Connection | None = None
+        self._engine: Engine | None = None
+
+    @property
+    def engine(self) -> Engine:
+        """Return a lazily-created SQLAlchemy ``Engine`` for this database.
+
+        The engine points at the same SQLite file used by the raw
+        :mod:`sqlite3` code path. It enables callers (e.g. CLI commands
+        that want PostgreSQL/MySQL) to construct
+        :class:`~domainraptor.storage._sql_repository.SqlScanRepository`
+        and :class:`~domainraptor.storage._sql_repository.SqlWatchRepository`
+        without duplicating connection setup.
+        """
+        if self._engine is None:
+            from domainraptor.storage._engine import create_engine_from_url
+
+            self._engine = create_engine_from_url(f"sqlite:///{self.db_path}")
+        return self._engine
 
     @contextmanager
     def get_connection(self) -> Generator[sqlite3.Connection, None, None]:
