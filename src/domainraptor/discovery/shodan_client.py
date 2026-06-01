@@ -25,6 +25,7 @@ from domainraptor.core.exceptions import (
     SourceRateLimitError,
 )
 from domainraptor.core.types import Asset, AssetType, Service, SeverityLevel, Vulnerability
+from domainraptor.discovery._host import HostInformation
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
@@ -49,21 +50,12 @@ class ShodanNotFoundError(ShodanError, SourceNotFoundError):
 
 
 @dataclass
-class ShodanHostResult:
+class ShodanHostResult(HostInformation):
     """Result from Shodan host lookup."""
 
-    ip: str
-    hostnames: list[str] = field(default_factory=list)
-    country: str = ""
-    city: str = ""
     org: str = ""
-    asn: str = ""
     isp: str = ""
-    os: str | None = None
-    ports: list[int] = field(default_factory=list)
-    services: list[Service] = field(default_factory=list)
     vulns: list[str] = field(default_factory=list)
-    last_update: datetime | None = None
     tags: list[str] = field(default_factory=list)
 
 

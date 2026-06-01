@@ -25,7 +25,8 @@ from domainraptor.core.exceptions import (
     SourceNotFoundError,
     SourceRateLimitError,
 )
-from domainraptor.core.types import Asset, AssetType, Service
+from domainraptor.core.types import Asset, AssetType
+from domainraptor.discovery._host import HostInformation
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
@@ -50,21 +51,12 @@ class ZoomEyeNotFoundError(ZoomEyeError, SourceNotFoundError):
 
 
 @dataclass
-class ZoomEyeHostResult:
+class ZoomEyeHostResult(HostInformation):
     """Result from ZoomEye host lookup."""
 
-    ip: str
-    hostnames: list[str] = field(default_factory=list)
-    country: str = ""
-    city: str = ""
     org: str = ""
-    asn: str = ""
     isp: str = ""
-    os: str | None = None
-    ports: list[int] = field(default_factory=list)
-    services: list[Service] = field(default_factory=list)
     vulns: list[str] = field(default_factory=list)
-    last_update: datetime | None = None
     tags: list[str] = field(default_factory=list)
     device_type: str = ""
     banner: str = ""
