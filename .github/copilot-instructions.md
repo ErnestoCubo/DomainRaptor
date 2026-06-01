@@ -38,7 +38,13 @@ When invoking a Python script use `uv run python …`, never `python …`.
   reformatted files, retry once with `git add -u && git commit -m "…"`.
 - **Branches**: feature work on `feat/<topic>` branched from `develop`.
   Implementer tasks go on `feat/T###-<slug>` (see sprint docs).
-- **Releases** flow `develop → main` via release-please PR.
+- **Release train**: `feat/* → develop → release → main`, then
+  `release-please` opens a versioning PR on `main` that becomes the tag
+  + GitHub Release + PyPI publish. The two promotion legs
+  (`develop → release` and `release → main`) are agent-driven by
+  `@release-manager` + `@pr-opener`, merged by `@pr-merger` only with
+  human confirmation. Direct push to `develop`, `release` or `main` is
+  forbidden. See `wiki/Release-Process.md`.
 
 ## Conventional Commits (mandatory)
 
@@ -48,6 +54,24 @@ allowed types: `feat`, `fix`, `perf`, `revert`, `docs`, `refactor`, `test`,
 `discovery`, `enrichment`, `exploitation`, `assessment`, `storage`,
 `reporting`, `deps`, `ci`, `docs`, `agents`, `sprints`. Add `!` or
 `BREAKING CHANGE:` footer for majors. Force a release with `Release-As: X.Y.Z`.
+
+### Version bump table
+
+| Commit prefix | Bump on next release | Notes |
+|---|---|---|
+| `feat:` | minor | new user-facing capability |
+| `feat!:` or `BREAKING CHANGE:` footer | major (minor while pre-1.0, see `release-please-config.json`) | API break |
+| `fix:` | patch | bug fix |
+| `perf:` | patch | perf improvement |
+| `revert:` | patch | undo a previous change |
+| `docs:` | none | shows in CHANGELOG "Documentation" |
+| `refactor:` | none | shows in CHANGELOG "Code Refactoring" |
+| `test:` / `build:` / `ci:` / `chore:` | none | hidden from CHANGELOG |
+| any commit with footer `Release-As: X.Y.Z` | forced to exactly `X.Y.Z` | use sparingly |
+
+Promotion PRs (`develop → release`, `release → main`) MUST use the
+`chore(release):` prefix — release-please ignores them for bumps; only
+the feature commits squashed into `develop` count.
 
 ## Autopilot policy
 
@@ -121,3 +145,5 @@ devops-engineer and ai-governance-reviewer)
 - Reusable prompts: `.github/prompts/` (invoke with `/<name>`).
 - Agent roster: `.github/agents/` (invoke with `@<name>`).
 - Sprint methodology: `.github/sprints/_template/README.md`.
+- Release train (branches, gates, promotion agents): `wiki/Release-Process.md`.
+- PR / release agents: `@pr-opener`, `@pr-merger`, `@release-manager`.

@@ -61,6 +61,14 @@ Closes finding F-003 from AUDIT-2026-06-15.md.
 - `ai-auditor.agent.md` changes → certified by `ai-governance-reviewer`.
 - `ai-governance-reviewer.agent.md` changes → approved by **human only**.
 
+### Extension — PR / release agents
+
+`@pr-opener`, `@pr-merger`, `@release-manager` MUST refuse to open,
+merge or promote any PR whose diff modifies their own `.agent.md`.
+Such PRs route exclusively through `ai-governance-reviewer` + human
+approval. `@pr-merger` enforces this as a blocker in its Required
+Conditions checklist.
+
 ## Quorum to weaken rules (HARD RULE 26)
 
 Removing or relaxing any rule (1–26) requires:
