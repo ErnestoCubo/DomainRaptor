@@ -1,0 +1,113 @@
+name: ai-audit
+
+on:
+    pull_request:
+        paths:
+            - ".github/agents/**"
+            - ".github/prompts/**"
+            - ".github/instructions/**"
+            - ".github/copilot-instructions.md"
+            - ".github/model-policy.md"
+            - ".github/sprints/**"
+
+permissions:
+    contents: read
+    pull-requests: read
+
+jobs:
+    validate-frontmatter:
+        name: Validate YAML frontmatter
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install uv
+              uses: astral-sh/setup-uv@v3
+              with:
+                  enable-cache: true
+            - name: Install pyyaml
+              run: uv pip install --system pyyaml
+            - name: Validate frontmatter
+              run: |
+                  python - <<'PY'
+                  from __future__ import annotations
+                  import sys, pathlib, yaml
+
+                  ROOT = pathlib.Path(".github")
+                  targets = []
+                  for sub in ("agents", "prompts", "instructions"):
+                      targets.extend((ROOT / sub).rglob("*.md"))
+
+                  errors: list[str] = []
+                  for path in sorted(targets):
+                      text = path.read_text(encoding="utf-8")
+                      if not text.startswith("---"):
+                          errors.append(f"{path}: missing frontmatter")
+                          continue
+                      _, _, rest = text.partition("---\n")
+                      fm, sep, _body = rest.partition("\n---")
+                      if not sep:
+                          errors.append(f"{path}: unterminated frontmatter")
+                          continue
+                      try:
+                          data = yaml.safe_load(fm) or {}
+                      except yaml.YAMLError as e:
+                          errors.append(f"{path}: invalid YAML: {e}")
+                          continue
+                      if not isinstance(data, dict):
+                          errors.append(f"{path}: frontmatter not a mapping")
+                          continue
+                      if "description" not in data:
+                          errors.append(f"{path}: missing 'description'")
+                      if path.parent.name == "agents":
+                          for key in ("tools", "model"):
+                              if key not in data:
+                                  errors.append(f"{path}: missing '{key}'")
+                      if path.parent.name == "instructions":
+                          if "applyTo" not in data:
+                              errors.append(f"{path}: missing 'applyTo'")
+
+                  if errors:
+                      print("Frontmatter validation FAILED:")
+                      for e in errors:
+                          print(f"  - {e}")
+                      sys.exit(1)
+                  print(f"Validated {len(targets)} files. All frontmatter OK.")
+                  PY
+
+    dry-check:
+        name: DRY meta scan (informational)
+        runs-on: ubuntu-latest
+        continue-on-error: true
+        steps:
+            - uses: actions/checkout@v4
+            - name: Find duplicated paragraphs
+              run: |
+                  python - <<'PY'
+                  from __future__ import annotations
+                  import pathlib, hashlib, collections
+
+                  ROOT = pathlib.Path(".github")
+                  targets = []
+                  for sub in ("agents", "prompts", "instructions"):
+                      targets.extend((ROOT / sub).rglob("*.md"))
+                  targets.append(ROOT / "copilot-instructions.md")
+
+                  buckets: dict[str, list[str]] = collections.defaultdict(list)
+                  for path in sorted(targets):
+                      if not path.exists():
+                          continue
+                      for block in path.read_text(encoding="utf-8").split("\n\n"):
+                          norm = " ".join(block.split())
+                          if len(norm) < 120:
+                              continue
+                          h = hashlib.sha256(norm.encode()).hexdigest()
+                          buckets[h].append(str(path))
+
+                  dups = {h: paths for h, paths in buckets.items() if len(paths) > 1}
+                  if not dups:
+                      print("No exact-duplicate paragraphs ≥120 chars found.")
+                  else:
+                      print(f"Found {len(dups)} duplicate paragraphs:")
+                      for h, paths in dups.items():
+                          print(f"  - {h[:8]}: {paths}")
+                  PY
