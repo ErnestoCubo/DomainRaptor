@@ -66,7 +66,7 @@ class WaybackClient(SubdomainClient):
             response = self.get(self.BASE_URL, params=params)
             data = response.json()
         except Exception as exc:
-            logger.error("wayback: query failed for %s: %s", target, exc)
+            logger.error("wayback: query failed for %s: %s", target, exc, exc_info=True)
             return []
 
         if not data or len(data) < 2:

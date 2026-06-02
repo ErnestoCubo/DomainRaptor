@@ -11,7 +11,6 @@ Docs: https://shodan.readthedocs.io/
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 import re
@@ -19,52 +18,44 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceRateLimitError,
+)
 from domainraptor.core.types import Asset, AssetType, Service, SeverityLevel, Vulnerability
+from domainraptor.discovery._host import HostInformation
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class ShodanError(Exception):
+class ShodanError(SourceError):
     """Base exception for Shodan client errors."""
 
-    pass
+    source = "shodan"
 
 
-class ShodanAPIKeyError(ShodanError):
+class ShodanAPIKeyError(ShodanError, SourceAPIKeyError):
     """Raised when API key is missing or invalid."""
 
-    pass
 
-
-class ShodanRateLimitError(ShodanError):
+class ShodanRateLimitError(ShodanError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class ShodanNotFoundError(ShodanError):
+class ShodanNotFoundError(ShodanError, SourceNotFoundError):
     """Raised when host/domain not found in Shodan."""
-
-    pass
 
 
 @dataclass
-class ShodanHostResult:
+class ShodanHostResult(HostInformation):
     """Result from Shodan host lookup."""
 
-    ip: str
-    hostnames: list[str] = field(default_factory=list)
-    country: str = ""
-    city: str = ""
     org: str = ""
-    asn: str = ""
     isp: str = ""
-    os: str | None = None
-    ports: list[int] = field(default_factory=list)
-    services: list[Service] = field(default_factory=list)
     vulns: list[str] = field(default_factory=list)
-    last_update: datetime | None = None
     tags: list[str] = field(default_factory=list)
 
 
@@ -159,63 +150,16 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: Failed to lookup {ip}: {e}")
+            logger.error(f"Shodan: Failed to lookup {ip}: {e}", exc_info=True)
             raise ShodanError(f"Failed to lookup host {ip}: {e}") from e
 
         return self._parse_host_result(data)
 
     def _parse_host_result(self, data: dict[str, Any]) -> ShodanHostResult:
-        """Parse Shodan host API response."""
-        services: list[Service] = []
+        """Parse Shodan host API response (delegates to `_mappers.shodan`)."""
+        from domainraptor.discovery._mappers.shodan import parse_host_result
 
-        for item in data.get("data", []):
-            port = item.get("port", 0)
-            transport = item.get("transport", "tcp")
-
-            service = Service(
-                port=port,
-                protocol=transport,
-                service_name=item.get("product", "") or item.get("_shodan", {}).get("module", ""),
-                version=item.get("version", "") or "",
-                banner=item.get("data", "")[:500] if item.get("data") else "",
-                cpe=item.get("cpe", []) or [],
-                metadata={
-                    "module": item.get("_shodan", {}).get("module", ""),
-                    "ssl": bool(item.get("ssl")),
-                    "http": item.get("http", {}),
-                },
-            )
-            services.append(service)
-
-        last_update = None
-        if data.get("last_update"):
-            with contextlib.suppress(ValueError, AttributeError):
-                last_update = datetime.fromisoformat(data["last_update"].replace("Z", "+00:00"))
-
-        # Handle vulns - can be dict (older API) or list (newer API)
-        raw_vulns = data.get("vulns", [])
-        if isinstance(raw_vulns, dict):
-            vuln_list = list(raw_vulns.keys())
-        elif isinstance(raw_vulns, list):
-            vuln_list = raw_vulns
-        else:
-            vuln_list = []
-
-        return ShodanHostResult(
-            ip=data.get("ip_str", ""),
-            hostnames=data.get("hostnames", []),
-            country=data.get("country_name", "") or data.get("country_code", ""),
-            city=data.get("city", "") or "",
-            org=data.get("org", "") or "",
-            asn=data.get("asn", "") or "",
-            isp=data.get("isp", "") or "",
-            os=data.get("os"),
-            ports=data.get("ports", []),
-            services=services,
-            vulns=vuln_list,
-            last_update=last_update,
-            tags=data.get("tags", []),
-        )
+        return parse_host_result(data)
 
     def dns_domain(self, domain: str) -> list[Asset]:
         """Get subdomains for a domain from Shodan DNS.
@@ -242,7 +186,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: DNS lookup failed for {domain}: {e}")
+            logger.error(f"Shodan: DNS lookup failed for {domain}: {e}", exc_info=True)
             raise ShodanError(f"DNS lookup failed: {e}") from e
 
         assets: list[Asset] = []
@@ -291,7 +235,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: DNS resolve failed: {e}")
+            logger.error(f"Shodan: DNS resolve failed: {e}", exc_info=True)
             return {}
 
     def reverse_dns(self, ips: list[str]) -> dict[str, list[str]]:
@@ -321,7 +265,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: Reverse DNS failed: {e}")
+            logger.error(f"Shodan: Reverse DNS failed: {e}", exc_info=True)
             return {}
 
     def get_vulns_for_host(self, ip: str) -> list[Vulnerability]:
@@ -500,7 +444,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: Org search failed for {org}: {e}")
+            logger.error(f"Shodan: Org search failed for {org}: {e}", exc_info=True)
             raise ShodanError(f"Org search failed: {e}") from e
 
         return results
@@ -557,7 +501,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: SSL search failed for {domain}: {e}")
+            logger.error(f"Shodan: SSL search failed for {domain}: {e}", exc_info=True)
             raise ShodanError(f"SSL search failed: {e}") from e
 
         return results
@@ -613,7 +557,7 @@ class ShodanClient(BaseClient[ShodanHostResult]):
         except ShodanError:
             raise
         except Exception as e:
-            logger.error(f"Shodan: ASN search failed for {asn_normalized}: {e}")
+            logger.error(f"Shodan: ASN search failed for {asn_normalized}: {e}", exc_info=True)
             raise ShodanError(f"ASN search failed: {e}") from e
 
         return results

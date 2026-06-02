@@ -22,21 +22,20 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-import httpx
+from domainraptor.core._http import create_http_client
+from domainraptor.core.exceptions import SourceError, SourceRateLimitError
 
 logger = logging.getLogger(__name__)
 
 
-class NVDError(Exception):
+class NVDError(SourceError):
     """Base exception for NVD client errors."""
 
-    pass
+    source = "nvd"
 
 
-class NVDRateLimitError(NVDError):
+class NVDRateLimitError(NVDError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
-
-    pass
 
 
 @dataclass
@@ -81,7 +80,7 @@ class NVDClient:
         # Rate limit: 0.6s without key, 0.1s with key
         self._min_interval = 0.1 if self.api_key else 0.6
 
-        self._client = httpx.Client(timeout=30)
+        self._client = create_http_client(timeout=30)
 
     def close(self) -> None:
         """Close the HTTP client."""
@@ -153,7 +152,7 @@ class NVDClient:
             except NVDError:
                 raise
             except Exception as e:
-                logger.error(f"NVD lookup failed for {cve_id}: {e}")
+                logger.error(f"NVD lookup failed for {cve_id}: {e}", exc_info=True)
                 return None
 
         return None  # Should not reach here
@@ -190,7 +189,7 @@ class NVDClient:
                 if info:
                     results[cve_id] = info
             except Exception as e:
-                logger.error(f"Failed to fetch {cve_id}: {e}")
+                logger.error(f"Failed to fetch {cve_id}: {e}", exc_info=True)
 
         return results
 

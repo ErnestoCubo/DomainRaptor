@@ -93,7 +93,7 @@ class UrlscanClient(BaseClient[UrlscanResult]):
             response = self.get(SEARCH_URL, params=params)
             payload = response.json()
         except Exception as exc:
-            logger.error("urlscan: search failed for %s: %s", target, exc)
+            logger.error("urlscan: search failed for %s: %s", target, exc, exc_info=True)
             return []
 
         results: list[UrlscanResult] = []

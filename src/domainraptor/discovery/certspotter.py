@@ -70,7 +70,7 @@ class CertSpotterClient(SubdomainClient):
             response = self.get(url)
             data: list[dict[str, Any]] = response.json()
         except Exception as exc:
-            logger.error("certspotter: failed to query %s: %s", target, exc)
+            logger.error("certspotter: failed to query %s: %s", target, exc, exc_info=True)
             return []
 
         if not isinstance(data, list) or not data:

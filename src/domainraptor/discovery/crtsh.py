@@ -64,7 +64,7 @@ class CrtShClient(SubdomainClient):
             response = self.get(url)
             data = response.json()
         except Exception as e:
-            logger.error(f"crt.sh: Failed to query {target}: {e}")
+            logger.error(f"crt.sh: Failed to query {target}: {e}", exc_info=True)
             return []
 
         if not data:
@@ -120,7 +120,7 @@ class CrtShClient(SubdomainClient):
             response = self.get(url)
             data = response.json()
         except Exception as e:
-            logger.error(f"crt.sh: Failed to query certificates for {target}: {e}")
+            logger.error(f"crt.sh: Failed to query certificates for {target}: {e}", exc_info=True)
             return []
 
         if not data:

@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 from rich.panel import Panel
 
-from domainraptor.core.config import AppConfig, OutputFormat
+from domainraptor.cli._base import get_app_config
+from domainraptor.core.config import OutputFormat
 from domainraptor.core.risk import calculate_risk_level, get_risk_level_description
 from domainraptor.utils.output import (
     console,
@@ -107,7 +108,7 @@ def generate_cmd(
         [dim]# Include history and remediation[/dim]
         domainraptor report generate example.com --history --remediation
     """
-    ctx.obj.get("config", AppConfig())
+    get_app_config(ctx)
 
     print_info(f"Generating {format_type.upper()} report for: [bold]{target}[/bold]")
 

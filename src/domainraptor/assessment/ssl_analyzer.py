@@ -141,11 +141,11 @@ class SSLAnalyzer(ConfigurationChecker):
         except ssl.SSLCertVerificationError as e:
             ssl_info.has_valid_cert = False
             ssl_info.cert_error = str(e)
-            logger.warning(f"Certificate verification failed: {e}")
+            logger.warning(f"Certificate verification failed: {e}", exc_info=True)
             # Try without verification to still get info
             return self._get_ssl_info_insecure(hostname, port, ssl_info)
         except (OSError, ssl.SSLError, TimeoutError) as e:
-            logger.error(f"SSL connection failed: {e}")
+            logger.error(f"SSL connection failed: {e}", exc_info=True)
             return None
 
         # Test protocol support
@@ -172,8 +172,8 @@ class SSLAnalyzer(ConfigurationChecker):
                 if cipher:
                     ssl_info.cipher_name = cipher[0]
                     ssl_info.cipher_bits = cipher[2]
-        except Exception as e:
-            logger.error(f"Insecure SSL connection also failed: {e}")
+        except (OSError, ssl.SSLError, TimeoutError) as e:
+            logger.error(f"Insecure SSL connection also failed: {e}", exc_info=True)
 
         return ssl_info
 

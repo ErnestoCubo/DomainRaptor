@@ -10,6 +10,7 @@ from typing import Any, Generic, TypeVar
 
 import httpx
 
+from domainraptor.core._http import create_http_client
 from domainraptor.core.types import Asset
 
 logger = logging.getLogger(__name__)
@@ -68,10 +69,9 @@ class BaseClient(ABC, Generic[T]):
     def client(self) -> httpx.Client:
         """Lazy-initialized HTTP client."""
         if self._client is None:
-            self._client = httpx.Client(
+            self._client = create_http_client(
                 timeout=self.config.timeout,
                 headers=self.config.headers,
-                follow_redirects=True,
             )
         return self._client
 

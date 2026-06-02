@@ -176,10 +176,10 @@ class HeadersChecker(ConfigurationChecker):
             return headers
 
         except httpx.HTTPError as e:
-            logger.error(f"HTTP error fetching headers: {e}")
+            logger.error(f"HTTP error fetching headers: {e}", exc_info=True)
             return None
         except Exception as e:
-            logger.error(f"Error fetching headers: {e}")
+            logger.error(f"Error fetching headers: {e}", exc_info=True)
             return None
 
     def _check_missing_headers(self, headers: SecurityHeaders) -> list[ConfigIssue]:

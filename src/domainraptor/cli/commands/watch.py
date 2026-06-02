@@ -8,6 +8,7 @@ from typing import Annotated, Any
 import typer
 from rich.table import Table
 
+from domainraptor.cli._base import get_app_config
 from domainraptor.core.config import AppConfig
 from domainraptor.core.types import AssetType, Change, ChangeType, ScanResult, WatchTarget
 from domainraptor.storage.repository import ScanRepository, WatchRepository
@@ -121,7 +122,7 @@ def add_cmd(
         [dim]# Watch certificate expiration[/dim]
         domainraptor watch add example.com --type certificate
     """
-    ctx.obj.get("config", AppConfig())
+    get_app_config(ctx)
     repo = _get_watch_repo()
 
     # Parse interval
@@ -255,7 +256,7 @@ def run_cmd(
         [dim]# Force check all targets[/dim]
         domainraptor watch run --force
     """
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    config: AppConfig = get_app_config(ctx)
     repo = _get_watch_repo()
 
     targets_to_check: list[WatchTarget] = []

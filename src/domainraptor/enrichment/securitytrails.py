@@ -13,47 +13,45 @@ Docs: https://docs.securitytrails.com/reference
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceQuotaExceededError,
+    SourceRateLimitError,
+)
 from domainraptor.core.types import Asset, AssetType
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class SecurityTrailsError(Exception):
+class SecurityTrailsError(SourceError):
     """Base exception for SecurityTrails client errors."""
 
-    pass
+    source = "securitytrails"
 
 
-class SecurityTrailsAPIKeyError(SecurityTrailsError):
+class SecurityTrailsAPIKeyError(SecurityTrailsError, SourceAPIKeyError):
     """Raised when API key is missing or invalid."""
 
-    pass
 
-
-class SecurityTrailsRateLimitError(SecurityTrailsError):
+class SecurityTrailsRateLimitError(SecurityTrailsError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class SecurityTrailsQuotaExceededError(SecurityTrailsError):
+class SecurityTrailsQuotaExceededError(SecurityTrailsError, SourceQuotaExceededError):
     """Raised when monthly quota is exceeded."""
 
-    pass
 
-
-class SecurityTrailsNotFoundError(SecurityTrailsError):
+class SecurityTrailsNotFoundError(SecurityTrailsError, SourceNotFoundError):
     """Raised when domain not found."""
-
-    pass
 
 
 @dataclass
@@ -205,37 +203,16 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: Failed to lookup {domain}: {e}")
+            logger.error(f"SecurityTrails: Failed to lookup {domain}: {e}", exc_info=True)
             raise SecurityTrailsError(f"Failed to lookup domain {domain}: {e}") from e
 
         return self._parse_domain_result(data, domain)
 
     def _parse_domain_result(self, data: dict[str, Any], domain: str) -> DomainInfo:
-        """Parse SecurityTrails domain API response."""
-        current_dns: dict[str, list[str]] = {}
+        """Parse SecurityTrails domain API response (delegates to `_mappers.securitytrails`)."""
+        from domainraptor.enrichment._mappers.securitytrails import parse_domain_result
 
-        # Parse current DNS records
-        dns_data = data.get("current_dns", {})
-        for record_type in ["a", "aaaa", "mx", "ns", "soa", "txt"]:
-            records = dns_data.get(record_type, {})
-            values = records.get("values", [])
-            if values:
-                # Extract IP/value from nested structure
-                extracted = []
-                for v in values:
-                    if isinstance(v, dict):
-                        extracted.append(v.get("ip", v.get("value", str(v))))
-                    else:
-                        extracted.append(str(v))
-                current_dns[record_type.upper()] = extracted
-
-        return DomainInfo(
-            domain=domain,
-            alexa_rank=data.get("alexa_rank"),
-            apex_domain=data.get("apex_domain", domain),
-            current_dns=current_dns,
-            subdomain_count=data.get("subdomain_count", 0),
-        )
+        return parse_domain_result(data, domain)
 
     def get_subdomains(self, domain: str) -> list[Asset]:
         """Get subdomains for a domain.
@@ -262,7 +239,9 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: Subdomain enumeration failed for {domain}: {e}")
+            logger.error(
+                f"SecurityTrails: Subdomain enumeration failed for {domain}: {e}", exc_info=True
+            )
             raise SecurityTrailsError(f"Subdomain enumeration failed: {e}") from e
 
         assets: list[Asset] = []
@@ -308,7 +287,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: DNS history failed for {domain}: {e}")
+            logger.error(f"SecurityTrails: DNS history failed for {domain}: {e}", exc_info=True)
             raise SecurityTrailsError(f"DNS history lookup failed: {e}") from e
 
         return self._parse_dns_history(data, record_type)
@@ -316,42 +295,10 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
     def _parse_dns_history(
         self, data: dict[str, Any], record_type: str
     ) -> list[HistoricalDnsRecord]:
-        """Parse SecurityTrails DNS history response."""
-        records: list[HistoricalDnsRecord] = []
+        """Parse SecurityTrails DNS history response (delegates to `_mappers.securitytrails`)."""
+        from domainraptor.enrichment._mappers.securitytrails import parse_dns_history
 
-        for item in data.get("records", []):
-            values = item.get("values", [])
-            extracted_values = []
-            organizations = []
-
-            for v in values:
-                if isinstance(v, dict):
-                    extracted_values.append(v.get("ip", v.get("value", str(v))))
-                    if v.get("ip_organization"):
-                        organizations.append(v["ip_organization"])
-                else:
-                    extracted_values.append(str(v))
-
-            first_seen = None
-            last_seen = None
-            if item.get("first_seen"):
-                with contextlib.suppress(ValueError, TypeError):
-                    first_seen = datetime.strptime(item["first_seen"], "%Y-%m-%d")
-            if item.get("last_seen"):
-                with contextlib.suppress(ValueError, TypeError):
-                    last_seen = datetime.strptime(item["last_seen"], "%Y-%m-%d")
-
-            records.append(
-                HistoricalDnsRecord(
-                    record_type=record_type.upper(),
-                    values=extracted_values,
-                    first_seen=first_seen,
-                    last_seen=last_seen,
-                    organizations=list(set(organizations)),
-                )
-            )
-
-        return records
+        return parse_dns_history(data, record_type)
 
     def get_associated_domains(self, domain: str) -> list[str]:
         """Get domains associated with the same organization/registrant.
@@ -376,7 +323,9 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: Associated domains failed for {domain}: {e}")
+            logger.error(
+                f"SecurityTrails: Associated domains failed for {domain}: {e}", exc_info=True
+            )
             return []
 
         records = data.get("records", [])
@@ -405,7 +354,7 @@ class SecurityTrailsClient(BaseClient[DomainInfo]):
         except SecurityTrailsError:
             raise
         except Exception as e:
-            logger.error(f"SecurityTrails: IP neighbors failed for {ip}: {e}")
+            logger.error(f"SecurityTrails: IP neighbors failed for {ip}: {e}", exc_info=True)
             return []
 
         blocks = data.get("blocks", [])
