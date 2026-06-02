@@ -9,18 +9,18 @@ import pytest
 
 pytest.importorskip("sqlalchemy")
 
-from domainraptor.core.config import AppConfig  # noqa: E402
-from domainraptor.storage import (  # noqa: E402
+from domainraptor.core.config import AppConfig
+from domainraptor.storage import (
     ScanRepository,
     WatchRepository,
     get_scan_repository,
     get_watch_repository,
 )
-from domainraptor.storage._sql_repository import (  # noqa: E402
+from domainraptor.storage._sql_repository import (
     SqlScanRepository,
     SqlWatchRepository,
 )
-from domainraptor.storage.database import DatabaseManager  # noqa: E402
+from domainraptor.storage.database import DatabaseManager
 
 
 def test_database_manager_engine_lazy() -> None:

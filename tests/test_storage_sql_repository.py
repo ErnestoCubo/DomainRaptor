@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("sqlalchemy")
 
-from domainraptor.core.types import (  # noqa: E402
+from domainraptor.core.types import (
     Asset,
     AssetType,
     Certificate,
@@ -20,11 +20,11 @@ from domainraptor.core.types import (  # noqa: E402
     Vulnerability,
     WatchTarget,
 )
-from domainraptor.storage._engine import (  # noqa: E402
+from domainraptor.storage._engine import (
     create_engine_from_url,
     init_schema,
 )
-from domainraptor.storage._sql_repository import (  # noqa: E402
+from domainraptor.storage._sql_repository import (
     SqlScanRepository,
     SqlWatchRepository,
 )
