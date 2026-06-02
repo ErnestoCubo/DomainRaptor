@@ -13,59 +13,50 @@ Docs: https://www.zoomeye.org/doc
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from domainraptor.core.types import Asset, AssetType, Service
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceRateLimitError,
+)
+from domainraptor.core.types import Asset, AssetType
+from domainraptor.discovery._host import HostInformation
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class ZoomEyeError(Exception):
+class ZoomEyeError(SourceError):
     """Base exception for ZoomEye client errors."""
 
-    pass
+    source = "zoomeye"
 
 
-class ZoomEyeAPIKeyError(ZoomEyeError):
+class ZoomEyeAPIKeyError(ZoomEyeError, SourceAPIKeyError):
     """Raised when API key is missing or invalid."""
 
-    pass
 
-
-class ZoomEyeRateLimitError(ZoomEyeError):
+class ZoomEyeRateLimitError(ZoomEyeError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class ZoomEyeNotFoundError(ZoomEyeError):
+class ZoomEyeNotFoundError(ZoomEyeError, SourceNotFoundError):
     """Raised when host/domain not found."""
-
-    pass
 
 
 @dataclass
-class ZoomEyeHostResult:
+class ZoomEyeHostResult(HostInformation):
     """Result from ZoomEye host lookup."""
 
-    ip: str
-    hostnames: list[str] = field(default_factory=list)
-    country: str = ""
-    city: str = ""
     org: str = ""
-    asn: str = ""
     isp: str = ""
-    os: str | None = None
-    ports: list[int] = field(default_factory=list)
-    services: list[Service] = field(default_factory=list)
     vulns: list[str] = field(default_factory=list)
-    last_update: datetime | None = None
     tags: list[str] = field(default_factory=list)
     device_type: str = ""
     banner: str = ""
@@ -183,7 +174,7 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         except ZoomEyeError:
             raise
         except Exception as e:
-            logger.error(f"ZoomEye: Search failed: {e}")
+            logger.error(f"ZoomEye: Search failed: {e}", exc_info=True)
             raise ZoomEyeError(f"Search failed: {e}") from e
 
         results: list[ZoomEyeHostResult] = []
@@ -226,7 +217,7 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         except ZoomEyeError:
             raise
         except Exception as e:
-            logger.error(f"ZoomEye: Web search failed: {e}")
+            logger.error(f"ZoomEye: Web search failed: {e}", exc_info=True)
             raise ZoomEyeError(f"Web search failed: {e}") from e
 
         return data.get("matches", [])[:limit]
@@ -284,7 +275,7 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         except ZoomEyeError:
             raise
         except Exception as e:
-            logger.error(f"ZoomEye: Domain search failed: {e}")
+            logger.error(f"ZoomEye: Domain search failed: {e}", exc_info=True)
             raise ZoomEyeError(f"Domain search failed: {e}") from e
 
         results = data.get("list", [])[:limit]
@@ -361,53 +352,10 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         return self.search_host(f'cidr:"{cidr}"', limit=limit)
 
     def _parse_host_match(self, match: dict[str, Any]) -> ZoomEyeHostResult:
-        """Parse ZoomEye host match from API response."""
-        portinfo = match.get("portinfo", {})
-        geoinfo = match.get("geoinfo", {})
+        """Parse ZoomEye host match (delegates to `_mappers.zoomeye`)."""
+        from domainraptor.discovery._mappers.zoomeye import parse_host_match
 
-        # Extract service info
-        services: list[Service] = []
-        port = portinfo.get("port", 0)
-        if port:
-            service = Service(
-                port=port,
-                protocol=portinfo.get("protocol", "tcp"),
-                service_name=portinfo.get("service", "") or portinfo.get("app", ""),
-                version=portinfo.get("version", "") or "",
-                banner=portinfo.get("banner", "")[:500] if portinfo.get("banner") else "",
-                metadata={
-                    "device": portinfo.get("device", ""),
-                    "os": portinfo.get("os", ""),
-                    "extrainfo": portinfo.get("extrainfo", ""),
-                },
-            )
-            services.append(service)
-
-        # Parse last update
-        last_update = None
-        timestamp = match.get("timestamp")
-        if timestamp:
-            with contextlib.suppress(ValueError):
-                last_update = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-
-        return ZoomEyeHostResult(
-            ip=match.get("ip", ""),
-            hostnames=portinfo.get("hostname", [])
-            if isinstance(portinfo.get("hostname"), list)
-            else [],
-            country=geoinfo.get("country", {}).get("names", {}).get("en", "") or "",
-            city=geoinfo.get("city", {}).get("names", {}).get("en", "") or "",
-            org=geoinfo.get("organization", "") or "",
-            asn=geoinfo.get("asn", "") or "",
-            isp=geoinfo.get("isp", "") or "",
-            os=portinfo.get("os", "") or None,
-            ports=[port] if port else [],
-            services=services,
-            vulns=[],  # ZoomEye doesn't provide CVEs in basic search
-            last_update=last_update,
-            device_type=portinfo.get("device", "") or "",
-            banner=portinfo.get("banner", "")[:500] if portinfo.get("banner") else "",
-        )
+        return parse_host_match(match)
 
     def get_resources_info(self) -> dict[str, Any]:
         """Get account resources/credits info.
@@ -425,7 +373,7 @@ class ZoomEyeClient(BaseClient[ZoomEyeHostResult]):
         except ZoomEyeError:
             raise
         except Exception as e:
-            logger.error(f"ZoomEye: Failed to get resources info: {e}")
+            logger.error(f"ZoomEye: Failed to get resources info: {e}", exc_info=True)
             raise ZoomEyeError(f"Failed to get resources info: {e}") from e
 
     def get_subdomains(self, domain: str, limit: int = 100) -> list[Asset]:

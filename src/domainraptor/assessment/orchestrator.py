@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -140,16 +140,21 @@ class AssessmentOrchestrator:
                 executor.submit(check_func): name for name, check_func in checks.items()
             }
 
+            per_task_timeout = self.options.timeout + 5
             for future in as_completed(future_to_name):
                 name = future_to_name[future]
                 self._progress.current_check = name
 
                 try:
-                    issues = future.result()
+                    issues = future.result(timeout=per_task_timeout)
                     all_issues.extend(issues)
+                except FutureTimeoutError:
+                    error_msg = f"{name} timed out after {per_task_timeout}s"
+                    logger.error(error_msg)
+                    result.errors.append(error_msg)
                 except Exception as e:
                     error_msg = f"{name} failed: {e}"
-                    logger.error(error_msg)
+                    logger.error(error_msg, exc_info=True)
                     result.errors.append(error_msg)
 
                 self._progress.completed_checks += 1

@@ -8,7 +8,7 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
-from domainraptor.core.config import AppConfig
+from domainraptor.cli._base import get_app_config
 from domainraptor.core.types import AssetType, Change, ChangeType, ScanResult
 from domainraptor.storage.repository import ScanRepository
 from domainraptor.utils.output import (
@@ -237,7 +237,7 @@ def compare_history_cmd(
         [dim]# Compare since specific date[/dim]
         domainraptor compare history example.com --since 2024-01-01
     """
-    ctx.obj.get("config", AppConfig())
+    get_app_config(ctx)
 
     print_info(f"Comparing scan history for: [bold]{target}[/bold]")
     print_info(f"Last {last} scans")

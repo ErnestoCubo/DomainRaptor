@@ -20,50 +20,42 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from domainraptor.core.types import Asset, AssetType, Service
+from domainraptor.core.exceptions import (
+    SourceAPIKeyError,
+    SourceError,
+    SourceNotFoundError,
+    SourceRateLimitError,
+)
+from domainraptor.core.types import Asset, AssetType
+from domainraptor.discovery._host import HostInformation
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
 
 
-class CensysError(Exception):
+class CensysError(SourceError):
     """Base exception for Censys client errors."""
 
-    pass
+    source = "censys"
 
 
-class CensysAPIKeyError(CensysError):
+class CensysAPIKeyError(CensysError, SourceAPIKeyError):
     """Raised when API credentials are missing or invalid."""
 
-    pass
 
-
-class CensysRateLimitError(CensysError):
+class CensysRateLimitError(CensysError, SourceRateLimitError):
     """Raised when rate limit is exceeded."""
 
-    pass
 
-
-class CensysNotFoundError(CensysError):
+class CensysNotFoundError(CensysError, SourceNotFoundError):
     """Raised when host/domain not found."""
-
-    pass
 
 
 @dataclass
-class CensysHostResult:
+class CensysHostResult(HostInformation):
     """Result from Censys host lookup."""
 
-    ip: str
-    hostnames: list[str] = field(default_factory=list)
-    country: str = ""
-    city: str = ""
     autonomous_system: str = ""
-    asn: str = ""
-    os: str | None = None
-    ports: list[int] = field(default_factory=list)
-    services: list[Service] = field(default_factory=list)
-    last_update: datetime | None = None
     labels: list[str] = field(default_factory=list)
     protocols: list[str] = field(default_factory=list)
 
@@ -235,7 +227,7 @@ class CensysClient(BaseClient[CensysHostResult]):
         except CensysError:
             raise
         except Exception as e:
-            logger.error(f"Censys: Search failed: {e}")
+            logger.error(f"Censys: Search failed: {e}", exc_info=True)
             raise CensysError(f"Search failed: {e}") from e
 
         results: list[CensysHostResult] = []
@@ -300,7 +292,7 @@ class CensysClient(BaseClient[CensysHostResult]):
         except CensysError:
             raise
         except Exception as e:
-            logger.error(f"Censys: Host lookup failed: {e}")
+            logger.error(f"Censys: Host lookup failed: {e}", exc_info=True)
             raise CensysError(f"Host lookup failed: {e}") from e
 
         # v3 API returns result.resource instead of just result
@@ -359,7 +351,7 @@ class CensysClient(BaseClient[CensysHostResult]):
         except CensysError:
             raise
         except Exception as e:
-            logger.error(f"Censys: Certificate search failed: {e}")
+            logger.error(f"Censys: Certificate search failed: {e}", exc_info=True)
             raise CensysError(f"Certificate search failed: {e}") from e
 
         results: list[CensysCertificateResult] = []
@@ -533,87 +525,16 @@ class CensysClient(BaseClient[CensysHostResult]):
         return assets
 
     def _parse_host_hit(self, hit: dict[str, Any]) -> CensysHostResult:
-        """Parse Censys host search hit."""
-        services: list[Service] = []
+        """Parse Censys host search hit (delegates to `_mappers.censys`)."""
+        from domainraptor.discovery._mappers.censys import parse_host_hit
 
-        for svc in hit.get("services", []):
-            port = svc.get("port", 0)
-            service = Service(
-                port=port,
-                protocol=svc.get("transport_protocol", "tcp"),
-                service_name=svc.get("service_name", "") or "",
-                banner=svc.get("banner", "")[:500] if svc.get("banner") else "",
-                metadata={
-                    "extended_service_name": svc.get("extended_service_name", ""),
-                },
-            )
-            services.append(service)
-
-        autonomy = hit.get("autonomous_system", {})
-
-        last_update = None
-        if hit.get("last_updated_at"):
-            with contextlib.suppress(ValueError):
-                last_update = datetime.fromisoformat(hit["last_updated_at"].replace("Z", "+00:00"))
-
-        return CensysHostResult(
-            ip=hit.get("ip", ""),
-            hostnames=hit.get("dns", {}).get("reverse_dns", {}).get("names", []) or [],
-            country=hit.get("location", {}).get("country", "") or "",
-            city=hit.get("location", {}).get("city", "") or "",
-            autonomous_system=autonomy.get("name", "") or "",
-            asn=str(autonomy.get("asn", "")) if autonomy.get("asn") else "",
-            ports=[s.port for s in services],
-            services=services,
-            last_update=last_update,
-            labels=hit.get("labels", []) or [],
-            protocols=list({s.protocol for s in services}),
-        )
+        return parse_host_hit(hit)
 
     def _parse_host_detail(self, result: dict[str, Any]) -> CensysHostResult:
-        """Parse Censys host detail response."""
-        services: list[Service] = []
+        """Parse Censys host detail response (delegates to `_mappers.censys`)."""
+        from domainraptor.discovery._mappers.censys import parse_host_detail
 
-        for svc in result.get("services", []):
-            port = svc.get("port", 0)
-            service = Service(
-                port=port,
-                protocol=svc.get("transport_protocol", "tcp"),
-                service_name=svc.get("service_name", "") or "",
-                version=svc.get("software", [{}])[0].get("version", "")
-                if svc.get("software")
-                else "",
-                banner=svc.get("banner", "")[:500] if svc.get("banner") else "",
-                metadata={
-                    "tls": svc.get("tls", {}),
-                    "http": svc.get("http", {}),
-                },
-            )
-            services.append(service)
-
-        autonomy = result.get("autonomous_system", {})
-
-        last_update = None
-        if result.get("last_updated_at"):
-            with contextlib.suppress(ValueError):
-                last_update = datetime.fromisoformat(
-                    result["last_updated_at"].replace("Z", "+00:00")
-                )
-
-        return CensysHostResult(
-            ip=result.get("ip", ""),
-            hostnames=result.get("dns", {}).get("reverse_dns", {}).get("names", []) or [],
-            country=result.get("location", {}).get("country", "") or "",
-            city=result.get("location", {}).get("city", "") or "",
-            autonomous_system=autonomy.get("name", "") or "",
-            asn=str(autonomy.get("asn", "")) if autonomy.get("asn") else "",
-            os=result.get("operating_system", {}).get("product", "") or None,
-            ports=[s.port for s in services],
-            services=services,
-            last_update=last_update,
-            labels=result.get("labels", []) or [],
-            protocols=list({s.protocol for s in services}),
-        )
+        return parse_host_detail(result)
 
     def _parse_certificate_hit(self, hit: dict[str, Any]) -> CensysCertificateResult:
         """Parse Censys certificate search hit."""
@@ -663,5 +584,5 @@ class CensysClient(BaseClient[CensysHostResult]):
         except CensysError:
             raise
         except Exception as e:
-            logger.error(f"Censys: Failed to get account info: {e}")
+            logger.error(f"Censys: Failed to get account info: {e}", exc_info=True)
             raise CensysError(f"Failed to get account info: {e}") from e

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import re
 from datetime import datetime
 from typing import Annotated
@@ -14,6 +15,7 @@ from domainraptor.assessment import (
     HeadersChecker,
     SSLAnalyzer,
 )
+from domainraptor.cli._base import get_app_config
 from domainraptor.core.config import AppConfig
 from domainraptor.core.types import (
     ScanResult,
@@ -31,6 +33,8 @@ from domainraptor.utils.output import (
     print_vulnerabilities_table,
     print_warning,
 )
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="assess",
@@ -76,7 +80,7 @@ def assess_callback(
             raise typer.Exit()
         return
 
-    config: AppConfig = ctx.obj.get("config", AppConfig())
+    config: AppConfig = get_app_config(ctx)
 
     print_info(f"Starting full assessment for: [bold]{target}[/bold]")
     print_info(f"Mode: {config.mode.value}")
@@ -183,7 +187,7 @@ def assess_vulns_cmd(
         [dim]# Include exploit availability[/dim]
         domainraptor assess vulns example.com --exploits
     """
-    _config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = get_app_config(ctx)
 
     print_info(f"Vulnerability assessment for: [bold]{target}[/bold]")
     print_info(f"Min severity: {min_severity.value} | CVE check: {cve_check}")
@@ -333,7 +337,7 @@ def assess_config_cmd(
         [dim]# DNS security check[/dim]
         domainraptor assess config example.com --category dns
     """
-    _config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = get_app_config(ctx)
 
     print_info(f"Configuration assessment for: [bold]{target}[/bold]")
     print_info(f"Category: {category}")
@@ -421,7 +425,7 @@ def assess_outdated_cmd(
         [dim]# Include minor updates[/dim]
         domainraptor assess outdated example.com --include-minor
     """
-    _config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = get_app_config(ctx)
 
     print_info(f"Outdated software check for: [bold]{target}[/bold]")
 
@@ -696,7 +700,8 @@ def _fetch_nvd_for_assess(cve_ids: list[str]) -> dict:
 
     except ImportError:
         return {}
-    except Exception:
+    except Exception as exc:
+        logger.warning("NVD CVE fetch failed: %s", exc, exc_info=True)
         return {}
 
 

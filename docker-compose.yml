@@ -1,0 +1,45 @@
+# Dev compose for SQL backends. Not for production.
+# Bring up: `docker compose up -d postgres mysql`
+# Tear down: `docker compose down -v` (drops volumes)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: domainraptor
+      POSTGRES_USER: domainraptor
+      POSTGRES_PASSWORD: domainraptor_dev # pragma: allowlist secret — dev only, never reuse
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - dr_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U domainraptor -d domainraptor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.4
+    container_name: dr-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: domainraptor
+      MYSQL_USER: domainraptor
+      MYSQL_PASSWORD: domainraptor_dev # pragma: allowlist secret -- dev only
+      MYSQL_ROOT_PASSWORD: root_dev # pragma: allowlist secret -- dev only
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - dr_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  dr_pg_data:
+  dr_mysql_data:

@@ -8,6 +8,7 @@ import typer
 from rich.panel import Panel
 from rich.table import Table
 
+from domainraptor.cli._base import get_app_config
 from domainraptor.core.config import AppConfig
 from domainraptor.utils.output import (
     console,
@@ -34,7 +35,7 @@ def enrich_urlscan_cmd(
     ] = 25,
 ) -> None:
     """Enrich a domain with public URLScan.io data."""
-    _config: AppConfig = ctx.obj.get("config", AppConfig())
+    _config: AppConfig = get_app_config(ctx)
 
     from domainraptor.enrichment.urlscan_client import UrlscanClient
 

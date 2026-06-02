@@ -109,7 +109,7 @@ class WhoisClient:
         try:
             w = whois.whois(target)
         except Exception as e:
-            logger.error(f"WHOIS: Query failed for {target}: {e}")
+            logger.error(f"WHOIS: Query failed for {target}: {e}", exc_info=True)
             return None
 
         if w is None or w.domain_name is None:

@@ -9,6 +9,11 @@ from domainraptor.enrichment.securitytrails import (
     HistoricalDnsRecord,
     SecurityTrailsClient,
 )
+from domainraptor.enrichment.urlscan_client import (
+    UrlscanClient,
+    UrlscanEnrichment,
+    UrlscanResult,
+)
 from domainraptor.enrichment.virustotal import ReputationResult, VirusTotalClient
 
 __all__ = [
@@ -16,5 +21,8 @@ __all__ = [
     "HistoricalDnsRecord",
     "ReputationResult",
     "SecurityTrailsClient",
+    "UrlscanClient",
+    "UrlscanEnrichment",
+    "UrlscanResult",
     "VirusTotalClient",
 ]

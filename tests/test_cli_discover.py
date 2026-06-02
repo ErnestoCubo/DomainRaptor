@@ -407,7 +407,7 @@ class TestDiscoverPortsHelper:
 
         with (
             patch.dict("os.environ", {"SHODAN_API_KEY": "test"}),  # pragma: allowlist secret
-            patch("socket.gethostbyname", side_effect=Exception("DNS failed")),
+            patch("socket.gethostbyname", side_effect=OSError("DNS failed")),
         ):
             _discover_ports("nonexistent.invalid", result, config)
 

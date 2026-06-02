@@ -28,6 +28,7 @@
 - [Output Formats](Output-Formats)
 - [Scan Modes](Scan-Modes)
 - [Risk Algorithm](Risk-Algorithm)
+- [Database Backends](Database-Backends)
 - [Examples](Examples)
 
 ### Resources
