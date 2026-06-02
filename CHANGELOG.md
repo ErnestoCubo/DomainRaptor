@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.7.0](https://github.com/ErnestoCubo/DomainRaptor/compare/v0.6.0...v0.7.0) (2026-06-02)
+
+
+### Features
+
+* **agents:** add pr-opener, pr-merger, release-manager and formalize develop→release→main flow ([dc04484](https://github.com/ErnestoCubo/DomainRaptor/commit/dc044844768455e084edac8c1dc143154194e2d8))
+* **agents:** bootstrap agentic system — instructions, prompts, 16 agents, sprint templates ([ce7e053](https://github.com/ErnestoCubo/DomainRaptor/commit/ce7e053fcd83d81826ca498842e6c6b7554bdcb9))
+* **storage,agents:** SQL backends + agentic system bootstrap ([283f9c7](https://github.com/ErnestoCubo/DomainRaptor/commit/283f9c75fcaf2b36a0a708becec6d091227663e8))
+* **storage:** add Alembic scaffolding and baseline migration (v3 schema) ([0fcdd56](https://github.com/ErnestoCubo/DomainRaptor/commit/0fcdd5666b82b7b9e3aa6566ade19f6e928d7134))
+* **storage:** add database_url config and SQLAlchemy/Alembic deps ([84507d1](https://github.com/ErnestoCubo/DomainRaptor/commit/84507d11663a7cde6c9f2dd5bd21fb7a7e5a1793))
+* **storage:** add engine property and repository factories ([9fed89d](https://github.com/ErnestoCubo/DomainRaptor/commit/9fed89de98ec44bc0662fc0098316a137bab8247))
+* **storage:** add SQLAlchemy schema mirror and engine factory ([f690fa6](https://github.com/ErnestoCubo/DomainRaptor/commit/f690fa6dc16115c55e2c00496165c438e92aa4a2))
+
+
+### Bug Fixes
+
+* **ci:** exclude migrations/ from ruff to avoid version-skew on isort ([407ffd3](https://github.com/ErnestoCubo/DomainRaptor/commit/407ffd37829e8ecda2e95d52f9d31583ad577241))
+* **core:** hardening — TUI api keys, future timeouts, narrow excepts ([37b7817](https://github.com/ErnestoCubo/DomainRaptor/commit/37b78178f4ba26948c591ffa3913925f25c21ed6))
+
+
+### Performance Improvements
+
+* **cli:** parallelize shodan/censys/zoomeye fullscan host enrichment ([ac790a5](https://github.com/ErnestoCubo/DomainRaptor/commit/ac790a59b3cb9dece5cab21ba0863515625fed40))
+
+
+### Documentation
+
+* add brand assets, refresh README, ignore social drafts ([7896172](https://github.com/ErnestoCubo/DomainRaptor/commit/789617288f3bf256774505ec1cdf532a3e095453))
+* add brand assets, refresh README, ignore social drafts ([fb8c8c0](https://github.com/ErnestoCubo/DomainRaptor/commit/fb8c8c0d7f6415e3b7c2773dcc1d15af9232477c))
+* **wiki:** add Database Backends page for PostgreSQL/MySQL support ([e633e6a](https://github.com/ErnestoCubo/DomainRaptor/commit/e633e6ad3203e0e524afc2501764e38c77d8168f))
+
+
+### Code Refactoring
+
+* **cli:** extract get_app_config helper for Typer context ([40fe2cc](https://github.com/ErnestoCubo/DomainRaptor/commit/40fe2cc645057a541d203ecc92d036781f33b2fd))
+* **core:** add exc_info to error logs and narrow DNS/SSL excepts ([58b1886](https://github.com/ErnestoCubo/DomainRaptor/commit/58b188638ee505cc62b257a50c0f39481c4154d1))
+* **core:** centralise httpx.Client construction via create_http_client ([8a1b114](https://github.com/ErnestoCubo/DomainRaptor/commit/8a1b114e7568009c33e8ab33054c89520d2a45d7))
+* **core:** unify source error hierarchy and add credential resolver ([99ad136](https://github.com/ErnestoCubo/DomainRaptor/commit/99ad1368703b3260e6e7f1e8d37c60969b489780))
+* **discovery:** extract host-result parsers into _mappers package ([e80191d](https://github.com/ErnestoCubo/DomainRaptor/commit/e80191d9087b042f8b6a5e223b0b6db76b7bdc5a))
+* **discovery:** introduce HostInformation base for *HostResult dataclasses ([f4373f1](https://github.com/ErnestoCubo/DomainRaptor/commit/f4373f1b20ba3cad2d15ec02b743c8b349ea2a30))
+* **enrichment:** extract response parsers into _mappers package ([c4d1856](https://github.com/ErnestoCubo/DomainRaptor/commit/c4d18567d19f4f8ed6c5b20cf158b71e48cb31a4))
+* **storage:** centralise JSON (de)serialization via utils helpers ([13f6e7d](https://github.com/ErnestoCubo/DomainRaptor/commit/13f6e7db4bfcbd45a8488818e32567a9341518df))
+* **storage:** port ScanRepository and WatchRepository to SQLAlchemy Core ([20a8d8d](https://github.com/ErnestoCubo/DomainRaptor/commit/20a8d8df668e802f4d33062fbac0e635854bec61))
+* **tests:** extract sample data construction into SampleDataFactory ([38a148a](https://github.com/ErnestoCubo/DomainRaptor/commit/38a148a0459175021d2481f810c59d34ff95459b))
+
 ## [0.6.0](https://github.com/ErnestoCubo/DomainRaptor/compare/v0.5.0...v0.6.0) (2026-05-29)
 
 
