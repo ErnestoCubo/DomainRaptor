@@ -26,7 +26,8 @@ from domainraptor.core.exceptions import (
     SourceNotFoundError,
     SourceRateLimitError,
 )
-from domainraptor.core.types import Asset, AssetType, Service
+from domainraptor.core.types import Asset, AssetType
+from domainraptor.discovery._host import HostInformation
 from domainraptor.discovery.base import BaseClient, ClientConfig
 
 logger = logging.getLogger(__name__)
@@ -51,19 +52,10 @@ class CensysNotFoundError(CensysError, SourceNotFoundError):
 
 
 @dataclass
-class CensysHostResult:
+class CensysHostResult(HostInformation):
     """Result from Censys host lookup."""
 
-    ip: str
-    hostnames: list[str] = field(default_factory=list)
-    country: str = ""
-    city: str = ""
     autonomous_system: str = ""
-    asn: str = ""
-    os: str | None = None
-    ports: list[int] = field(default_factory=list)
-    services: list[Service] = field(default_factory=list)
-    last_update: datetime | None = None
     labels: list[str] = field(default_factory=list)
     protocols: list[str] = field(default_factory=list)
 
