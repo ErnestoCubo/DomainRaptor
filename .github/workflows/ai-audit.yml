@@ -24,11 +24,9 @@ jobs:
               uses: astral-sh/setup-uv@v3
               with:
                   enable-cache: true
-            - name: Install pyyaml
-              run: uv pip install --system pyyaml
             - name: Validate frontmatter
               run: |
-                  python - <<'PY'
+                  uv run --with pyyaml python - <<'PY'
                   from __future__ import annotations
                   import sys, pathlib, yaml
 
