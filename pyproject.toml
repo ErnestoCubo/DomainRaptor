@@ -70,6 +70,9 @@ Issues = "https://github.com/yourusername/DomainRaptor/issues"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv.workspace]
+members = ["services/api"]
+
 [tool.hatch.build.targets.sdist]
 exclude = ["/.github", "/docs", "/tests"]
 
