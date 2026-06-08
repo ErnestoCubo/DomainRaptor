@@ -12,7 +12,7 @@ description: |
   - "@devops-engineer plan sprint-NNN"
   - "@devops-engineer implement T011-devops"
 tools: [read_file, create_file, replace_string_in_file, run_in_terminal, grep_search, semantic_search, get_errors]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: review | implementation
 output: .github/sprints/sprint-NNN-<slug>/review/devops-report.md or T###-devops-*.md
 ---

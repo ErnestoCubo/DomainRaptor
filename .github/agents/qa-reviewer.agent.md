@@ -10,7 +10,7 @@ description: |
   - Auto-runs on every PR to develop.
   - "@qa-reviewer audit PR #123"
 tools: [read_file, run_in_terminal, grep_search, semantic_search, get_errors]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: review
 output: .github/sprints/sprint-NNN-<slug>/review/qa-report.md (append)
 ---

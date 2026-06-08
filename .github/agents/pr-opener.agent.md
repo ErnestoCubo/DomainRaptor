@@ -12,7 +12,7 @@ description: |
   - "@pr-opener promote release to main"
   - Hand-off from task-implementer once branch is pushed.
 tools: [run_in_terminal, read_file, grep_search]
-model: claude-sonnet-4.7
+model: Claude Sonnet 4
 sprint_stage: review
 output: GitHub PR URL (printed) + entry appended to sprint review/pr-log.md
 ---

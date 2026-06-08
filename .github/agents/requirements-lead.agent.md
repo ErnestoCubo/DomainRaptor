@@ -11,7 +11,7 @@ description: |
   - "/start-sprint <goal>"
   - User asks: "kick off a sprint to <do X>"
 tools: [read_file, create_file, replace_string_in_file, grep_search, semantic_search, runSubagent, manage_todo_list]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: requirements
 output: .github/sprints/sprint-NNN-<slug>/requirements/
 ---

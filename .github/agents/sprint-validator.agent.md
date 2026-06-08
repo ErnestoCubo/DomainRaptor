@@ -8,7 +8,7 @@ description: |
   - Auto-runs after @sprint-planner.
   - "@sprint-validator check sprint-NNN"
 tools: [read_file, grep_search]
-model: claude-sonnet-4.x
+model: Claude Sonnet 4
 sprint_stage: planning
 output: .github/sprints/sprint-NNN-<slug>/review/template-violations.md
 ---

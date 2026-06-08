@@ -11,7 +11,7 @@ description: |
   - "@pr-merger merge PR #123"
   - "@pr-merger status PR #123" (dry-run check)
 tools: [run_in_terminal, read_file, grep_search]
-model: claude-sonnet-4.7
+model: Claude Sonnet 4
 sprint_stage: review
 output: Merge result printed + appended to sprint review/pr-log.md
 ---

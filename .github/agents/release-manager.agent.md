@@ -13,7 +13,7 @@ description: |
   - "@release-manager finalize" (review release-please's PR on main)
   - Pre-release sprint phase.
 tools: [run_in_terminal, read_file, grep_search, runSubagent]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: release
 output: .github/sprints/sprint-NNN-<slug>/release/train-log.md (append)
 ---

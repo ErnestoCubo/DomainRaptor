@@ -10,7 +10,7 @@ description: |
   - Auto-runs after @requirements-validator returns clean.
   - "@sprint-planner plan sprint-NNN"
 tools: [read_file, create_file, replace_string_in_file, grep_search, semantic_search]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: planning
 output: .github/sprints/sprint-NNN-<slug>/tasks/T###-*.md
 ---

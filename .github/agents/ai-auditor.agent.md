@@ -11,7 +11,7 @@ description: |
     /memories/repo/** (via workflow ai-audit.yml).
   - Pre-release: certify sprint summary.
 tools: [read_file, create_file, replace_string_in_file, run_in_terminal, grep_search, semantic_search, memory]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: meta
 output: .github/ai-audit/AUDIT-YYYY-MM-DD.md
 ---

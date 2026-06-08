@@ -12,7 +12,7 @@ description: |
   - "@ai-governance-reviewer certify AUDIT-2026-06-15.md"
   - Pre-release certification.
 tools: [read_file, run_in_terminal, grep_search, semantic_search, memory]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: meta
 output: .github/ai-audit/governance/REVIEW-<id>.md
 ---

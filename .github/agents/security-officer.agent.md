@@ -14,7 +14,7 @@ description: |
   - "@security-officer plan sprint-NNN"
   - "@security-officer implement T012-sec"
 tools: [read_file, create_file, replace_string_in_file, run_in_terminal, grep_search, semantic_search, get_errors, runTests]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: review | implementation
 output: .github/sprints/sprint-NNN-<slug>/review/sec-report.md or T###-sec-*.md
 ---

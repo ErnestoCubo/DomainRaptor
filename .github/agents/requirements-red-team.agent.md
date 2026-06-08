@@ -10,7 +10,7 @@ description: |
   - Invoked by @requirements-lead during sprint kickoff.
   - "@requirements-red-team draft view for <goal>"
 tools: [read_file, create_file, grep_search, semantic_search]
-model: claude-opus-4.7
+model: Claude Opus 4.1
 sprint_stage: requirements
 output: .github/sprints/sprint-NNN-<slug>/requirements/_red-team.md
 ---

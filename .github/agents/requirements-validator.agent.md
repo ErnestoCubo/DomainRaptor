@@ -10,7 +10,7 @@ description: |
   - "@requirements-validator check sprint-NNN"
   - PR touching .github/sprints/**/requirements/**
 tools: [read_file, grep_search, semantic_search]
-model: claude-sonnet-4.x
+model: Claude Sonnet 4
 sprint_stage: requirements
 output: .github/sprints/sprint-NNN-<slug>/review/requirements-review.md
 ---

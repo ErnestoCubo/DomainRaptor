@@ -9,7 +9,7 @@ description: |
   - Auto-runs when task-implementer marks task `status: review`.
   - "@implementation-validator check PR #123"
 tools: [read_file, run_in_terminal, grep_search, semantic_search, runTests]
-model: claude-sonnet-4.x
+model: Claude Sonnet 4
 sprint_stage: review
 output: .github/sprints/sprint-NNN-<slug>/review/impl-report.md (append)
 ---

@@ -9,7 +9,7 @@ description: |
   - Auto-runs after @sprint-validator.
   - "@sprint-deduper scan sprint-NNN"
 tools: [read_file, grep_search, semantic_search]
-model: claude-sonnet-4.x
+model: Claude Sonnet 4
 sprint_stage: planning
 output: .github/sprints/sprint-NNN-<slug>/review/dedup-report.md
 ---

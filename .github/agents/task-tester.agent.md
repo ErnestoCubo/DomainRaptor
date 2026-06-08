@@ -10,7 +10,7 @@ description: |
   - task-implementer hand-off: "@task-tester finish AC tests for T007"
   - implementation-validator reports missing tests.
 tools: [read_file, create_file, replace_string_in_file, run_in_terminal, grep_search, semantic_search, runTests]
-model: claude-sonnet-4.x
+model: Claude Sonnet 4
 sprint_stage: implementation
 output: tests/test_*.py additions
 ---
